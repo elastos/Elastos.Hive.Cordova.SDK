@@ -1,143 +1,116 @@
- /*
-  * Copyright (c) 2019 Elastos Foundation
-  *
-  * Permission is hereby granted, free of charge, to any person obtaining a copy
-  * of this software and associated documentation files (the "Software"), to deal
-  * in the Software without restriction, including without limitation the rights
-  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-  * copies of the Software, and to permit persons to whom the Software is
-  * furnished to do so, subject to the following conditions:
-  *
-  * The above copyright notice and this permission notice shall be included in all
-  * copies or substantial portions of the Software.
-  *
-  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-  * SOFTWARE.
-  */
+/*
+ * Copyright (c) 2019 Elastos Foundation
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 
 var exec = require('cordova/exec');
 
 function File() {
-    const FILE = 4;
+    this.objId  = null;
+    this.plugin = null;
 
-    this.objId = null;
+    const CLAZZ = 4;
     //TODO;
 };
 
 File.prototype = {
     onstructor: File,
 
-    getInfo: function() {
-        exec(onSuccess, onError, 'HivePlugin', 'getInfo', [this.FILE, this.objId]);
+    getLastInfo: function() {
+        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.CLAZZ, this.objId]);
     },
 
-    getPromise: function(onSuccess, onError, methodName, args) {
-        return new Promise(resolve, reject) {
-            var onResult: function(ret) {
-                if (ret.object != null) {
-                    onSuccess(ret.object);
-                    resolve(ret.object);
-                } else {
-                    onError(ret.error);
-                    reject(ret.error);
-                }
-            };
-            exec(onResult, null, 'HivePlugin', methodName, args);
-        };
+    getInfo: function()  {
+        return this.plugin.getPromise(this, 'getInfo', []);
     },
 
-    getLastInfo: function(onSuccess, onError)  {
-        return getPromise(onSuccess, onError, 'getLastInfo', [this.FILE, this.objId]);
-    }
-
-    moveTo: function(onSuccess, onError, newPath) {
-        return getPromise(onSuccess, onError, 'moveTo', [this.FILE, this.objId, destPath]);
+    moveTo: function(destPath) {
+        return this.plugin.getPromise(this, 'moveTo', [destPath]);
     },
 
-    copyTo: function(onSuccess, onError, newPath) {
-        return getPromise(onSuccess, onError, 'copyTo', [this.FILE, this.objId, newPath]);
+    copyTo: function(newPath) {
+        return this.plugin.getPromise(this, 'copyTo', [newPath]);
     },
 
-    deleteItem: function(onSuccess, onError) {
-        return getPromise(onSuccess, onError, 'deleteItem', [this.FILE, this.objId]);
+    deleteItem: function() {
+        return this.plugin.getPromise(this, 'deleteItem', []);
     },
 };
 
 function Directory() {
-    const DIR = 3;
+    this.objId  = null;
+    this.plugin = null;
 
-    this.objId = null;
+    const CLAZZ = 3;
     //TODO
 };
 
 Directory.prototype = {
     onstructor: Directory,
 
-    getInfo: function() {
-        exec(onSuccess, onError, 'HivePlugin', 'getInfo', [this.DIR, this.objId]);
-    },
-
-    getPromise: function(onSuccess, onError, methodName, args) {
-        return new Promise(resolve, reject) {
-            var onResult: function(ret) {
-                if (ret.object != null) {
-                    onSuccess(ret.object);
-                    resolve(ret.object);
-                } else {
-                    onError(ret.error);
-                    reject(ret.error);
-                }
-            };
-            exec(onResult, null, 'HivePlugin', methodName, args);
-        };
-    },
-
     getLastInfo: function(onSuccess, onError) {
-        return getPromise(onSuccess, onError, 'getLastInfo', [this.DIR, this.objId]);
+        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.CLAZZ, this.objId]);
     },
 
-    createDirectory: function(onSuccess, onError, name) {
-        return getPromise(onSuccess, onError, 'createDirectory', [this.DIR, this.objId, name]);
+    getInfo: function() {
+        return this.plugin.getPromise(this, 'getInfo', []);
     },
 
-    getDirectory: function(onSuccess, onError, name) {
-        return getPromise(onSuccess, onError, 'getDirectory', [this.DIR, this.objId, name]);
+    createDirectory: function(name) {
+        return this.plugin.getPromise(this, 'createDir', [name]);
     },
 
-    createFile: function(onSuccess, onError, name) {
-        return getPromise(onSuccess, onError, 'createFile', [this.DIR, this.objId, name]);
+    getDirectory: function(name) {
+        return this.plugin.getPromise(this, 'getDir', [name]);
     },
 
-    getFile: function(onSuccess, onError, name) {
-        return getPromise(onSuccess, onError, 'getFile', [this.DIR, this.objId, name]);
+    createFile: function(name) {
+        return this.plugin.getPromise(this, 'createFile', [name]);
     },
 
-    getChildren: function(onSuccess, onError) {
-        return getPromise(onSuccess, onError, 'getChildren', [this.DIR, this.objId]);
+    getFile: function(name) {
+        return this.plugin.getPromise(this, 'getFile', [name]);
     },
 
-    moveTo: function(onSuccess, onError, newPath) {
-        return getPromise(onSuccess, onError, 'moveTo', [this.DIR, this.objId, destPath]);
+    getChildren: function() {
+        return this.plugin.getPromise(this, 'getChildren', []);
     },
 
-    copyTo: function(onSuccess, onError, newPath) {
-        return getPromise(onSuccess, onError, 'copyTo', [this.DIR, this.objId, newPath]);
+    moveTo: function(destPath) {
+        return this.plugin.getPromise(this, 'moveTo', [destPath]);
     },
 
-    deleteItem: function(onSuccess, onError) {
-        return getPromise(onSuccess, onError, 'deleteItem', [this.DIR, this.objId]);
+    copyTo: function(newPath) {
+        return this.plugin.getPromise(this, 'copyTo', [newPath]);
+    },
+
+    deleteItem: function() {
+        return this.plugin.getPromise(this, 'deleteItem', []);
     },
 };
 
 function Drive() {
-    const DRIVE = 2;
+    this.objId  = null;
+    this.plugin = null;
 
-    this.objId = null;
+    const CLAZZ = 2;
 
     // TODO
 };
@@ -145,96 +118,93 @@ function Drive() {
 Drive.prototype = {
     onstructor: Drive,
 
-    getInfo: function() {
-        exec(onSuccess, onError, 'HivePlugin', 'getInfo', [this.DRIVE, this.objId]);
-    },
-
-    getPromise: function(onSuccess, onError, methodName, args) {
-        return new Promise(resolve, reject) {
-            var onResult: function(ret) {
-                if (ret.object != null) {
-                    onSuccess(ret.object);
-                    resolve(ret.object);
-                } else {
-                    onError(ret.error);
-                    reject(ret.error);
-                }
-            };
-
-            exec(onResult, null, 'HivePlugin', methodName, args);
-        };
-    },
-
     getLastInfo: function(onSuccess, onError) {
-        return getPromise(onSuccess, onError, 'getLastInfo', [this.DRIVE, this.objId]);
+        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.CLAZZ, this.objId]);
     },
 
-    rootDirctory: function(onSuccess, onError) {
-        return getPromise(onSuccess, onError, 'rootDirctory',[this.DRIVE, this.objId]);
+    getInfo: function() {
+        return this.plugin.getPromise(this, 'getInfo', []);
     },
 
-    createDirectory: function(onSuccess, onError, path) {
-        return getPromise(onSuccess, onError, 'createDirectory', [this.DRIVE, this.objId, path]);
+    rootDirctory: function() {
+        return this.plugin.getPromise(this, 'rootDir', []);
     },
 
-    getDirectory: function(onSuccess, onError, path) {
-        return getPromise(onSuccess, onError, 'getDirectory', [this.DRIVE, this.objId, path]);
+    createDirectory: function(path) {
+        return this.plugin.getPromise(this, 'createDir', [path]);
     },
 
-    createFile: function(onSuccess, onError, path) {
-        return getPromise(onSuccess, onError, 'createFile', [this.DRIVE, this.objId, path]);
+    getDirectory: function(path) {
+        return this.plugin.getPromise(this, 'getDir', [path]);
     },
 
-    getFile: function(onSuccess, onError, path) {
-        return getPromise(onSuccess, onError, 'getFile', [this.DRIVE, this.objId, path]);
+    createFile: function(path) {
+        return this.plugin.getPromise(this, 'createFile', [path]);
     },
 
-    getItemInfo: function(onSuccess, onError, path) {
-        return getPromise(onSuccess, onError, 'getItemInfo', [this.DRIVE, this.objId, path]);
+    getFile: function(path) {
+        return this.plugin.getPromise(this, 'getFile', [path]);
+    },
+
+    getItemInfo: function(path) {
+        return this.plugin.getPromise(this, 'getItemInfo', [path]);
     },
 };
 
 function Client() {
-    this.objId = null;
+    this.objId  = null;
+    this.plugin = null;
 
-    const CLIENT = 1;
+    const CLAZZ = 1;
     // TODO
 };
 
 Client.prototype = {
     constructor: Client;
 
-    getInfo: function(onSuccess, onError) {
-        exec(onSuccess, onError, "getInfo", [this.CLIENT, this.objId]);
-    }
-
-    getPromise: function(onSuccess, onError, methodName) {
-        return new Promise(resolve, reject) {
-            var onResult: function(ret) {
-                if (ret.object != null) {
-                    onSuccess(ret.object);
-                    resolve(ret.object);
-                } else {
-                    onError(ret.error);
-                    reject(ret.error);
-                }
-            };
-
-            exec(onResult, null, 'HivePlugin', methodName, [this.CLIENT, this.objId]);
-        };
-    },
-
     getLastInfo: function(onSuccess, onError) {
-        return getPromise(onSuccess, onError, 'getInfo');
+        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.CLAZZ, this.objId]);
     },
 
-    getDefaultDrive: function(onSuccess, onError) {
-        return getPromise(onSuccess, onError,'getDefaultDrive');
+    login: function(onSuccess, onError, handler) {
+        var args = [
+          this.objId,
+          this.plugin.addLoginRequestCb(handler)
+        ];
+        exec(onSuccess, onError, 'HivePlugin', 'login', args);
+    },
+
+    logout: function(onSuccess, onError) {
+        exec(onSuccess, onError, 'HivePlugin', 'logout', [this.objId]);
+    },
+
+    getInfo: function() {
+        return this.plugin.getPromise(this, 'getInfo', []);
+    },
+
+    getDefaultDrive: function() {
+        return this.plugin.getPromise(this, 'getDefDrive', []);
     },
 };
 
 function HivePlugin() {
-    // TODO;
+    this.clients = [];
+
+    this.resultIndex = 0;
+    this.resultEvent = [];
+    this.loginCount  = 0;
+    this.loginRequest = [];
+
+    this.driveType = {
+        NATIVE: 1,
+        ONEDRIVE: 2,
+        IPFS: 3,
+    };
+
+    const LISTENER_LOGIN  = 1;
+    const LISTENER_RESULT = 2;
+
+    // TODO
 
     Object.freeze(HivePlugin.prototype);
     Object.freeze(Client.prototype);
@@ -242,34 +212,93 @@ function HivePlugin() {
     Object.freeze(Directory.prototype);
     Object.freeze(File.prototype);
 
-    // TODO;
+    Object.freeze(this.driveType);
+
+    exec(function () {}, null, 'HivePlugin', 'initVal', []);
+
+    var me = this;
+
+    this.addLoginRequestCb = function(callback) {
+        // TODO;
+    },
+
+    this.onLoginRequest = function(event) {
+        // TODO;
+    },
+
+    this.addResultEventCb = function(callback, object) {
+        var eventCb = new Object;
+        eventCb.callback = callback;
+        eventCb.object = object;
+
+        me.resultIndex++;
+        me.resultEvent[me.resultIndex] = eventCb;
+        return me.resultIndex;
+    },
+
+    this.onResultEvent = function(event) {
+        var id = event.id;
+        event.id = null;
+
+        if (me.resultEvent[id].callback)  {
+            client = me.resultEvent[id].object;
+            me.resultEvent[id].callback(event);
+        }
+    },
+
+    this.getPromise = async function(object, method, args) {
+        var onResult: function(ret) {
+            if (null != ret.object)
+                Promise.resolve(ret.object);
+            if (null != ret.error)
+                Promise.reject(ret.error);
+        };
+
+        var _args = [
+          client.CLAZZ,
+          client.objId,
+          this.addResultEventCb(onResult, object),
+        ];
+
+        exec(null, null, 'HivePlugin', method, _args.concat(args));
+    },
+
+    this.setListener(LISTENER_LOGIN,  this.onLoginRequest);
+    this.setListener(LISTENER_RESULT, this.onResultEvent);
 };
 
 HivePlugin.prototype = {
     constructor: HivePlugin,
 
-    options: {
-        persistentLocation: ".data",
-        bootstraps: this.bootstraps
-    },
-
-    test: function(onSuccess, onError, buf) {
-        exec(onSuccess, onError, 'HivePlugin', 'test', [buf]);
-    },
-
     getVersion: function(onSuccess, onError) {
         exec(onSuccess, onError, 'HivePlugin', 'getVersion', [])
+    },
+
+    setListener: function (type, eventCallback) {
+        exec(eventCallback, null, 'HivePlugin', 'setListener', [type]);
     },
 
     createClient: function(onSuccess, onError, options) {
         var client = Client();
         var me = this;
 
-        if (typeof (options) == "undefined" || options == null)
-            options = this.options;
+        var _onSuccess = function(ret) {
+            client.objId = ret.id;
+            client.plugin = me;
+            me.clients[client.objId] = client;
+            if (onSuccess)
+                onSuccess(client);
+        }
 
-        var configString = JSON.stringify(options);
-        exec(onSuccess, onError, 'HivePlugin', 'createClient', [configString]);
+        if (typeof (options) == "undefined" || options == null ||
+            typeof (options.driveType) != "string")
+            if (onError) {
+                onError("invalid options");
+                return;
+            }
+
+        var configStr = JSON.stringify(options);
+        exec(_onSuccess, onError, 'HivePlugin', 'createClient', ["im", configStr]);
     },
 };
 
