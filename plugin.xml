@@ -1,0 +1,42 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plugin id="elastos-trinity-plugins-hive" version="0.0.1" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+    <name>Hive</name>
+    <js-module name="HivePlugin" src="www/hive.js">
+        <clobbers target="HivePlugin" />
+    </js-module>
+
+    <!-- <hook type="after_plugin_add" src="hooks/after_plugin_add.js" /> -->
+    <platform name="browser">
+        <config-file target="config.xml" parent="/*">
+            <feature name="Hive">
+                <param name="browser-package" value="Hive" />
+            </feature>
+        </config-file>
+
+        <js-module src="src/browser/HiveProxy.js" name="HiveProxy">
+            <runs />
+        </js-module>
+    </platform>
+	<platform name="android">
+		<config-file target="config.xml" parent="/*">
+			<feature name="HivePlugin">
+				<param name="android-package" value="org.elastos.trinity.plugins.hive.HivePlugin" />
+			</feature>
+		</config-file>
+        <source-file src="src/android/HivePlugin.java" target-dir="src/org/elastos/trinity/plugins/hive" />
+        <framework src="src/android/hive.gradle" custom="true" type="gradleReference"/>
+        <resource-file src="src/android/libs/org.elastos.hive-debug.aar" target="libs/org.elastos.trinity.hive-debug.aar"/>
+	</platform>
+    <platform name="ios">
+        <config-file target="config.xml" parent="/*">
+            <feature name="HivePlugin">
+                <param name="ios-package" value="HivePlugin" />
+            </feature>
+        </config-file>
+        <!-- <dependency id="cordova-plugin-add-swift-support" version="1.7.2"/> -->
+        <source-file src="src/ios/HivePlugin.swift" />
+        <framework src="src/ios/libs/ElastosHiveSDK.framework" custom="true" />
+        <!-- <source-file src="src/ios/libs/ElastosHive.framework" target-dir="src/libs" framework="true" /> -->
+    </platform>
+</plugin>
+
