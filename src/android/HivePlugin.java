@@ -357,7 +357,7 @@
 
           ObjectMap map = ObjectMap.acquire(mapId);
           if (ObjectMap.isDriveMap(map)) {
-              ObjectMap.toDriveMap(map).get(objId).getDirectory(
+              ObjectMap.toDriveMap(map).get(objId).rootDirectory(
                   new ResultHandler<Directory>(handlerId, resultCallbackCtxt)
               );
               return;
@@ -372,13 +372,13 @@
 
           ObjectMap map = ObjectMap.acquire(mapId);
           if (ObjectMap.isDriveMap(map)) {
-              ObjectMap.toDriveMap(map).get(objId).getDirectory(path,
+              ObjectMap.toDriveMap(map).get(objId).createDirectory(path,
                   new ResultHandler<Directory>(handlerId, resultCallbackCtxt)
               );
               return;
           }
           if (ObjectMap.isDirMap(map)) {
-              ObjectMap.toDirMap(map).get(objId).getDirectory(path,
+              ObjectMap.toDirMap(map).get(objId).createDirectory(path,
                   new ResultHandler<Directory>(handlerId, resultCallbackCtxt)
               );
               return;

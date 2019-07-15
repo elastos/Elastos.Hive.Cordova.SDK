@@ -62,7 +62,7 @@ class ObjectMap<T> {
     }
 
     static ObjectMap acquire(String mapId) {
-        ObjectMap objMap;
+        ObjectMap objMap = null;
 
         switch (mapId) {
         case CLIENT:
