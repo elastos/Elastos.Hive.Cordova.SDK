@@ -77,9 +77,6 @@ class HivePlugin : TrinityPlugin {
         self.commandDelegate.send(result, callbackId: command.callbackId)
     }
 
-    @objc func test(_ command: CDVInvokedUrlCommand) {
-    }
-
     @objc func getVersion(_ command: CDVInvokedUrlCommand) {
         self.success(command, retAsString: "HiveSDK-v0.0.1");
     }
@@ -107,55 +104,308 @@ class HivePlugin : TrinityPlugin {
         // TODO
     }
 
-    @objc func getInfo(_ command: CDVInvokedUrlCommand) {
-        // TODO
-    }
-
     @objc func getLastInfo(_ command: CDVInvokedUrlCommand) {
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+
+        let map: ObjectMap = ObjectMap.acquire(mapId)
+          if (ObjectMap.isClientMap(map)) {
+              JSONObjectHolder<Client.Info> holder;
+              Client.Info info;
+
+              info = ObjectMap.toClientMap(map).get(objId).getInfo();
+              if (info == null) {
+                  callbackContext.error("no info");
+                  return;
+              }
+
+              holder = new JSONObjectHolder<Client.Info>(info);
+              holder.put(Client.Info.userId)
+                    .put(Client.Info.name)
+                    .put(Client.Info.email)
+                    .put(Client.Info.phoneNo)
+                    .put(Client.Info.region);
+
+              callbackContext.success(holder.get());
+              return;
+          }
+
+          if (ObjectMap.isDriveMap(map)) {
+              JSONObjectHolder<Drive.Info> holder;
+              Drive.Info info;
+
+              info = ObjectMap.toDriveMap(map).get(objId).getInfo();
+              holder = new JSONObjectHolder<Drive.Info>(info);
+              holder.put(Drive.Info.driveId)
+                    .put(Drive.Info.name);
+
+              callbackContext.success(holder.get());
+              return;
+          }
+
+          if (ObjectMap.isDirMap(map)) {
+              JSONObjectHolder<Directory.Info> holder;
+              Directory.Info info;
+
+              info = ObjectMap.toDirMap(map).get(objId).getInfo();
+              holder = new JSONObjectHolder<Directory.Info>(info);
+              holder.put(Directory.Info.itemId)
+                    .put(Directory.Info.name)
+                    .put(Directory.Info.childCount);
+
+              callbackContext.success(holder.get());
+              return;
+          }
+
+          if (ObjectMap.isFileMap(map)) {
+              JSONObjectHolder<File.Info> holder;
+              File.Info info;
+
+              info = ObjectMap.toDirMap(map).get(objId).getInfo();
+              holder = new JSONObjectHolder<File.Info>(info);
+              holder.put(File.Info.itemId)
+                    .put(File.Info.name)
+                    .put(File.Info.size);
+
+              callbackContext.success(holder.get());
+              return;
+          }
         // TODO
     }
 
-    @objc func getDefaultDrive(_ command: CDVInvokedUrlCommand) {
-        // TODO
+    @objc func getInfo(_ command: CDVInvokedUrlCommand) {
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
+
+        let map: ObjectMap = ObjectMap.acquire(mapId)
+        if (ObjectMap.isClientMap(map)) {
+            ObjectMap.toClientMap(map).get(objId).lastUpdatedInfo(
+                handleBy: ResultHandler<Client.Info>(handlerId, resultCallbackCtxt)
+            )
+            return
+        }
+
+        if (ObjectMap.isDriveMap(map)) {
+            ObjectMap.toDriveMap(map).get(objId).lastUpdatedInfo(
+                handleBy: ResultHandler<Drive.Info>(handlerId, resultCallbackCtxt)
+            )
+            return
+        }
+
+        if (ObjectMap.isDirMap(map)) {
+            ObjectMap.toDirMap(map).get(objId).lastUpdatedInfo(
+                handleBy: ResultHandler<Directory.Info>(handlerId, resultCallbackCtxt)
+            )
+            return
+        }
+
+        if (ObjectMap.isFileMap(map)) {
+            ObjectMap.toFileMap(map).get(objId).lastUpdatedInfo(
+                handleBy: ResultHandler<File.Info>(handlerId, resultCallbackCtxt)
+            )
+        }
     }
 
-    @objc func rootDirectory(_ command: CDVInvokedUrlCommand) {
-        // TODO
+    @objc func getDefDrive(_ command: CDVInvokedUrlCommand) {
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
+
+        let map: ObjectMap = ObjectMap.acquire(mapId)
+        if (ObjectMap.isClientMap(map)) {
+            ObjectMap.toClientMap(map).get(objId).getDefaultDrive(
+                ResultHandler<HiveDriveHandle>(hdrId, resultCallback)
+            )
+            return
+        }
     }
 
-    @objc func createDirectory(_ command: CDVInvokedUrlCommand) {
-        // TODO
+    @objc func rootDir(_ command: CDVInvokedUrlCommand) {
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
+
+        let map: ObjectMap = ObjectMap.acquire(mapId)
+        if (ObjectMap.isDriveMap(map)) {
+            ObjectMap.toDriveMap(map).get(objId).rootDirectoryHandle(
+                ResultHandler<HiveDirectoryHandle>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
     }
 
-    @objc func getDirectory(_ command: CDVInvokedUrlCommand) {
-        // TODO
+    @objc func createDir(_ command: CDVInvokedUrlCommand) {
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
+
+        let map: ObjectMap = ObjectMap.acquire(mapId)
+        if (ObjectMap.isDriveMap(map)) {
+            ObjectMap.toDriveMap(map).get(objId).createDirectory(withPath: path,
+                handleBy: ResultHandler<HiveDirectoryHandle>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
+        if (ObjectMap.isDirMap(map)) {
+            ObjectMap.toDirMap(map).get(objId).createDirectory(path,
+                ResultHandler<HiveDirectoryHandle>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
+    }
+
+    @objc func getDir(_ command: CDVInvokedUrlCommand) {
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
+        let  path = command.arguments[3] as? String ?? null
+
+        let map: ObjectMap = ObjectMap.acquire(mapId)
+        if (ObjectMap.isDriveMap(map)) {
+            ObjectMap.toDriveMap(map).get(objId).directoryHandle(atPath: path,
+                handleBy: ResultHandler<HiveDirectoryHandle>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
+        if (ObjectMap.isDirMap(map)) {
+            ObjectMap.toDirMap(map).get(objId).directoryHandle(atName: path,
+                handleBy: ResultHandler<HiveDirectoryHandle>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
     }
 
     @objc func createFile(_ command: CDVInvokedUrlCommand) {
-        // TODO
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
+        let  path = command.arguments[3] as? String ?? null
+
+        let map: ObjectMap = ObjectMap.acquire(mapId)
+        if (ObjectMap.isDriveMap(map)) {
+            ObjectMap.toDriveMap(map).get(objId).createFile(withPath: path,
+                handleBy: ResultHandler<HiveFileHandle>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
+        if (ObjectMap.isDirMap(map)) {
+            ObjectMap.toDirMap(map).get(objId).createFile(withName: path,
+                handleBy: ResultHandler<HiveFileHandle>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
     }
 
     @objc func getFile(_ command: CDVInvokedUrlCommand) {
-        // TODO
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
+        let  path = command.arguments[3] as? String ?? null
+
+        let map: ObjectMap = ObjectMap.acquire(mapId)
+        if (ObjectMap.isDriveMap(map)) {
+            ObjectMap.toDriveMap(map).get(objId).fileHandle(atPath: path,
+                handleBy: ResultHandler<HiveFileHandle>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
+        if (ObjectMap.isDirMap(map)) {
+            ObjectMap.toDirMap(map).get(objId).fileHandle(atName: path,
+                handleBy: ResultHandler<HiveFileHandle>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
     }
 
     @objc func getItemInfo(_ command: CDVInvokedUrlCommand) {
-        // TODO
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
+        let  path = command.arguments[3] as? String ?? null
+
+        let map: ObjectMap = ObjectMap.acquire(map)
+        if (ObjectMap.isDriveMap(map)) {
+            ObjectMap.toDriveMap(map).get(objId).getItemInfo(path,
+                handleBy: ResultHandler<HiveItemInfo>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
     }
 
     @objc func getChildren(_ command: CDVInvokedUrlCommand) {
-        // TODO
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
+
+        let map: ObjectMap = ObjectMap.acquire(map)
+        if (ObjectMap.isDirMap(map)) {
+            ObjectMap.toDirMap(map).get(objId).getChildren(path,
+                handleBy: ResultHandler<HiveChildren>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
     }
 
     @objc func moveTo(_ command: CDVInvokedUrlCommand) {
-        // TODO
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
+        let  path = command.arguments[3] as? String ?? null
+
+        let map: ObjectMap = ObjectMap.acquire(map)
+        if (ObjectMap.isDirMap(map)) {
+            ObjectMap.toDirMap(map).get(objId).moveTo(path,
+                handleBy: ResultHandler<HiveVoid>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
+        if (ObjectMap.isFileMap(map)) {
+            ObjectMap.toFileMap(map).get(objId).moveTo(path,
+                handleBy: ResultHandler<HiveVoid>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
     }
 
     @objc func copyTo(_ command: CDVInvokedUrlCommand) {
-        // TODO
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
+        let  path = command.arguments[3] as? String ?? null
+
+        let map: ObjectMap = ObjectMap.acquire(map)
+        if (ObjectMap.isDirMap(map)) {
+            ObjectMap.toDirMap(map).get(objId).copyTo(path,
+                handleBy: ResultHandler<HiveVoid>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
+        if (ObjectMap.isFileMap(map)) {
+            ObjectMap.toFileMap(map).get(objId).copyTo(path,
+                handleBy: ResultHandler<HiveVoid>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
     }
 
     @objc func deleteItem(_ command: CDVInvokedUrlCommand) {
-        // TODO
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
+
+        let map: ObjectMap = ObjectMap.acquire(map)
+        if (ObjectMap.isDirMap(map)) {
+            ObjectMap.toDirMap(map).get(objId).deleteItem(
+                handleBy: ResultHandler<HiveVoid>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
+        if (ObjectMap.isFileMap(map)) {
+            ObjectMap.toFileMap(map).get(objId).deleteItem(
+                handleBy: ResultHandler<HiveVoid>(hdrId, resultCallbackCtxt)
+            )
+            return
+        }
     }
 }
