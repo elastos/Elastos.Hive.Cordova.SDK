@@ -28,5 +28,5 @@ repositories {
 }
 
 dependencies {
-    implementation(name: 'org.elastos.trinity.hive-debug', ext: 'aar')
+    implementation(name: 'ElastosHiveSDK-0.1.0', ext:'jar')
 }

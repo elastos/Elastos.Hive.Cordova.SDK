@@ -20,7 +20,7 @@
   * SOFTWARE.
   */
 
- package org.elastos.trinity.plugins.hive;
+package org.elastos.trinity.plugins.hive;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
@@ -29,7 +29,7 @@ import org.json.JSONObject;
 
 import org.elastos.hive.*;
 
-public class LoginHandler implements Authenticator {
+class LoginHandler implements Authenticator {
     private final int handlerId;
     private final CallbackContext callbackContext;
 
@@ -47,7 +47,7 @@ public class LoginHandler implements Authenticator {
     }
 
     @Override
-    void requestAuthentication(String requestUrl) {
+    public void requestAuthentication(String requestUrl) {
         JSONObject ret = new JSONObject();
         try {
             ret.put("url", requestUrl);

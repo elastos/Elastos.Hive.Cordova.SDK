@@ -34,7 +34,8 @@ import java.util.ArrayList;
 import java.io.File;
 
 import org.elastos.hive.*;
-import org.elastos.hive.exceptions.HiveException;
+import org.elastos.hive.HiveException;
+import org.elastos.hive.vendors.onedrive.OneDriveParameter;
 
 class ClientBuilder {
     private static String TAG = "ClientBuilder";
@@ -43,27 +44,27 @@ class ClientBuilder {
     private static final int ONEDRIVE  = 2;
     private static final int IPFS      = 3;
 
-    private static Client createForOneDrive(String dir, JSONObject json) {
+    private static Client createForOneDrive(String dir, JSONObject json) throws JSONException, HiveException {
         OAuthEntry entry = new OAuthEntry(
             json.getString("clientId"),
             json.getString("scope"),
             json.getString("redirectUrl")
         );
-        return Client.createInstance(new OneDriveParameter(dir, entry));
+        return Client.createInstance(new OneDriveParameter(entry, dir));
     }
 
-    private Client createForIPFS(String dir, JSONObject json) {
+    private static Client createForIPFS(String dir, JSONObject json) throws JSONException {
         // TODO;
         return null;
     }
 
-    private static Client create(String dir, String options) throws JSONException {
+    static Client create(String dir, String options) throws JSONException {
         JSONObject jsonObject = new JSONObject(options);
         int type = jsonObject.getInt("type");
 
         Client client = null;
         try {
-            switch(driveType) {
+            switch(type) {
             case ONEDRIVE:
                 client = createForOneDrive(dir, jsonObject);
                 break;

@@ -27,61 +27,68 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import org.elastos.hive.*;
-import org.elastos.hive.exceptions.HiveException;
+import org.elastos.hive.HiveException;
 
 class JSONObjectHolder<T extends Result> {
     private JSONObject jsonObject;
     private final T result;
 
     JSONObjectHolder(T result) {
-        this.jsonObject = new jsonObject();
+        this.jsonObject = new JSONObject();
         this.result = result;
     }
 
+    JSONObject get() {
+        return jsonObject;
+    }
+
     JSONObjectHolder put(String propId) {
-        if (result instanceof Client.Info)
-            put(propId, (Client.Info)result);
-        else if (result instanceof Drive.Info)
-            put(propId, (Drive.Info)result);
-        else if (result instanceof Directory.Info)
-            put(propId, (Directory.Info)result);
-        else if (result instanceof File.Info)
-            put(propId, (File.Info)result);
-        else if (result instanceof ItemInfo)
-            put(propId, (ItemInfo)result);
-        else if (result instanceof Children)
-            put(propId, (ItemInfo)result);
+        try {
+            if (result instanceof Client.Info)
+                put(propId, (Client.Info)result);
+            else if (result instanceof Drive.Info)
+                put(propId, (Drive.Info)result);
+            else if (result instanceof Directory.Info)
+                put(propId, (Directory.Info)result);
+            else if (result instanceof File.Info)
+                put(propId, (File.Info)result);
+            else if (result instanceof ItemInfo)
+                put(propId, (ItemInfo)result);
+            else if (result instanceof Children)
+                put(propId, (ItemInfo)result);
+        } catch (JSONException e) {
+        }
 
         return this;
     }
 
-    private void put(String propId, Client.Info info) {
-        if (info.containKey(propId))
+    private void put(String propId, Client.Info info) throws JSONException {
+        if (info.containsKey(propId))
             jsonObject.put(propId, info.get(propId));
     }
 
-    private void put(String propId, Drive.Info info) {
-        if (info.containKey(propId))
+    private void put(String propId, Drive.Info info) throws JSONException {
+        if (info.containsKey(propId))
             jsonObject.put(propId, info.get(propId));
     }
 
-    private void put(String propId, Directory.Info info) {
-        if (info.containKey(propId))
+    private void put(String propId, Directory.Info info) throws JSONException {
+        if (info.containsKey(propId))
             jsonObject.put(propId, info.get(propId));
     }
 
-    private void put(String propId, Directory.Info info) {
-        if (info.containKey(propId))
+    private void put(String propId, File.Info info) throws JSONException {
+        if (info.containsKey(propId))
             jsonObject.put(propId, info.get(propId));
     }
 
-    private void put(String propId, ItemInfo info) {
-        if (info.containKey(propId))
+    private void put(String propId, ItemInfo info) throws JSONException {
+        if (info.containsKey(propId))
             jsonObject.put(propId, info.get(propId));
     }
 
-    private void put(String propId, Children info) {
-        if (info.containKey(propId))
-            jsonObject.put(propId, info.get(propId));
+    private void put(String propId, Children info) throws JSONException {
+        //if (info.getContent().containsKey(propId))
+        //    jsonObject.put(propId, info.getContent().get(propId));
     }
 }

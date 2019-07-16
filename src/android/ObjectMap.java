@@ -29,17 +29,14 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.ArrayList;
-import java.io.File;
+import java.util.HashMap;
 
 import org.elastos.hive.*;
-import org.elastos.hive.exceptions.HiveException;
 
 class ObjectMap<T> {
     static ObjectMap clientMap = new ClientMap();
     static ObjectMap driveMap  = new DriveMap();
-    static ObjectMap dirMap    = new DirectoryMap();
+    static ObjectMap dirMap    = new DirMap();
     static ObjectMap fileMap   = new FileMap();
 
     static final int CLIENT = 1;
@@ -53,15 +50,15 @@ class ObjectMap<T> {
         objMap = new HashMap<Integer, T>();
     }
 
-    T get(String objId) {
+    T get(Integer objId) {
         return objMap.get(objId);
     }
 
-    void put(String objId, T obj) {
-        objMap.put(objid,  obj);
+    void put(Integer objId, T obj) {
+        objMap.put(objId,  obj);
     }
 
-    static ObjectMap acquire(String mapId) {
+    static ObjectMap acquire(Integer mapId) {
         ObjectMap objMap = null;
 
         switch (mapId) {
@@ -72,7 +69,7 @@ class ObjectMap<T> {
             objMap = driveMap;
             break;
         case DIR:
-            objMap = directroyMap;
+            objMap = dirMap;
             break;
         case FILE:
             objMap = fileMap;
@@ -95,7 +92,7 @@ class ObjectMap<T> {
     }
 
     static boolean isDirMap(ObjectMap map) {
-        return (map instanceof DirectoryMap);
+        return (map instanceof DirMap);
     }
 
     static boolean isFileMap(ObjectMap map) {
@@ -110,8 +107,8 @@ class ObjectMap<T> {
         return (isDriveMap(map) ? (DriveMap)map : null);
     }
 
-    static DirectoryMap toDirMap(ObjectMap map) {
-        return (isDirMap(map) ? (DirectoryMap)map : null);
+    static DirMap toDirMap(ObjectMap map) {
+        return (isDirMap(map) ? (DirMap)map : null);
     }
 
     static FileMap toFileMap(ObjectMap map) {

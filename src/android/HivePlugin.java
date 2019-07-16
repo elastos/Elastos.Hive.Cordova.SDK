@@ -38,7 +38,9 @@
   import java.util.HashMap;
 
   import org.elastos.hive.*;
-  import org.elastos.hive.exceptions.HiveException;
+  import org.elastos.hive.Void;
+  import org.elastos.hive.File;
+  import org.elastos.hive.HiveException;
 
   /**
    * This class echoes a string called from JavaScript.
@@ -58,7 +60,7 @@
                   this.getVersion(args, callbackContext);
                   break;
 
-              case "setListener"
+              case "setListener":
                   this.setListener(args, callbackContext);
                   break;
 
@@ -95,7 +97,7 @@
                   break;
 
               case "getDir":
-                  this.getDirectroy(args, callbackContext);
+                  this.getDirectory(args, callbackContext);
                   break;
 
               case "createFile":
@@ -129,16 +131,13 @@
               default:
                   return false;
               }
-          } catch (HiveException e) {
-              String error = String.format("%s error (0x%x)", action, e.getErrorCode());
-              callbackContext.error(error);
           } catch (JSONException e) {
-              e.printStack();
+              //e.printStack();
           }
           return true;
       }
 
-      private void getVersion(CallbackContext callbackContext) throws JSONException {
+      private void getVersion(JSONArray args, CallbackContext callbackContext) throws JSONException {
           String version = "ElastosHiveSDK-v0.1";
           callbackContext.success(version);
       }
@@ -165,24 +164,18 @@
           String dataDir = args.getString(0);
           String options = args.getString(1);
 
-          File dirFile = new File(cordova.getActivity().getFilesDir() + "/data/hive" + dataDir);
+          java.io.File dirFile = new java.io.File(cordova.getActivity().getFilesDir() + "/data/hive" + dataDir);
           if (!dirFile.exists())
                dirFile.mkdirs();
 
           ObjectMap map = ObjectMap.acquire(1);
+          Client client = ClientBuilder.create(dataDir, options);
+          Integer objId = System.identityHashCode(client);
+          ObjectMap.toClientMap(map).put(objId, client);
 
-          try {
-              Client client = ClientBuilder.create(dataDir, options);
-              Integer objId = System.identityHashCode(client);
-              ObjectMap.toClientMap(map).put(objId, client);
-
-              JSONObject ret = new JSONObject();
-              ret.put("id", objId);
-              callbackContext.success(ret);
-          } catch(HiveException e) {
-              callbackContext.error("error: " + e.getMessage());
-              e.printStack();
-          }
+          JSONObject ret= new JSONObject();
+          ret.put("id", objId);
+          callbackContext.success(ret);
       }
 
       private void login(JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -203,6 +196,8 @@
                   JSONObject ret = new JSONObject();
                   ret.put("result", "success");
                   callbackContext.success(ret);
+              } catch(JSONException e) {
+                  callbackContext.error("error");
               } catch(HiveException e) {
                   callbackContext.error("error");
               }
@@ -213,25 +208,23 @@
           Integer mapId = args.getInt(0);
           Integer objId = args.getInt(1);
 
-          ObjectMap map = ObjectMap.acquire(objId);
+          ObjectMap map = ObjectMap.acquire(mapId);
           if (!ObjectMap.isClientMap(map))
               return;
 
           new Thread(() -> {
               try {
-                  ObjectMap.toClientMap(map).logout();
+                  ObjectMap.toClientMap(map).get(objId).logout();
 
                   JSONObject ret = new JSONObject();
                   ret.put("result", "success");
                   callbackContext.success(ret);
+              } catch (JSONException e) {
+                  callbackContext.error("error");
               } catch (HiveException e) {
                   callbackContext.error("error");
               }
           }).start();
-      }
-
-      private static class JSONHelper<T> {
-          void put(String key);
       }
 
       private void getLastInfo(JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -243,7 +236,7 @@
               JSONObjectHolder<Client.Info> holder;
               Client.Info info;
 
-              info = ObjectMap.toClientMap(map).get(objId).getInfo();
+              info = ObjectMap.toClientMap(map).get(objId).getLastInfo();
               if (info == null) {
                   callbackContext.error("no info");
                   return;
@@ -264,10 +257,9 @@
               JSONObjectHolder<Drive.Info> holder;
               Drive.Info info;
 
-              info = ObjectMap.toDriveMap(map).get(objId).getInfo();
+              info = ObjectMap.toDriveMap(map).get(objId).getLastInfo();
               holder = new JSONObjectHolder<Drive.Info>(info);
-              holder.put(Drive.Info.driveId)
-                    .put(Drive.Info.name);
+              holder.put(Drive.Info.driveId);
 
               callbackContext.success(holder.get());
               return;
@@ -277,7 +269,7 @@
               JSONObjectHolder<Directory.Info> holder;
               Directory.Info info;
 
-              info = ObjectMap.toDirMap(map).get(objId).getInfo();
+              info = ObjectMap.toDirMap(map).get(objId).getLastInfo();
               holder = new JSONObjectHolder<Directory.Info>(info);
               holder.put(Directory.Info.itemId)
                     .put(Directory.Info.name)
@@ -291,7 +283,7 @@
               JSONObjectHolder<File.Info> holder;
               File.Info info;
 
-              info = ObjectMap.toDirMap(map).get(objId).getInfo();
+              info = ObjectMap.toFileMap(map).get(objId).getLastInfo();
               holder = new JSONObjectHolder<File.Info>(info);
               holder.put(File.Info.itemId)
                     .put(File.Info.name)
@@ -357,7 +349,7 @@
 
           ObjectMap map = ObjectMap.acquire(mapId);
           if (ObjectMap.isDriveMap(map)) {
-              ObjectMap.toDriveMap(map).get(objId).rootDirectory(
+              ObjectMap.toDriveMap(map).get(objId).getRootDir(
                   new ResultHandler<Directory>(handlerId, resultCallbackCtxt)
               );
               return;
@@ -470,7 +462,7 @@
 
           ObjectMap map = ObjectMap.acquire(mapId);
           if (ObjectMap.isDirMap(map)) {
-              ObjectMap.toDirMap(map).get(objId).getChildren(path,
+              ObjectMap.toDirMap(map).get(objId).getChildren(
                   new ResultHandler<Children>(handlerId, resultCallbackCtxt)
               );
               return;
@@ -486,13 +478,13 @@
           ObjectMap map = ObjectMap.acquire(mapId);
           if (ObjectMap.isDirMap(map)) {
               ObjectMap.toDirMap(map).get(objId).moveTo(path,
-                  new ResultHandler<HiveVoid>(handlerId, resultCallbackCtxt)
+                  new ResultHandler<Void>(handlerId, resultCallbackCtxt)
               );
               return;
           }
           if (ObjectMap.isFileMap(map)) {
               ObjectMap.toFileMap(map).get(objId).moveTo(path,
-                  new ResultHandler<HiveVoid>(handlerId, resultCallbackCtxt)
+                  new ResultHandler<Void>(handlerId, resultCallbackCtxt)
               );
               return;
           }
@@ -507,13 +499,13 @@
           ObjectMap map = ObjectMap.acquire(mapId);
           if (ObjectMap.isDirMap(map)) {
               ObjectMap.toDirMap(map).get(objId).copyTo(path,
-                  new ResultHandler<HiveVoid>(handlerId, resultCallbackCtxt)
+                  new ResultHandler<Void>(handlerId, resultCallbackCtxt)
               );
               return;
           }
           if (ObjectMap.isFileMap(map)) {
               ObjectMap.toFileMap(map).get(objId).copyTo(path,
-                  new ResultHandler<HiveVoid>(handlerId, resultCallbackCtxt)
+                  new ResultHandler<Void>(handlerId, resultCallbackCtxt)
               );
               return;
           }
@@ -527,13 +519,13 @@
           ObjectMap map = ObjectMap.acquire(mapId);
           if (ObjectMap.isDirMap(map)) {
               ObjectMap.toDirMap(map).get(objId).deleteItem(
-                  new ResultHandler<HiveVoid>(handlerId, resultCallbackCtxt)
+                  new ResultHandler<Void>(handlerId, resultCallbackCtxt)
               );
               return;
           }
           if (ObjectMap.isFileMap(map)) {
-              ObjectMap.toFileMap(map).get(objid).deleteItem(
-                  new ResultHandler<HiveVoid>(handlerId, resultCallbackCtxt)
+              ObjectMap.toFileMap(map).get(objId).deleteItem(
+                  new ResultHandler<Void>(handlerId, resultCallbackCtxt)
               );
               return;
           }

@@ -22,16 +22,16 @@
 
 package org.elastos.trinity.plugins.hive;
 
-import android.util.Base64;
-
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import org.elastos.hive.*;
+import org.elastos.hive.Void;
+import org.elastos.hive.File;
 
-public class ResultHandler<T extends Result> implements Callback<T> {
+class ResultHandler<T extends Result> implements Callback<T> {
     private final int handlerId;
     private final CallbackContext callbackContext;
 
@@ -51,10 +51,10 @@ public class ResultHandler<T extends Result> implements Callback<T> {
     }
 
     @Override
-    void onError(HiveException e) {
+    public void onError(HiveException ex) {
         JSONObject ret = new JSONObject();
         try {
-            ret.put("error", e.getMessage());
+            ret.put("error", ex.getMessage());
             sendEvent(ret);
         } catch (JSONException e) {
             e.printStackTrace();
@@ -62,29 +62,29 @@ public class ResultHandler<T extends Result> implements Callback<T> {
     }
 
     @Override
-    void onSuccess(T body) {
+    public void onSuccess(T body) {
         JSONObject ret;
         try {
             if (body instanceof Drive) {
-                ret = driveToJson(body);
+                ret = driveToJson((Drive)body);
             } else if (body instanceof Directory) {
-                ret = directoryToJson(body);
+                ret = directoryToJson((Directory)body);
             } else if (body instanceof File) {
-                ret = fileToJson(body);
+                ret = fileToJson((File)body);
             } else if (body instanceof Client.Info) {
-                ret = clientInfoToJson(body);
+                ret = clientInfoToJson((Client.Info)body);
             } else if (body instanceof Drive.Info) {
-                ret = driveInfoToJson(body);
+                ret = driveInfoToJson((Drive.Info)body);
             } else if (body instanceof Directory.Info) {
-                ret = dirInfoToJson(body);
+                ret = dirInfoToJson((Directory.Info)body);
             } else if (body instanceof File.Info) {
-                ret = fileInfoToJson(body);
+                ret = fileInfoToJson((File.Info)body);
             } else if (body instanceof ItemInfo) {
-                ret = itemInfoToJson(body);
+                ret = itemInfoToJson((ItemInfo)body);
             } else if (body instanceof Children) {
-                ret = childrenToJson(body);
+                ret = childrenToJson((Children)body);
             } else {
-                ret = hiveVoidToJson(body);
+                ret = hiveVoidToJson((Void)body);
             }
 
             sendEvent(ret);
@@ -93,7 +93,7 @@ public class ResultHandler<T extends Result> implements Callback<T> {
         }
     }
 
-    private JSONObject driveToJson(Drive drive) {
+    private JSONObject driveToJson(Drive drive) throws JSONException {
         ObjectMap  map = ObjectMap.acquire(ObjectMap.DRIVE);
         Integer  objId = System.identityHashCode(drive);
         JSONObject ret = new JSONObject();
@@ -103,17 +103,17 @@ public class ResultHandler<T extends Result> implements Callback<T> {
         return ret;
     }
 
-    private JSONObject directoryToJson(Directory directory) {
+    private JSONObject directoryToJson(Directory directory) throws JSONException {
         ObjectMap  map = ObjectMap.acquire(ObjectMap.DIR);
         Integer  objId = System.identityHashCode(directory);
         JSONObject ret = new JSONObject();
 
-        ObjectMap.toDriveMap(map).put(objId, directory);
+        ObjectMap.toDirMap(map).put(objId, directory);
         ret.put("id", objId);
         return ret;
     }
 
-    private JSONObject fileToJson(File file) {
+    private JSONObject fileToJson(File file) throws JSONException {
         ObjectMap  map = ObjectMap.acquire(ObjectMap.FILE);
         Integer  objId = System.identityHashCode(file);
         JSONObject ret = new JSONObject();
@@ -123,7 +123,7 @@ public class ResultHandler<T extends Result> implements Callback<T> {
         return ret;
     }
 
-    private JSONObject clientInfoToJson(Client.Info info) {
+    private JSONObject clientInfoToJson(Client.Info info) throws JSONException {
         JSONObjectHolder<Client.Info> holder;
 
         holder = new JSONObjectHolder<Client.Info>(info);
@@ -136,17 +136,16 @@ public class ResultHandler<T extends Result> implements Callback<T> {
         return holder.get();
     }
 
-    private JSONObject driveInfoToJson(Drive.Info info) {
+    private JSONObject driveInfoToJson(Drive.Info info) throws JSONException {
         JSONObjectHolder<Drive.Info> holder;
 
         holder = new JSONObjectHolder<Drive.Info>(info);
-        holder.put(Drive.Info.driveId)
-              .put(Drive.Info.name);
+        holder.put(Drive.Info.driveId);
 
         return holder.get();
     }
 
-    private JSONObject dirInfoToJson(Directory.Info info) {
+    private JSONObject dirInfoToJson(Directory.Info info) throws JSONException {
         JSONObjectHolder<Directory.Info> holder;
 
         holder = new JSONObjectHolder<Directory.Info>(info);
@@ -157,7 +156,7 @@ public class ResultHandler<T extends Result> implements Callback<T> {
         return holder.get();
     }
 
-    private JSONObject fileInfoToJson(File.Info info) {
+    private JSONObject fileInfoToJson(File.Info info) throws JSONException {
         JSONObjectHolder<File.Info> holder;
 
         holder = new JSONObjectHolder<File.Info>(info);
@@ -168,15 +167,18 @@ public class ResultHandler<T extends Result> implements Callback<T> {
         return holder.get();
     }
 
-    private JSONObject itemInfoToJson(ItemInfo info) {
+    private JSONObject itemInfoToJson(ItemInfo info) throws JSONException {
         // TODO;
+        return null;
     }
 
-    private JSONObject childrenToJson(Children info) {
+    private JSONObject childrenToJson(Children info) throws JSONException {
         // TODO;
+        return null;
     }
 
-    private JSONObject hiveVoidToJson(HiveVoid padding) {
+    private JSONObject hiveVoidToJson(Void padding) throws JSONException {
         // TODO;
+        return null;
     }
 }
