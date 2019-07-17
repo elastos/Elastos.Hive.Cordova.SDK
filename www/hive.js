@@ -160,7 +160,7 @@ function Client() {
 };
 
 Client.prototype = {
-    constructor: Client;
+    constructor: Client,
 
     getLastInfo: function(onSuccess, onError) {
         exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.CLAZZ, this.objId]);
@@ -247,7 +247,7 @@ function HivePlugin() {
     },
 
     this.getPromise = async function(object, method, args) {
-        var onResult: function(ret) {
+        var onResult = function(ret) {
             if (null != ret.object)
                 Promise.resolve(ret.object);
             if (null != ret.error)
