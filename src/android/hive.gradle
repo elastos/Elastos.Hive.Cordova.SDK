@@ -25,6 +25,9 @@ repositories {
     flatDir{
         dirs 'src/main/libs'
     }
+    maven{
+        url 'https://dl.bintray.com/elastostest/maven'
+    }
 }
 
 dependencies {
