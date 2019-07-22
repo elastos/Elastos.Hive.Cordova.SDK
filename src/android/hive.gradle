@@ -31,5 +31,5 @@ repositories {
 }
 
 dependencies {
-    implementation(name: 'ElastosHiveSDK-0.1.0', ext:'jar')
+    implementation 'org.elastos:hivesdk:0.1.0'
 }
