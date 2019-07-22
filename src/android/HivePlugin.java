@@ -187,21 +187,21 @@
           if (!ObjectMap.isClientMap(map))
               return;
 
+          JSONObject ret = new JSONObject();
           new Thread(() -> {
               try {
                   ObjectMap.toClientMap(map).get(objId).login(
                       new LoginHandler(handlerId, loginCallbackCtxt)
                   );
 
-                  JSONObject ret = new JSONObject();
                   ret.put("result", "success");
-                  callbackContext.success(ret);
               } catch(JSONException e) {
                   callbackContext.error("error");
               } catch(HiveException e) {
                   callbackContext.error("error");
               }
           }).start();
+          callbackContext.success(ret);
       }
 
       private void logout(JSONArray args, CallbackContext callbackContext) throws JSONException {

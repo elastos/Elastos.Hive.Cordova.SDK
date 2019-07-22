@@ -25,8 +25,8 @@ var exec = require('cordova/exec');
 function File() {
     this.objId  = null;
     this.plugin = null;
+    this.clazz  = 4;
 
-    const CLAZZ = 4;
     //TODO;
 }
 
@@ -34,7 +34,7 @@ File.prototype = {
     onstructor: File,
 
     getLastInfo: function() {
-        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.CLAZZ, this.objId]);
+        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
     },
 
     getInfo: function()  {
@@ -57,8 +57,7 @@ File.prototype = {
 function Directory() {
     this.objId  = null;
     this.plugin = null;
-
-    const CLAZZ = 3;
+    this.clazz  = 3;
     //TODO
 }
 
@@ -66,7 +65,7 @@ Directory.prototype = {
     onstructor: Directory,
 
     getLastInfo: function(onSuccess, onError) {
-        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.CLAZZ, this.objId]);
+        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
     },
 
     getInfo: function() {
@@ -109,8 +108,7 @@ Directory.prototype = {
 function Drive() {
     this.objId  = null;
     this.plugin = null;
-
-    const CLAZZ = 2;
+    this.clazz  = 2;
 
     // TODO
 }
@@ -119,7 +117,7 @@ Drive.prototype = {
     onstructor: Drive,
 
     getLastInfo: function(onSuccess, onError) {
-        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.CLAZZ, this.objId]);
+        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
     },
 
     getInfo: function() {
@@ -154,28 +152,24 @@ Drive.prototype = {
 function Client() {
     this.objId  = null;
     this.plugin = null;
-
-    const CLAZZ = 1;
+    this.clazz  = 1;
     // TODO
 }
 
 Client.prototype = {
     constructor: Client,
 
-    getLastInfo: function(onSuccess, onError) {
-        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.CLAZZ, this.objId]);
-    },
-
     login: function(onSuccess, onError, handler) {
-        var args = [
-          this.objId,
-          this.plugin.addLoginRequestCb(handler)
-        ];
-        exec(onSuccess, onError, 'HivePlugin', 'login', args);
+        var handlerId = this.plugin.addLoginRequestCb(handler);
+        exec(onSuccess, onError, 'HivePlugin', 'login', [this.clazz, this.objId, handlerId]);
     },
 
     logout: function(onSuccess, onError) {
         exec(onSuccess, onError, 'HivePlugin', 'logout', [this.objId]);
+    },
+
+    getLastInfo: function(onSuccess, onError) {
+        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.CLAZZ, this.objId]);
     },
 
     getInfo: function() {
@@ -183,7 +177,14 @@ Client.prototype = {
     },
 
     getDefaultDrive: function() {
-        return this.plugin.getPromise(this, 'getDefDrive', []);
+        return this.plugin.getPromise(this, 'getDefDrive', []).then(
+            function (ret) {
+                var drive = new Drive();
+                drive.objId = ret.id;
+                drive.plugin = this.plugin;
+                return drive;
+            }
+        );
     },
 }
 
@@ -219,20 +220,27 @@ function HivePlugin() {
     var me = this;
 
     this.addLoginRequestCb = function(callback) {
-        // TODO;
+        var eventcb = new Object();
+        eventcb.callback = callback;
+
+        me.loginevent = eventcb;
+        return 0;
     },
 
     this.onLoginRequest = function(event) {
-        // TODO;
+        var id = event.id;
+        if (id == 0) {
+            me.loginevent.callback(event.url);
+        }
     },
 
     this.addResultEventCb = function(callback, object) {
-        var eventCb = new Object;
-        eventCb.callback = callback;
-        eventCb.object = object;
+        var eventcb = new Object;
+        eventcb.callback = callback;
+        eventcb.object = object;
 
         me.resultIndex++;
-        me.resultEvent[me.resultIndex] = eventCb;
+        me.resultEvent[me.resultIndex] = eventcb;
         return me.resultIndex;
     },
 
@@ -255,7 +263,7 @@ function HivePlugin() {
         };
 
         var _args = [
-          client.CLAZZ,
+          client.clazz,
           client.objId,
           this.addResultEventCb(onResult, object),
         ];
