@@ -28,7 +28,7 @@ function File() {
 
     const CLAZZ = 4;
     //TODO;
-};
+}
 
 File.prototype = {
     onstructor: File,
@@ -52,7 +52,7 @@ File.prototype = {
     deleteItem: function() {
         return this.plugin.getPromise(this, 'deleteItem', []);
     },
-};
+}
 
 function Directory() {
     this.objId  = null;
@@ -60,7 +60,7 @@ function Directory() {
 
     const CLAZZ = 3;
     //TODO
-};
+}
 
 Directory.prototype = {
     onstructor: Directory,
@@ -104,7 +104,7 @@ Directory.prototype = {
     deleteItem: function() {
         return this.plugin.getPromise(this, 'deleteItem', []);
     },
-};
+}
 
 function Drive() {
     this.objId  = null;
@@ -113,7 +113,7 @@ function Drive() {
     const CLAZZ = 2;
 
     // TODO
-};
+}
 
 Drive.prototype = {
     onstructor: Drive,
@@ -149,7 +149,7 @@ Drive.prototype = {
     getItemInfo: function(path) {
         return this.plugin.getPromise(this, 'getItemInfo', [path]);
     },
-};
+}
 
 function Client() {
     this.objId  = null;
@@ -157,7 +157,7 @@ function Client() {
 
     const CLAZZ = 1;
     // TODO
-};
+}
 
 Client.prototype = {
     constructor: Client,
@@ -185,7 +185,7 @@ Client.prototype = {
     getDefaultDrive: function() {
         return this.plugin.getPromise(this, 'getDefDrive', []);
     },
-};
+}
 
 function HivePlugin() {
     this.clients = [];
@@ -265,7 +265,7 @@ function HivePlugin() {
 
     this.setListener(LISTENER_LOGIN,  this.onLoginRequest);
     this.setListener(LISTENER_RESULT, this.onResultEvent);
-};
+}
 
 HivePlugin.prototype = {
     constructor: HivePlugin,
@@ -279,7 +279,7 @@ HivePlugin.prototype = {
     },
 
     createClient: function(onSuccess, onError, options) {
-        var client = Client();
+        var client = new Client();
         var me = this;
 
         var _onSuccess = function(ret) {
@@ -300,6 +300,6 @@ HivePlugin.prototype = {
         var configStr = JSON.stringify(options);
         exec(_onSuccess, onError, 'HivePlugin', 'createClient', ["im", configStr]);
     },
-};
+}
 
 module.exports = new HivePlugin();
