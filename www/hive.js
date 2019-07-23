@@ -176,7 +176,7 @@ Client.prototype = {
         return this.plugin.getPromise(this, 'getInfo', []);
     },
 
-    getDefaultDrive: function() {
+    getDefDrive: function() {
         return this.plugin.getPromise(this, 'getDefDrive', []).then(
             function (ret) {
                 var drive = new Drive();
@@ -254,21 +254,23 @@ function HivePlugin() {
         }
     },
 
-    this.getPromise = async function(object, method, args) {
-        var onResult = function(ret) {
-            if (null == ret.error)
-                Promise.resolve(ret);
-            else
-                Promise.reject(ret.error);
-        };
+    this.getPromise = function(object, method, args) {
+        return new Promise(function(resolve, reject) {
+            var onResult = function(ret) {
+                if (null == ret.error)
+                    resolve(ret);
+                else
+                    reject(ret.error);
+            };
 
-        var _args = [
-          client.clazz,
-          client.objId,
-          this.addResultEventCb(onResult, object),
-        ];
+            var _args = [
+                client.clazz,
+                client.objId,
+                me.addResultEventCb(onResult, object),
+            ];
 
-        exec(null, null, 'HivePlugin', method, _args.concat(args));
+            exec(null, null, 'HivePlugin', method, _args.concat(args));
+        });
     },
 
     this.setListener(LISTENER_LOGIN,  this.onLoginRequest);
