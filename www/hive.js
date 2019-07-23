@@ -165,11 +165,11 @@ Client.prototype = {
     },
 
     logout: function(onSuccess, onError) {
-        exec(onSuccess, onError, 'HivePlugin', 'logout', [this.objId]);
+        exec(onSuccess, onError, 'HivePlugin', 'logout', [this.clazz, this.objId]);
     },
 
     getLastInfo: function(onSuccess, onError) {
-        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.CLAZZ, this.objId]);
+        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
     },
 
     getInfo: function() {
@@ -245,8 +245,8 @@ function HivePlugin() {
     },
 
     this.onResultEvent = function(event) {
-        var id = event.id;
-        event.id = null;
+        var id = event.hid;
+        event.hid = null;
 
         if (me.resultEvent[id].callback)  {
             client = me.resultEvent[id].object;
@@ -256,9 +256,9 @@ function HivePlugin() {
 
     this.getPromise = async function(object, method, args) {
         var onResult = function(ret) {
-            if (null != ret.object)
-                Promise.resolve(ret.object);
-            if (null != ret.error)
+            if (null == ret.error)
+                Promise.resolve(ret);
+            else
                 Promise.reject(ret.error);
         };
 

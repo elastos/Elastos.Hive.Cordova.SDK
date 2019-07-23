@@ -41,9 +41,8 @@ class ResultHandler<T extends Result> implements Callback<T> {
     }
 
     private void sendEvent(JSONObject info) throws JSONException {
-        info.put("id", handlerId);
-
-        if (callbackContext != null) {
+    if (callbackContext != null) {
+            info.put("hid", handlerId);
             PluginResult res = new PluginResult(PluginResult.Status.OK, info);
             res.setKeepCallback(true);
             callbackContext.sendPluginResult(res);
@@ -52,8 +51,8 @@ class ResultHandler<T extends Result> implements Callback<T> {
 
     @Override
     public void onError(HiveException ex) {
-        JSONObject ret = new JSONObject();
         try {
+            JSONObject ret = new JSONObject();
             ret.put("error", ex.getMessage());
             sendEvent(ret);
         } catch (JSONException e) {
