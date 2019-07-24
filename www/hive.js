@@ -26,8 +26,6 @@ function File() {
     this.objId  = null;
     this.plugin = null;
     this.clazz  = 4;
-
-    //TODO;
 }
 
 File.prototype = {
@@ -58,7 +56,6 @@ function Directory() {
     this.objId  = null;
     this.plugin = null;
     this.clazz  = 3;
-    //TODO
 }
 
 Directory.prototype = {
@@ -73,19 +70,51 @@ Directory.prototype = {
     },
 
     createDirectory: function(name) {
-        return this.plugin.getPromise(this, 'createDir', [name]);
+        var plugin = this.plugin;
+        return this.plugin.getPromise(this, 'createDir', [name]).then(
+            function(ret) {
+                var directory = new Directory();
+                directory.objId = ret.id;
+                directory.plugin  = plugin;
+                return directory;
+            }
+        );
     },
 
     getDirectory: function(name) {
-        return this.plugin.getPromise(this, 'getDir', [name]);
+        var plugin = this.plugin;
+        return this.plugin.getPromise(this, 'getDir', [name]).then(
+            function(ret) {
+                var directory = new Directory();
+                directory.objId = ret.id;
+                directory.plugin  = plugin;
+                return directory;
+            }
+        );
     },
 
     createFile: function(name) {
-        return this.plugin.getPromise(this, 'createFile', [name]);
+        var plugin = this.plugin;
+        return this.plugin.getPromise(this, 'createFile', [name]).then(
+            function(ret) {
+                var file = new File();
+                file.objId = ret.id;
+                file.plugin = plugin;
+                return file;
+            }
+        );
     },
 
     getFile: function(name) {
-        return this.plugin.getPromise(this, 'getFile', [name]);
+        var plguin = this.plugin;
+        return this.plugin.getPromise(this, 'getFile', [name]).then(
+            function(ret) {
+                var file = new File();
+                file.objId = ret.id;
+                file.plugin = plugin;
+                return file;
+            }
+        );
     },
 
     getChildren: function() {
@@ -109,8 +138,6 @@ function Drive() {
     this.objId  = null;
     this.plugin = null;
     this.clazz  = 2;
-
-    // TODO
 }
 
 Drive.prototype = {
@@ -125,23 +152,63 @@ Drive.prototype = {
     },
 
     rootDirctory: function() {
-        return this.plugin.getPromise(this, 'rootDir', []);
+        var plugin = this.plugin;
+        return this.plugin.getPromise(this, 'rootDir', []).then(
+            function(ret) {
+                var directory = new Directory();
+                directory.objId = ret.id;
+                directory.plugin  = plugin;
+                return directory;
+            }
+        );
     },
 
     createDirectory: function(path) {
-        return this.plugin.getPromise(this, 'createDir', [path]);
+        var plugin = this.plugin;
+        return this.plugin.getPromise(this, 'createDir', [path]).then(
+            function(ret) {
+                var directory = new Directory();
+                directory.objId = ret.id;
+                directory.plugin  = plugin;
+                return directory;
+            }
+        );
     },
 
     getDirectory: function(path) {
-        return this.plugin.getPromise(this, 'getDir', [path]);
+        var plugin = this.plugin;
+        return this.plugin.getPromise(this, 'getDir', [path]).then(
+            function(ret) {
+                var directory = new Directory();
+                directory.objId = ret.id;
+                directory.plugin  = plugin;
+                return directory;
+            }
+        );
     },
 
     createFile: function(path) {
-        return this.plugin.getPromise(this, 'createFile', [path]);
+        var plugin = this.plugin;
+        return this.plugin.getPromise(this, 'createFile', [path]).then(
+            function(ret) {
+                var file = new File();
+                file.objId = ret.id;
+                file.plugin = plugin;
+                return file;
+            }
+        );
     },
 
     getFile: function(path) {
-        return this.plugin.getPromise(this, 'getFile', [path]);
+        var plguin = this.plugin;
+        return this.plugin.getPromise(this, 'getFile', [path]).then(
+            function(ret) {
+                var file = new File();
+                file.objId = ret.id;
+                file.plugin = plugin;
+                return file;
+            }
+        );
     },
 
     getItemInfo: function(path) {
@@ -153,7 +220,6 @@ function Client() {
     this.objId  = null;
     this.plugin = null;
     this.clazz  = 1;
-    // TODO
 }
 
 Client.prototype = {
@@ -177,11 +243,12 @@ Client.prototype = {
     },
 
     getDefDrive: function() {
+        var plugin = this.plugin;
         return this.plugin.getPromise(this, 'getDefDrive', []).then(
             function (ret) {
                 var drive = new Drive();
                 drive.objId = ret.id;
-                drive.plugin = this.plugin;
+                drive.plugin = plugin;
                 return drive;
             }
         );
@@ -204,8 +271,6 @@ function HivePlugin() {
 
     const LISTENER_LOGIN  = 1;
     const LISTENER_RESULT = 2;
-
-    // TODO
 
     Object.freeze(HivePlugin.prototype);
     Object.freeze(Client.prototype);
