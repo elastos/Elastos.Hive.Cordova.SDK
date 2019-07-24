@@ -314,7 +314,6 @@ function HivePlugin() {
         event.hid = null;
 
         if (me.resultEvent[id].callback)  {
-            client = me.resultEvent[id].object;
             me.resultEvent[id].callback(event);
         }
     },
@@ -329,8 +328,8 @@ function HivePlugin() {
             };
 
             var _args = [
-                client.clazz,
-                client.objId,
+                object.clazz,
+                object.objId,
                 me.addResultEventCb(onResult, object),
             ];
 
