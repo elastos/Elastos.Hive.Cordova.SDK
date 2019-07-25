@@ -121,7 +121,7 @@
                   break;
 
               case "copyTo":
-                  this.moveTo(args, callbackContext);
+                  this.copyTo(args, callbackContext);
                   break;
 
               case "deleteItem":
