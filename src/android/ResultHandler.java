@@ -86,7 +86,7 @@ class ResultHandler<T extends Result> implements Callback<T> {
                 ret = hiveVoidToJson((Void)body);
             }
 
-            sendEvent(ret);
+            if (ret != null) sendEvent(ret);
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -167,8 +167,15 @@ class ResultHandler<T extends Result> implements Callback<T> {
     }
 
     private JSONObject itemInfoToJson(ItemInfo info) throws JSONException {
-        // TODO;
-        return null;
+        JSONObjectHolder<ItemInfo> holder;
+
+        holder = new JSONObjectHolder<ItemInfo>(info);
+        holder.put(ItemInfo.itemId)
+                .put(ItemInfo.name)
+                .put(ItemInfo.type)
+                .put(ItemInfo.size);
+
+        return holder.get();
     }
 
     private JSONObject childrenToJson(Children info) throws JSONException {

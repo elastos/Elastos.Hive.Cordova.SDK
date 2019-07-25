@@ -105,7 +105,7 @@
                   break;
 
               case "getFile":
-                  this.createFile(args, callbackContext);
+                  this.getFile(args, callbackContext);
                   break;
 
               case "getItemInfo":

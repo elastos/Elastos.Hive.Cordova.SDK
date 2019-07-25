@@ -31,7 +31,7 @@ function File() {
 File.prototype = {
     onstructor: File,
 
-    getLastInfo: function() {
+    getLastInfo: function(onSuccess, onError) {
         exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
     },
 
@@ -106,7 +106,7 @@ Directory.prototype = {
     },
 
     getFile: function(name) {
-        var plguin = this.plugin;
+        var plugin = this.plugin;
         return this.plugin.getPromise(this, 'getFile', [name]).then(
             function(ret) {
                 var file = new File();
@@ -200,7 +200,7 @@ Drive.prototype = {
     },
 
     getFile: function(path) {
-        var plguin = this.plugin;
+        var plugin = this.plugin;
         return this.plugin.getPromise(this, 'getFile', [path]).then(
             function(ret) {
                 var file = new File();
