@@ -30,7 +30,6 @@
         <source-file src="src/android/ResultHandler.java" target-dir="src/org/elastos/trinity/plugins/hive" />
         <source-file src="src/android/ObjectMap.java" target-dir="src/org/elastos/trinity/plugins/hive" />
         <framework src="src/android/hive.gradle" custom="true" type="gradleReference"/>
-        <resource-file src="src/android/libs/ElastosHiveSDK-0.1.0.jar" target="libs/ElastosHiveSDK-0.1.0.jar"/>
 	</platform>
         <platform name="ios">
         <config-file target="config.xml" parent="/*">

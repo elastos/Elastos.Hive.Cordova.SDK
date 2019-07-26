@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/stiartsly/Elastos.Trinity.Plugins.Hive.git"
+    "url": "git+https://github.com/elastos/Elastos.Trinity.Plugins.Hive.git"
   },
   "keywords": [
     "cordova",
