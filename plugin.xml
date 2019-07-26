@@ -39,8 +39,13 @@
         </config-file>
         <!-- <dependency id="cordova-plugin-add-swift-support" version="1.7.2"/> -->
         <source-file src="src/ios/HivePlugin.swift" />
-        <!-- <framework src="src/ios/libs/ElastosHiveSDK.framework" custom="true" /> -->
-        <!-- <source-file src="src/ios/libs/ElastosHive.framework" target-dir="src/libs" framework="true" /> -->
+        <source-file src="src/ios/ClientBuilder.swift" />
+        <source-file src="src/ios/LoginHandler.swift" />
+        <source-file src="src/ios/ResultHandler.swift" />
+        <source-file src="src/ios/ObjectMap.swift" />
+        <source-file src="src/ios/DictionaryHolder.swift" />
+        <framework src="src/ios/libs/ElastosHiveSDK.framework" custom="true" />
+        <!--<source-file src="src/ios/libs/ElastosHive.framework" target-dir="src/libs" framework="true" />-->
     </platform>
 </plugin>
 

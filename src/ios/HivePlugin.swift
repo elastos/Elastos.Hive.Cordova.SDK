@@ -23,37 +23,19 @@
 import Foundation
 import ElastosHiveSDK
 
-typealias Client    = ElastosHiveSDK.Client
-typealias Drive     = ElastosHiveSDK.Drive
-typealias Directory = ElastosHiveSDK.Directory
-typealias File      = ElastosHiveSDK.File
-
 @objc(HivePlugin)
 class HivePlugin : TrinityPlugin {
+    internal static let LOGIN : Int = 1
+    internal static let RESULT: Int = 2
 
-    //        let test = Test()
+    internal var loginCallbackId:  String = ""
+    internal var resultCallbackId: String = ""
 
-    let OK        = 0
-    let CLIENT    = 1
-    let DRIVE     = 2
-    let DIRECTORY = 3
-    let FILE      = 4
-
-    var mClientDict    = [Int: Client]()
-    var mDriveDict     = [Int: Drive]()
-    var mDirectoryDict = [Int: Directory]()
-    var mFileDict      = [Int: File]()
+    internal var count: Int = 1
 
     var callbackId: String = ""
 
-    var count: Int = 1;
-
-    //    override init() {
-    //        super.init();
-    //    }
-
     @objc func initVal(_ command: CDVInvokedUrlCommand) {
-
     }
 
     @objc func success(_ command: CDVInvokedUrlCommand, retAsString: String) {
@@ -85,11 +67,12 @@ class HivePlugin : TrinityPlugin {
         let type = command.arguments[0] as? Int ?? 0
 
         switch (type) {
-        case CLIENT:
-        case DRIVE:
-        case DIRECTORY:
-        case FILE
-            callbackId = command.callbackId
+        case HivePlugin.LOGIN:
+            loginCallbackId = command.callbackId
+
+        case HivePlugin.RESULT:
+            resultCallbackId = command.callbackId
+
         default:
             self.error(command, retAsString: "Expected one non-empty let argument.")
         }
@@ -100,77 +83,135 @@ class HivePlugin : TrinityPlugin {
         self.commandDelegate.send(result, callbackId: command.callbackId)
     }
 
-    @objc func createObject(_ command: CDVInvokedUrlCommand) {
-        // TODO
+    @objc func createClient(_ command: CDVInvokedUrlCommand) {
+        let dataDir = command.arguments[0] as? String ?? ""
+        let options = command.arguments[1] as? String ?? ""
+
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(1)
+        let client: HiveClientHandle? = ClientBuilder.createClient(dataDir, options)
+        guard client != nil else {
+            self.error(command, retAsString: "Client create error")
+            return
+        }
+
+        let objId: Int = count
+        ObjectMap.asClientMap(map).put(objId, client!)
+        count += 1
+
+        let ret: NSDictionary = [ "id": objId ]
+        self.success(command, retAsDict: ret);
+    }
+
+    @objc func login(_ command: CDVInvokedUrlCommand) {
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
+
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(mapId)
+        guard ObjectMap.isClientMap(map) else {
+            return
+        }
+
+        let backgroundQueue = DispatchQueue(label: "org.elastos.hive.queue",
+                                            qos: .background, target: nil)
+        backgroundQueue.async {
+            var ret = Dictionary<String, Any>()
+
+            _ = try! ObjectMap.asClientMap(map).get(objId).login(
+                LoginHandler(hdrId, self.loginCallbackId, self.commandDelegate)
+            )
+
+            ret["result"] = "success"
+            self.success(command, retAsDict: ret as NSDictionary);
+        }
+    }
+
+    @objc func logout(_ command: CDVInvokedUrlCommand) {
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(mapId)
+        guard ObjectMap.isClientMap(map) else {
+            return
+        }
+
+        let backgroundQueue = DispatchQueue(label: "org.elastos.hive.queue",
+                                            qos: .background, target: nil)
+        backgroundQueue.async {
+            var ret = Dictionary<String, Any>()
+
+            _ = try! ObjectMap.asClientMap(map).get(objId).logout()
+
+            ret["result"] = "success"
+            self.success(command, retAsDict: ret as NSDictionary);
+        }
     }
 
     @objc func getLastInfo(_ command: CDVInvokedUrlCommand) {
         let mapId = command.arguments[0] as? Int ?? 0
         let objId = command.arguments[1] as? Int ?? 0
 
-        let map: ObjectMap = ObjectMap.acquire(mapId)
-          if (ObjectMap.isClientMap(map)) {
-              JSONObjectHolder<Client.Info> holder;
-              Client.Info info;
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(mapId)
+        if (ObjectMap.isClientMap(map)) {
+            var holder: DictionaryHolder<HiveClientInfo>
+            var info: HiveClientInfo?
 
-              info = ObjectMap.toClientMap(map).get(objId).getInfo();
-              if (info == null) {
-                  callbackContext.error("no info");
-                  return;
-              }
+            info = ObjectMap.asClientMap(map).get(objId).lastInfo
+            if (info == nil) {
+                self.error(command, retAsString: "Expected one non-empty let argument.")
+                return
+            }
 
-              holder = new JSONObjectHolder<Client.Info>(info);
-              holder.put(Client.Info.userId)
-                    .put(Client.Info.name)
-                    .put(Client.Info.email)
-                    .put(Client.Info.phoneNo)
-                    .put(Client.Info.region);
+            holder = DictionaryHolder<HiveClientInfo>(info!)
+            _ = holder.put(HiveClientInfo.userId)
+                .put(HiveClientInfo.name)
+                .put(HiveClientInfo.email)
+                .put(HiveClientInfo.phoneNo)
+                .put(HiveClientInfo.region)
 
-              callbackContext.success(holder.get());
-              return;
-          }
+            self.success(command, retAsDict: holder.get() as NSDictionary)
+            return;
+        }
 
-          if (ObjectMap.isDriveMap(map)) {
-              JSONObjectHolder<Drive.Info> holder;
-              Drive.Info info;
+        if (ObjectMap.isDriveMap(map)) {
+            var holder: DictionaryHolder<HiveDriveInfo>
+            var info: HiveDriveInfo
 
-              info = ObjectMap.toDriveMap(map).get(objId).getInfo();
-              holder = new JSONObjectHolder<Drive.Info>(info);
-              holder.put(Drive.Info.driveId)
-                    .put(Drive.Info.name);
+            info = ObjectMap.asDriveMap(map).get(objId).lastInfo
+            holder = DictionaryHolder<HiveDriveInfo>(info)
+            _ = holder.put(HiveDriveInfo.driveId)
 
-              callbackContext.success(holder.get());
-              return;
-          }
+            self.success(command, retAsDict: holder.get() as NSDictionary)
+            return;
+        }
 
-          if (ObjectMap.isDirMap(map)) {
-              JSONObjectHolder<Directory.Info> holder;
-              Directory.Info info;
+        if (ObjectMap.isDirMap(map)) {
+            var holder: DictionaryHolder<HiveDirectoryInfo>
+            var info: HiveDirectoryInfo
 
-              info = ObjectMap.toDirMap(map).get(objId).getInfo();
-              holder = new JSONObjectHolder<Directory.Info>(info);
-              holder.put(Directory.Info.itemId)
-                    .put(Directory.Info.name)
-                    .put(Directory.Info.childCount);
+            info = ObjectMap.asDirMap(map).get(objId).lastInfo!
+            holder = DictionaryHolder<HiveDirectoryInfo>(info)
+            _ =  holder.put(HiveDirectoryInfo.itemId)
+                .put(HiveDirectoryInfo.name)
+                .put(HiveDirectoryInfo.childCount)
 
-              callbackContext.success(holder.get());
-              return;
-          }
+            self.success(command, retAsDict: holder.get() as NSDictionary)
+            return;
+        }
 
-          if (ObjectMap.isFileMap(map)) {
-              JSONObjectHolder<File.Info> holder;
-              File.Info info;
+        if (ObjectMap.isFileMap(map)) {
+            var holder: DictionaryHolder<HiveFileInfo>
+            var info: HiveFileInfo
 
-              info = ObjectMap.toDirMap(map).get(objId).getInfo();
-              holder = new JSONObjectHolder<File.Info>(info);
-              holder.put(File.Info.itemId)
-                    .put(File.Info.name)
-                    .put(File.Info.size);
+            info = ObjectMap.asFileMap(map).get(objId).lastInfo!
+            holder = DictionaryHolder<HiveFileInfo>(info)
+            _ = holder.put(HiveFileInfo.itemId)
+                .put(HiveFileInfo.name)
+                .put(HiveFileInfo.size)
 
-              callbackContext.success(holder.get());
-              return;
-          }
-        // TODO
+            self.success(command, retAsDict: holder.get() as NSDictionary)
+            return;
+        }
     }
 
     @objc func getInfo(_ command: CDVInvokedUrlCommand) {
@@ -178,31 +219,31 @@ class HivePlugin : TrinityPlugin {
         let objId = command.arguments[1] as? Int ?? 0
         let hdrId = command.arguments[2] as? Int ?? 0
 
-        let map: ObjectMap = ObjectMap.acquire(mapId)
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(mapId)
         if (ObjectMap.isClientMap(map)) {
-            ObjectMap.toClientMap(map).get(objId).lastUpdatedInfo(
-                handleBy: ResultHandler<Client.Info>(handlerId, resultCallbackCtxt)
+            _ = ObjectMap.asClientMap(map).get(objId).lastUpdatedInfo(
+                handleBy: ResultHandler<HiveClientInfo>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
 
         if (ObjectMap.isDriveMap(map)) {
-            ObjectMap.toDriveMap(map).get(objId).lastUpdatedInfo(
-                handleBy: ResultHandler<Drive.Info>(handlerId, resultCallbackCtxt)
+            _ = ObjectMap.asDriveMap(map).get(objId).lastUpdatedInfo(
+                handleBy: ResultHandler<HiveDriveInfo>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
 
         if (ObjectMap.isDirMap(map)) {
-            ObjectMap.toDirMap(map).get(objId).lastUpdatedInfo(
-                handleBy: ResultHandler<Directory.Info>(handlerId, resultCallbackCtxt)
+            _ = ObjectMap.asDirMap(map).get(objId).lastUpdatedInfo(
+                handleBy: ResultHandler<HiveDirectoryInfo>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
 
         if (ObjectMap.isFileMap(map)) {
-            ObjectMap.toFileMap(map).get(objId).lastUpdatedInfo(
-                handleBy: ResultHandler<File.Info>(handlerId, resultCallbackCtxt)
+            _ = ObjectMap.asFileMap(map).get(objId).lastUpdatedInfo(
+                handleBy: ResultHandler<HiveFileInfo>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
         }
     }
@@ -212,10 +253,10 @@ class HivePlugin : TrinityPlugin {
         let objId = command.arguments[1] as? Int ?? 0
         let hdrId = command.arguments[2] as? Int ?? 0
 
-        let map: ObjectMap = ObjectMap.acquire(mapId)
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(mapId)
         if (ObjectMap.isClientMap(map)) {
-            ObjectMap.toClientMap(map).get(objId).getDefaultDrive(
-                ResultHandler<HiveDriveHandle>(hdrId, resultCallback)
+            _ = ObjectMap.asClientMap(map).get(objId).defaultDriveHandle(
+                handleBy: ResultHandler<HiveDriveHandle>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
@@ -226,10 +267,10 @@ class HivePlugin : TrinityPlugin {
         let objId = command.arguments[1] as? Int ?? 0
         let hdrId = command.arguments[2] as? Int ?? 0
 
-        let map: ObjectMap = ObjectMap.acquire(mapId)
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(mapId)
         if (ObjectMap.isDriveMap(map)) {
-            ObjectMap.toDriveMap(map).get(objId).rootDirectoryHandle(
-                ResultHandler<HiveDirectoryHandle>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asDriveMap(map).get(objId).rootDirectoryHandle(
+                handleBy: ResultHandler<HiveDirectoryHandle>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
@@ -239,17 +280,18 @@ class HivePlugin : TrinityPlugin {
         let mapId = command.arguments[0] as? Int ?? 0
         let objId = command.arguments[1] as? Int ?? 0
         let hdrId = command.arguments[2] as? Int ?? 0
+        let path  = command.arguments[3] as? String ?? ""
 
-        let map: ObjectMap = ObjectMap.acquire(mapId)
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(mapId)
         if (ObjectMap.isDriveMap(map)) {
-            ObjectMap.toDriveMap(map).get(objId).createDirectory(withPath: path,
-                handleBy: ResultHandler<HiveDirectoryHandle>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asDriveMap(map).get(objId).createDirectory(withPath: path,
+                handleBy: ResultHandler<HiveDirectoryHandle>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
         if (ObjectMap.isDirMap(map)) {
-            ObjectMap.toDirMap(map).get(objId).createDirectory(path,
-                ResultHandler<HiveDirectoryHandle>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asDirMap(map).get(objId).createDirectory(withName: path,
+                handleBy: ResultHandler<HiveDirectoryHandle>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
@@ -259,18 +301,18 @@ class HivePlugin : TrinityPlugin {
         let mapId = command.arguments[0] as? Int ?? 0
         let objId = command.arguments[1] as? Int ?? 0
         let hdrId = command.arguments[2] as? Int ?? 0
-        let  path = command.arguments[3] as? String ?? null
+        let  path = command.arguments[3] as? String ?? ""
 
-        let map: ObjectMap = ObjectMap.acquire(mapId)
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(mapId)
         if (ObjectMap.isDriveMap(map)) {
-            ObjectMap.toDriveMap(map).get(objId).directoryHandle(atPath: path,
-                handleBy: ResultHandler<HiveDirectoryHandle>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asDriveMap(map).get(objId).directoryHandle(atPath: path,
+                handleBy: ResultHandler<HiveDirectoryHandle>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
         if (ObjectMap.isDirMap(map)) {
-            ObjectMap.toDirMap(map).get(objId).directoryHandle(atName: path,
-                handleBy: ResultHandler<HiveDirectoryHandle>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asDirMap(map).get(objId).directoryHandle(atName: path,
+                handleBy: ResultHandler<HiveDirectoryHandle>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
@@ -280,18 +322,18 @@ class HivePlugin : TrinityPlugin {
         let mapId = command.arguments[0] as? Int ?? 0
         let objId = command.arguments[1] as? Int ?? 0
         let hdrId = command.arguments[2] as? Int ?? 0
-        let  path = command.arguments[3] as? String ?? null
+        let  path = command.arguments[3] as? String ?? ""
 
-        let map: ObjectMap = ObjectMap.acquire(mapId)
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(mapId)
         if (ObjectMap.isDriveMap(map)) {
-            ObjectMap.toDriveMap(map).get(objId).createFile(withPath: path,
-                handleBy: ResultHandler<HiveFileHandle>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asDriveMap(map).get(objId).createFile(withPath: path,
+                handleBy: ResultHandler<HiveFileHandle>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
         if (ObjectMap.isDirMap(map)) {
-            ObjectMap.toDirMap(map).get(objId).createFile(withName: path,
-                handleBy: ResultHandler<HiveFileHandle>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asDirMap(map).get(objId).createFile(withName: path,
+                handleBy: ResultHandler<HiveFileHandle>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
@@ -301,18 +343,18 @@ class HivePlugin : TrinityPlugin {
         let mapId = command.arguments[0] as? Int ?? 0
         let objId = command.arguments[1] as? Int ?? 0
         let hdrId = command.arguments[2] as? Int ?? 0
-        let  path = command.arguments[3] as? String ?? null
+        let  path = command.arguments[3] as? String ?? ""
 
-        let map: ObjectMap = ObjectMap.acquire(mapId)
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(mapId)
         if (ObjectMap.isDriveMap(map)) {
-            ObjectMap.toDriveMap(map).get(objId).fileHandle(atPath: path,
-                handleBy: ResultHandler<HiveFileHandle>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asDriveMap(map).get(objId).fileHandle(atPath: path,
+                handleBy: ResultHandler<HiveFileHandle>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
         if (ObjectMap.isDirMap(map)) {
-            ObjectMap.toDirMap(map).get(objId).fileHandle(atName: path,
-                handleBy: ResultHandler<HiveFileHandle>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asDirMap(map).get(objId).fileHandle(atName: path,
+                handleBy: ResultHandler<HiveFileHandle>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
@@ -322,12 +364,12 @@ class HivePlugin : TrinityPlugin {
         let mapId = command.arguments[0] as? Int ?? 0
         let objId = command.arguments[1] as? Int ?? 0
         let hdrId = command.arguments[2] as? Int ?? 0
-        let  path = command.arguments[3] as? String ?? null
+        let  path = command.arguments[3] as? String ?? ""
 
-        let map: ObjectMap = ObjectMap.acquire(map)
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(mapId)
         if (ObjectMap.isDriveMap(map)) {
-            ObjectMap.toDriveMap(map).get(objId).getItemInfo(path,
-                handleBy: ResultHandler<HiveItemInfo>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asDriveMap(map).get(objId).getItemInfo(path,
+                handleBy: ResultHandler<HiveItemInfo>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
@@ -338,10 +380,10 @@ class HivePlugin : TrinityPlugin {
         let objId = command.arguments[1] as? Int ?? 0
         let hdrId = command.arguments[2] as? Int ?? 0
 
-        let map: ObjectMap = ObjectMap.acquire(map)
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(mapId)
         if (ObjectMap.isDirMap(map)) {
-            ObjectMap.toDirMap(map).get(objId).getChildren(path,
-                handleBy: ResultHandler<HiveChildren>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asDirMap(map).get(objId).getChildren(
+                handleBy: ResultHandler<HiveChildren>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
@@ -351,18 +393,18 @@ class HivePlugin : TrinityPlugin {
         let mapId = command.arguments[0] as? Int ?? 0
         let objId = command.arguments[1] as? Int ?? 0
         let hdrId = command.arguments[2] as? Int ?? 0
-        let  path = command.arguments[3] as? String ?? null
+        let  path = command.arguments[3] as? String ?? ""
 
-        let map: ObjectMap = ObjectMap.acquire(map)
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(mapId)
         if (ObjectMap.isDirMap(map)) {
-            ObjectMap.toDirMap(map).get(objId).moveTo(path,
-                handleBy: ResultHandler<HiveVoid>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asDirMap(map).get(objId).moveTo(newPath: path,
+                handleBy: ResultHandler<Void>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
         if (ObjectMap.isFileMap(map)) {
-            ObjectMap.toFileMap(map).get(objId).moveTo(path,
-                handleBy: ResultHandler<HiveVoid>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asFileMap(map).get(objId).moveTo(newPath: path,
+                handleBy: ResultHandler<Void>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
@@ -372,18 +414,18 @@ class HivePlugin : TrinityPlugin {
         let mapId = command.arguments[0] as? Int ?? 0
         let objId = command.arguments[1] as? Int ?? 0
         let hdrId = command.arguments[2] as? Int ?? 0
-        let  path = command.arguments[3] as? String ?? null
+        let  path = command.arguments[3] as? String ?? ""
 
-        let map: ObjectMap = ObjectMap.acquire(map)
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(mapId)
         if (ObjectMap.isDirMap(map)) {
-            ObjectMap.toDirMap(map).get(objId).copyTo(path,
-                handleBy: ResultHandler<HiveVoid>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asDirMap(map).get(objId).copyTo(newPath: path,
+                handleBy: ResultHandler<Void>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
         if (ObjectMap.isFileMap(map)) {
-            ObjectMap.toFileMap(map).get(objId).copyTo(path,
-                handleBy: ResultHandler<HiveVoid>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asFileMap(map).get(objId).copyTo(newPath: path,
+                handleBy: ResultHandler<Void>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
@@ -394,16 +436,16 @@ class HivePlugin : TrinityPlugin {
         let objId = command.arguments[1] as? Int ?? 0
         let hdrId = command.arguments[2] as? Int ?? 0
 
-        let map: ObjectMap = ObjectMap.acquire(map)
+        let map: ObjectMap = ObjectMap<HiveClientHandle>.acquire(mapId)
         if (ObjectMap.isDirMap(map)) {
-            ObjectMap.toDirMap(map).get(objId).deleteItem(
-                handleBy: ResultHandler<HiveVoid>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asDirMap(map).get(objId).deleteItem(
+                handleBy: ResultHandler<Void>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
         if (ObjectMap.isFileMap(map)) {
-            ObjectMap.toFileMap(map).get(objId).deleteItem(
-                handleBy: ResultHandler<HiveVoid>(hdrId, resultCallbackCtxt)
+            _ = ObjectMap.asFileMap(map).get(objId).deleteItem(
+                handleBy: ResultHandler<Void>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
             return
         }
