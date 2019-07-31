@@ -36,7 +36,7 @@ class LoginHandler: Authenticator {
 
     private func sendEvent(_ ret: Dictionary<String, Any>) {
         var dict = ret;
-        dict["did"] = handlerId;
+        dict["id"] = handlerId;
         let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: dict as [AnyHashable : Any]);
         result?.setKeepCallbackAs(true);
         self.commandDelegate.send(result, callbackId: self.callbackId);

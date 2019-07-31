@@ -37,7 +37,7 @@ class ResultHandler<T>: HiveCallback<T> {
 
     private func sendEvent(_ ret: Dictionary<String, Any>) {
         var dict = ret;
-        dict["did"] = handlerId;
+        dict["hid"] = handlerId;
         let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: dict as [AnyHashable : Any]);
         result?.setKeepCallbackAs(true);
         self.commandDelegate.send(result, callbackId: self.callbackId);
@@ -77,10 +77,10 @@ class ResultHandler<T>: HiveCallback<T> {
     }
 
     private func driveHandleToDict(_ drive: HiveDriveHandle) -> Dictionary<String, Any> {
-        let map = ObjectMap<HiveClientHandle>.acquire(DRIVE)
+        let map: ObjectMap? = ObjectMapHolder.acquire(DRIVE)
         let objId = DriveMap.nextObjId()
 
-        ObjectMap.asDriveMap(map).put(objId, drive)
+        ObjectMapHolder.asDriveMap(map!).put(objId, drive)
 
         var ret = Dictionary<String, Any>()
         ret["id"] = objId
@@ -88,10 +88,10 @@ class ResultHandler<T>: HiveCallback<T> {
     }
 
     private func directoryHandleToDict(_ dir: HiveDirectoryHandle) -> Dictionary<String, Any> {
-        let map = ObjectMap<HiveClientHandle>.acquire(DIR)
+        let map: ObjectMap? = ObjectMapHolder.acquire(DIR)
         let objId = DriveMap.nextObjId()
 
-        ObjectMap.asDirMap(map).put(objId, dir)
+        ObjectMapHolder.asDirMap(map!).put(objId, dir)
 
         var ret = Dictionary<String, Any>()
         ret["id"] = objId
@@ -99,10 +99,10 @@ class ResultHandler<T>: HiveCallback<T> {
     }
 
     private func fileHandleToDict(_ file: HiveFileHandle) -> Dictionary<String, Any> {
-        let map = ObjectMap<HiveClientHandle>.acquire(FILE)
+        let map: ObjectMap? = ObjectMapHolder.acquire(FILE)
         let objId = FileMap.nextObjId()
 
-        ObjectMap.asFileMap(map).put(objId, file)
+        ObjectMapHolder.asFileMap(map!).put(objId, file)
 
         var ret = Dictionary<String, Any>()
         ret["id"] = objId
