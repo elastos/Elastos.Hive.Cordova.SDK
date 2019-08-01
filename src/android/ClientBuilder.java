@@ -36,6 +36,7 @@ import java.io.File;
 import org.elastos.hive.*;
 import org.elastos.hive.HiveException;
 import org.elastos.hive.vendors.onedrive.OneDriveParameter;
+import org.elastos.hive.vendors.ipfs.IPFSParameter;
 
 class ClientBuilder {
     private static String TAG = "ClientBuilder";
@@ -53,9 +54,14 @@ class ClientBuilder {
         return Client.createInstance(new OneDriveParameter(entry, dir));
     }
 
-    private static Client createForIPFS(String dir, JSONObject json) throws JSONException {
-        // TODO;
-        return null;
+    private static Client createForIPFS(String dir, JSONObject json) throws JSONException, HiveException {
+        JSONArray arr  = json.getJSONArray("rpc_addrs");
+        String[] array = new String[arr.length()];
+
+        for(int i = 0; i < arr.length(); i++)
+            array[i] = arr.getJSONObject(i).getString("addr");
+
+        return Client.createInstance(new IPFSParameter(new IPFSEntry(null, array), dir));
     }
 
     static Client create(String dir, String options) throws JSONException {
