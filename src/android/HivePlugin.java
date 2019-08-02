@@ -161,10 +161,10 @@
       }
 
       private void createClient(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          String dataDir = args.getString(0);
+          String dataDir = cordova.getActivity().getFilesDir() + "/data/hive/" + args.getString(0);
           String options = args.getString(1);
 
-          java.io.File dirFile = new java.io.File(cordova.getActivity().getFilesDir() + "/data/hive" + dataDir);
+          java.io.File dirFile = new java.io.File(dataDir);
           if (!dirFile.exists())
                dirFile.mkdirs();
 
