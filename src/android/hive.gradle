@@ -31,5 +31,5 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.elastos:hivesdk:0.1.4'
+    implementation 'org.elastos:hivesdk:0.1.5'
 }

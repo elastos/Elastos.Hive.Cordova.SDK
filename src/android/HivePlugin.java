@@ -22,6 +22,7 @@
 
   package org.elastos.trinity.plugins.hive;
 
+  import android.telecom.Call;
   import android.util.Base64;
 
   import org.apache.cordova.CordovaPlugin;
@@ -33,6 +34,7 @@
   import org.json.JSONException;
   import org.json.JSONObject;
 
+  import java.nio.ByteBuffer;
   import java.util.List;
   import java.util.Map;
   import java.util.HashMap;
@@ -126,6 +128,22 @@
 
               case "deleteItem":
                   this.deleteItem(args, callbackContext);
+                  break;
+
+              case "readData":
+                  this.readData(args, callbackContext);
+                  break;
+
+              case "writeData":
+                  this.writeData(args, callbackContext);
+                  break;
+
+              case "commitData":
+                  this.commitData(args, callbackContext);
+                  break;
+
+              case "discardData":
+                  this.discardData(args, callbackContext);
                   break;
 
               default:
@@ -529,5 +547,63 @@
               );
               return;
           }
+      }
+
+      private void readData(JSONArray args, CallbackContext callbackContext) throws JSONException {
+          Integer mapId = args.getInt(0);
+          Integer objId = args.getInt(1);
+          int handlerId = args.getInt(2);
+          int length    = args.getInt(3);
+
+          ByteBuffer buffer = ByteBuffer.allocate(length);
+          ObjectMap map = ObjectMap.acquire(mapId);
+          if (ObjectMap.isFileMap(map)) {
+              ObjectMap.toFileMap(map).get(objId).read(buffer,
+                  new ResultHandler<Length>(handlerId, resultCallbackCtxt, buffer)
+              );
+              return;
+          }
+      }
+
+      private void writeData(JSONArray args, CallbackContext callbackContext) throws JSONException {
+          Integer mapId = args.getInt(0);
+          Integer objId = args.getInt(1);
+          int handlerId = args.getInt(2);
+          String  data  = args.getString(3);
+
+          ByteBuffer buffer = ByteBuffer.wrap(data.getBytes());
+          ObjectMap map = ObjectMap.acquire(mapId);
+          if (ObjectMap.isFileMap(map)) {
+              ObjectMap.toFileMap(map).get(objId).write(buffer,
+                  new ResultHandler<Length>(handlerId, resultCallbackCtxt)
+              );
+              return;
+          }
+      }
+
+      private void commitData(JSONArray args, CallbackContext callbackContext) throws JSONException {
+          Integer mapId = args.getInt(0);
+          Integer objId = args.getInt(1);
+          int handlerId = args.getInt(2);
+
+          ObjectMap map = ObjectMap.acquire(mapId);
+          if (ObjectMap.isFileMap(map)) {
+              ObjectMap.toFileMap(map).get(objId).commit(
+                  new ResultHandler<Void>(handlerId, resultCallbackCtxt)
+              );
+              return;
+          }
+      }
+
+      private void discardData(JSONArray args, CallbackContext callbackContext) throws JSONException {
+          Integer mapId = args.getInt(0);
+          Integer objId = args.getInt(1);
+          int handlerId = args.getInt(2);
+
+          ObjectMap map = ObjectMap.acquire(mapId);
+          if (ObjectMap.isFileMap(map))
+              ObjectMap.toFileMap(map).get(objId).discard();
+
+          callbackContext.success();
       }
   }

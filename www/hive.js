@@ -50,6 +50,22 @@ File.prototype = {
     deleteItem: function() {
         return this.plugin.getPromise(this, 'deleteItem', []);
     },
+
+    readData: function(length) {
+        return this.plugin.getPromise(this, 'readData', [length]);
+    },
+
+    writeData: function(data) {
+        return this.plugin.getPromise(this, 'writeData', [data]);
+    },
+
+    commit: function() {
+        return this.plugin.getPromise(this, 'commitData', []);
+    },
+
+    discard: function(onSuccess) {
+        exec(onSuccess, null, 'HivePlugin', 'discardData', [this.clazz, this.objId]);
+    },
 }
 
 function Directory() {

@@ -22,6 +22,8 @@
 
 package org.elastos.trinity.plugins.hive;
 
+import android.telecom.Call;
+
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
@@ -32,15 +34,23 @@ import org.elastos.hive.*;
 import org.elastos.hive.Void;
 import org.elastos.hive.File;
 
-import java.util.ArrayList;
+import java.nio.ByteBuffer;
 
 class ResultHandler<T extends Result> implements Callback<T> {
     private final int handlerId;
     private final CallbackContext callbackContext;
+    private final ByteBuffer byteBuffer;
 
     ResultHandler(int id, CallbackContext callbackContext) {
         this.handlerId = id;
         this.callbackContext = callbackContext;
+        this.byteBuffer = null;
+    }
+
+    ResultHandler(int id, CallbackContext callbackContext, ByteBuffer buffer) {
+        this.handlerId = id;
+        this.callbackContext = callbackContext;
+        this.byteBuffer = buffer;
     }
 
     private void sendEvent(JSONObject info) throws JSONException {
@@ -84,7 +94,9 @@ class ResultHandler<T extends Result> implements Callback<T> {
             } else if (body instanceof ItemInfo) {
                 ret = itemInfoToJson((ItemInfo)body);
             } else if (body instanceof Children) {
-                ret = childrenToJson((Children)body);
+                ret = childrenToJson((Children) body);
+            } else if (body instanceof Length) {
+                ret = lengthToJson((Length)body);
             } else {
                 ret = hiveVoidToJson((Void)body);
             }
@@ -211,5 +223,16 @@ class ResultHandler<T extends Result> implements Callback<T> {
         holder.put();
 
         return holder.get();
+    }
+
+    private JSONObject lengthToJson(Length length) throws JSONException {
+        JSONObjectHolder<Length> holder;
+
+        JSONObject json = new JSONObject();
+        json.put("length", length.getLength());
+        if (byteBuffer != null)
+            json.put("data", new String(byteBuffer.array()));
+
+        return json;
     }
 }
