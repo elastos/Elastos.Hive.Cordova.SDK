@@ -24,12 +24,15 @@ package org.elastos.trinity.plugins.hive;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import org.elastos.hive.*;
 import org.elastos.hive.Void;
 import org.elastos.hive.File;
+
+import java.util.ArrayList;
 
 class ResultHandler<T extends Result> implements Callback<T> {
     private final int handlerId;
@@ -41,7 +44,7 @@ class ResultHandler<T extends Result> implements Callback<T> {
     }
 
     private void sendEvent(JSONObject info) throws JSONException {
-    if (callbackContext != null) {
+        if (callbackContext != null) {
             info.put("hid", handlerId);
             PluginResult res = new PluginResult(PluginResult.Status.OK, info);
             res.setKeepCallback(true);
@@ -171,20 +174,42 @@ class ResultHandler<T extends Result> implements Callback<T> {
 
         holder = new JSONObjectHolder<ItemInfo>(info);
         holder.put(ItemInfo.itemId)
-                .put(ItemInfo.name)
-                .put(ItemInfo.type)
-                .put(ItemInfo.size);
+              .put(ItemInfo.name)
+              .put(ItemInfo.type)
+              .put(ItemInfo.size);
 
         return holder.get();
     }
 
     private JSONObject childrenToJson(Children info) throws JSONException {
-        // TODO;
-        return null;
+        JSONObjectHolder<ItemInfo> holder;
+        JSONArray array = new JSONArray();
+
+        for(ItemInfo itemInfo: info.getContent()) {
+            holder = new JSONObjectHolder<>(itemInfo);
+            holder.put(ItemInfo.itemId)
+                  .put(ItemInfo.name)
+                  .put(ItemInfo.type)
+                  .put(ItemInfo.size);
+
+            try {
+                array.put(holder.get());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        JSONObject json = new JSONObject();
+        json.put("items", array);
+        return json;
     }
 
     private JSONObject hiveVoidToJson(Void padding) throws JSONException {
-        // TODO;
-        return null;
+        JSONObjectHolder<Void> holder;
+
+        holder = new JSONObjectHolder<Void>(padding);
+        holder.put();
+
+        return holder.get();
     }
 }

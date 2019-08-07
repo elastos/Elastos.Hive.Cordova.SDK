@@ -22,12 +22,10 @@
 
 package org.elastos.trinity.plugins.hive;
 
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import org.elastos.hive.*;
-import org.elastos.hive.HiveException;
 
 class JSONObjectHolder<T extends Result> {
     private JSONObject jsonObject;
@@ -42,6 +40,15 @@ class JSONObjectHolder<T extends Result> {
         return jsonObject;
     }
 
+    JSONObjectHolder put() {
+        try {
+            jsonObject.put("void", "Void");
+        } catch(JSONException e) {
+        }
+
+        return this;
+    }
+
     JSONObjectHolder put(String propId) {
         try {
             if (result instanceof Client.Info)
@@ -54,9 +61,8 @@ class JSONObjectHolder<T extends Result> {
                 put(propId, (File.Info)result);
             else if (result instanceof ItemInfo)
                 put(propId, (ItemInfo)result);
-            else if (result instanceof Children)
-                put(propId, (ItemInfo)result);
         } catch (JSONException e) {
+            e.printStackTrace();
         }
 
         return this;
@@ -85,10 +91,5 @@ class JSONObjectHolder<T extends Result> {
     private void put(String propId, ItemInfo info) throws JSONException {
         if (info.containsKey(propId))
             jsonObject.put(propId, info.get(propId));
-    }
-
-    private void put(String propId, Children info) throws JSONException {
-        //if (info.getContent().containsKey(propId))
-        //    jsonObject.put(propId, info.getContent().get(propId));
     }
 }
