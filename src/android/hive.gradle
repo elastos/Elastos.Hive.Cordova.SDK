@@ -25,11 +25,8 @@ repositories {
     flatDir{
         dirs 'src/main/libs'
     }
-    maven{
-        url 'https://dl.bintray.com/elastostest/maven'
-    }
 }
 
 dependencies {
-    implementation 'org.elastos:hivesdk:0.1.5'
+    implementation 'org.elastos:hive:0.5.0'
 }

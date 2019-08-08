@@ -1,4 +1,4 @@
-/*
+G/*
  * Copyright (c) 2019 Elastos Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -134,7 +134,11 @@ Directory.prototype = {
     },
 
     getChildren: function() {
-        return this.plugin.getPromise(this, 'getChildren', []);
+        return this.plugin.getPromise(this, 'getChildren', []).then(
+            function(ret) {
+                return ret.items;
+            }
+        );
     },
 
     moveTo: function(destPath) {
