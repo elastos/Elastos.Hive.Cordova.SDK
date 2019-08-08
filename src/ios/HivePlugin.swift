@@ -116,8 +116,7 @@ class HivePlugin : TrinityPlugin {
                 LoginHandler(hdrId, self.loginCallbackId, self.commandDelegate)
             )
 
-            var ret = Dictionary<String, Any>()
-            ret["result"] = "success"
+            let ret: NSDictionary = ["result": "success"]
             self.success(command, retAsDict: ret as NSDictionary);
         }
     }
@@ -135,10 +134,9 @@ class HivePlugin : TrinityPlugin {
                                             qos: .background, target: nil)
 
         backgroundQueue.async {
-            var ret = Dictionary<String, Any>()
             _ = try! ObjectMapHolder.asClientMap(map!).get(objId).logout()
 
-            ret["result"] = "success"
+            let ret: NSDictionary = ["result": "success"]
             self.success(command, retAsDict: ret as NSDictionary);
         }
     }
@@ -443,6 +441,63 @@ class HivePlugin : TrinityPlugin {
             _ = ObjectMapHolder.asFileMap(map!).get(objId).deleteItem(
                 handleBy: ResultHandler<Void>(hdrId, self.resultCallbackId, self.commandDelegate)
             )
+            return
+        }
+    }
+
+    @objc func readData(_ command: CDVInvokedUrlCommand) {
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
+        let length = command.arguments[3] as? Int ?? 0
+
+        let map: ObjectMap? = ObjectMapHolder.acquire(mapId)
+        if (ObjectMapHolder.isFileMap(map)) {
+            _ = ObjectMapHolder.asFileMap(map!).get(objId).readData(length,
+                handleBy: ResultHandler<Data>(hdrId, self.resultCallbackId, self.commandDelegate)
+            )
+            return
+        }
+    }
+
+    @objc func writeData(_ command: CDVInvokedUrlCommand) {
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
+        let jdata = command.arguments[3] as? String ?? ""
+
+        let map: ObjectMap? = ObjectMapHolder.acquire(mapId)
+        if (ObjectMapHolder.isFileMap(map)) {
+            _ = ObjectMapHolder.asFileMap(map!).get(objId).writeData(withData: Data(jdata.utf8),
+                 handleBy: ResultHandler<Int32>(hdrId, self.resultCallbackId, self.commandDelegate)
+            )
+            return
+        }
+    }
+
+    @objc func commitData(_ command: CDVInvokedUrlCommand) {
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+        //let hdrId = command.arguments[2] as? Int ?? 0
+
+        let map: ObjectMap? = ObjectMapHolder.acquire(mapId)
+        if (ObjectMapHolder.isFileMap(map)) {
+            _ = ObjectMapHolder.asFileMap(map!).get(objId).commitData()
+            // TODO;
+            return
+        }
+    }
+
+    @objc func discardData(_ command: CDVInvokedUrlCommand) {
+        let mapId = command.arguments[0] as? Int ?? 0
+        let objId = command.arguments[1] as? Int ?? 0
+
+        let map: ObjectMap? = ObjectMapHolder.acquire(mapId)
+        if (ObjectMapHolder.isFileMap(map)) {
+            _ = ObjectMapHolder.asFileMap(map!).get(objId).discardData()
+
+            let ret: NSDictionary = ["result": "success"]
+            self.success(command, retAsDict: ret as NSDictionary);
             return
         }
     }

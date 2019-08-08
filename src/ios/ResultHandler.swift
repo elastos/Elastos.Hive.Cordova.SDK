@@ -64,6 +64,10 @@ class ResultHandler<T>: HiveCallback<T> {
             ret =  itemInfoToDict(result as! HiveItemInfo)
         } else if (result is HiveChildren) {
             ret =  childrenToDict(result as! HiveChildren)
+        } else if (result is Int32) {
+            ret = lengthToDict(result as! Int32)
+        } else if (result is Data) {
+            ret = dataToDict(result as! Data)
         } else if (result is Void) {
             ret =  voidToDict(result as! Void)
         }
@@ -140,18 +144,48 @@ class ResultHandler<T>: HiveCallback<T> {
             .get()
     }
 
-    private func itemInfoToDict(_ result: HiveItemInfo) -> Dictionary<String, Any> {
-        // TODO
-        return Dictionary<String, Any>()
+    private func itemInfoToDict(_ info: HiveItemInfo) -> Dictionary<String, Any> {
+        let holder = DictionaryHolder<HiveItemInfo>(info)
+        return holder.put(HiveItemInfo.itemId)
+            .put(HiveItemInfo.name)
+            .put(HiveItemInfo.size)
+            .put(HiveItemInfo.type)
+            .get()
     }
 
     private func childrenToDict(_ result: HiveChildren) -> Dictionary<String, Any> {
-        // TODO
-        return Dictionary<String, Any>()
+        var array = Array<Dictionary<String, Any>>()
+
+        for itemInfo in result.children {
+            let holder = DictionaryHolder<HiveItemInfo>(itemInfo)
+            _ = holder.put(HiveItemInfo.itemId)
+                  .put(HiveItemInfo.name)
+                  .put(HiveItemInfo.type)
+                  .put(HiveItemInfo.size)
+            array.append(holder.get())
+        }
+
+        var dict = Dictionary<String, Any>()
+        dict["items"] = array
+        return dict
     }
 
     private func voidToDict(_ result: Void) -> Dictionary<String, Any> {
-        // TODO
-        return Dictionary<String, Any>()
+        var dict = HiveObjectInfo()
+        dict["void"] = "Void"
+        return dict
+    }
+
+    private func lengthToDict(_ length: Int32) -> Dictionary<String, Any> {
+        var dict = HiveObjectInfo()
+        dict["length"] = String(length)
+        return dict
+    }
+
+    private func dataToDict(_ data: Data) -> Dictionary<String, Any> {
+        var dict = HiveObjectInfo()
+        dict["length"] = String(data.count)
+        dict["data"] = String(decoding:data, as: UTF8.self)
+        return dict
     }
 }

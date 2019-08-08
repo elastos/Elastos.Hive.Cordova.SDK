@@ -598,7 +598,6 @@
       private void discardData(JSONArray args, CallbackContext callbackContext) throws JSONException {
           Integer mapId = args.getInt(0);
           Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
 
           ObjectMap map = ObjectMap.acquire(mapId);
           if (ObjectMap.isFileMap(map))

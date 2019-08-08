@@ -226,8 +226,6 @@ class ResultHandler<T extends Result> implements Callback<T> {
     }
 
     private JSONObject lengthToJson(Length length) throws JSONException {
-        JSONObjectHolder<Length> holder;
-
         JSONObject json = new JSONObject();
         json.put("length", length.getLength());
         if (byteBuffer != null)
