@@ -478,12 +478,13 @@ class HivePlugin : TrinityPlugin {
     @objc func commitData(_ command: CDVInvokedUrlCommand) {
         let mapId = command.arguments[0] as? Int ?? 0
         let objId = command.arguments[1] as? Int ?? 0
-        //let hdrId = command.arguments[2] as? Int ?? 0
+        let hdrId = command.arguments[2] as? Int ?? 0
 
         let map: ObjectMap? = ObjectMapHolder.acquire(mapId)
         if (ObjectMapHolder.isFileMap(map)) {
-            _ = ObjectMapHolder.asFileMap(map!).get(objId).commitData()
-            // TODO;
+            _ = ObjectMapHolder.asFileMap(map!).get(objId).commitData(
+                handleBy: ResultHandler<Void>(hdrId, self.resultCallbackId, self.commandDelegate)
+            )
             return
         }
     }
