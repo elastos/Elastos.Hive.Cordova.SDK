@@ -1,0 +1,11 @@
+framework module ElastosHiveSDK {
+  umbrella header "ElastosHiveSDK.h"
+
+  export *
+  module * { export * }
+}
+
+module ElastosHiveSDK.Swift {
+    header "ElastosHiveSDK-Swift.h"
+    requires objc
+}
