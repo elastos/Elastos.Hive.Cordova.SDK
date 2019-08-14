@@ -22,8 +22,12 @@
 
 package org.elastos.trinity.plugins.hive;
 
+import android.app.Activity;
+import android.content.res.Resources;
+
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
+import org.elastos.trinity.runtime.R;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -54,17 +58,14 @@ class ClientBuilder {
         return Client.createInstance(new OneDriveParameter(entry, dir));
     }
 
-    private static Client createForIPFS(String dir, JSONObject json) throws JSONException, HiveException {
-        JSONArray arr  = json.getJSONArray("rpc_addrs");
-        String[] array = new String[arr.length()];
-
-        for(int i = 0; i < arr.length(); i++)
-            array[i] = arr.getJSONObject(i).getString("addr");
+    private static Client createForIPFS(String dir, JSONObject json, HivePlugin plugin) throws HiveException {
+        Resources res = plugin.cordova.getActivity().getResources();
+        String[] array = res.getStringArray(R.array.IPFSNodes);
 
         return Client.createInstance(new IPFSParameter(new IPFSEntry(null, array), dir));
     }
 
-    static Client create(String dir, String options) throws JSONException {
+    static Client create(String dir, String options, HivePlugin plugin) throws JSONException {
         JSONObject jsonObject = new JSONObject(options);
         int type = jsonObject.getInt("type");
 
@@ -76,7 +77,7 @@ class ClientBuilder {
                 break;
 
             case IPFS:
-                client = createForIPFS(dir, jsonObject);
+                client = createForIPFS(dir, jsonObject, plugin);
                 break;
             }
         } catch (HiveException e) {

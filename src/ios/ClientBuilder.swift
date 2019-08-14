@@ -35,8 +35,11 @@ class ClientBuilder {
     }
 
     private class func createForIPFS(_ dataDir: String, _ option: Dictionary<String, String>) -> HiveClientHandle? {
-        // TODO
-        return nil
+        let path: String? = Bundle.main.path(forResource: "HiveIPFSNodes", ofType: "plist")
+        let array: NSArray? = NSArray(contentsOfFile: path!)
+        let entry = IPFSEntry(array! as! Array<String>)
+        HiveClientHandle.createInstance(IPFSParameter(entry, dataDir))
+        return HiveClientHandle.sharedInstance(type: .hiveIPFS)
     }
 
     class func createClient(_ dataDir: String, _ options: String) -> HiveClientHandle? {

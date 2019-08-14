@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name = "IPFSNodes">
+        <item>52.83.119.110:9095</item>
+        <item>52.83.159.189:9095</item>
+        <item>3.16.202.140:9095</item>
+        <item>18.217.147.205:9095</item>
+        <item>18.219.53.133:9095</item>
+    </string-array>
+</resources>

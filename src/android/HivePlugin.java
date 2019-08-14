@@ -187,7 +187,7 @@
                dirFile.mkdirs();
 
           ObjectMap map = ObjectMap.acquire(1);
-          Client client = ClientBuilder.create(dataDir, options);
+          Client client = ClientBuilder.create(dataDir, options, this);
           Integer objId = System.identityHashCode(client);
           ObjectMap.toClientMap(map).put(objId, client);
 
