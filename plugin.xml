@@ -23,7 +23,8 @@
 				<param name="android-package" value="org.elastos.trinity.plugins.hive.HivePlugin" />
 			</feature>
 		</config-file>
-        <resource-file src="src/android/HiveIPFSNodes.xml" target="res/values/HiveIPFSNodes.xml" />
+        <resource-file src="ipfsnodes.json" target="res/raw/ipfsnodes.json" />
+        <source-file src="src/android/IpfsNodesGetter.java" target-dir="src/org/elastos/trinity/plugins/hive" />
         <source-file src="src/android/HivePlugin.java" target-dir="src/org/elastos/trinity/plugins/hive" />
         <source-file src="src/android/ClientBuilder.java" target-dir="src/org/elastos/trinity/plugins/hive" />
         <source-file src="src/android/JSONObjectHolder.java" target-dir="src/org/elastos/trinity/plugins/hive" />
@@ -39,7 +40,7 @@
             </feature>
         </config-file>
         <!-- <dependency id="cordova-plugin-add-swift-support" version="1.7.2"/> -->
-        <resource-file src="src/ios/HiveIPFSNodes.plist" />
+        <resource-file src="ipfsnodes.json" />
         <source-file src="src/ios/HivePlugin.swift" />
         <source-file src="src/ios/ClientBuilder.swift" />
         <source-file src="src/ios/LoginHandler.swift" />

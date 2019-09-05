@@ -35,9 +35,18 @@ class ClientBuilder {
     }
 
     private class func createForIPFS(_ dataDir: String, _ option: Dictionary<String, String>) -> HiveClientHandle? {
-        let path: String? = Bundle.main.path(forResource: "HiveIPFSNodes", ofType: "plist")
-        let array: NSArray? = NSArray(contentsOfFile: path!)
-        let entry = IPFSEntry(array! as! Array<String>)
+        let path = Bundle.main.path(forResource: "ipfsnodes", ofType: "json")
+        let data = try! Data(contentsOf: URL(fileURLWithPath: path!))
+        let json = try! JSONSerialization.jsonObject(with: data, options: []) as! [String: Any]
+        let ipfsNodes = json["ipfsnodes"] as! Array<Any>
+
+        var array = [String]()
+        for item in ipfsNodes {
+            let node = item as! [String: String]
+            array.append(node["addr"]!)
+        }
+
+        let entry = IPFSEntry(array)
         HiveClientHandle.createInstance(IPFSParameter(entry, dataDir))
         return HiveClientHandle.sharedInstance(type: .hiveIPFS)
     }
@@ -46,7 +55,7 @@ class ClientBuilder {
         let jsonData = options.data(using: .utf8)
         let decodedDict: Dictionary<String, String> = (try! JSONSerialization.jsonObject(with: jsonData!, options: []) as? Dictionary<String, String>)!
         print("decodedJsonDict=\(decodedDict)")
-        
+
         var client: HiveClientHandle?
         switch (Int(decodedDict["type"]!)) {
         case ONEDRIVE:

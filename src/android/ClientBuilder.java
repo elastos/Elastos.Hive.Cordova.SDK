@@ -59,8 +59,12 @@ class ClientBuilder {
     }
 
     private static Client createForIPFS(String dir, JSONObject json, HivePlugin plugin) throws HiveException {
-        Resources res = plugin.cordova.getActivity().getResources();
-        String[] array = res.getStringArray(R.array.IPFSNodes);
+        ArrayList<IpfsNodesGetter.IpfsNode> list = IpfsNodesGetter.getIpfsNodes(plugin);
+        String[] array = new String[list.size()];
+        int i = 0;
+        for (IpfsNodesGetter.IpfsNode node: list) {
+            array[i++] = node.addr;
+        }
 
         return Client.createInstance(new IPFSParameter(new IPFSEntry(null, array), dir));
     }
