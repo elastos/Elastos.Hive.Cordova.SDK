@@ -22,6 +22,10 @@
 
 var exec = require('cordova/exec');
 
+/**
+ * The class representing File.
+ * @class
+ */
 function File() {
     this.objId  = null;
     this.plugin = null;
@@ -31,43 +35,81 @@ function File() {
 File.prototype = {
     onstructor: File,
 
+    /**
+     * Get the information(ID, name size, type) of the file got last time.
+     * @param {Function} onSuccess  The function to call on success.
+     * @param {Function} onError    The function to call on error.
+     */
     getLastInfo: function(onSuccess, onError) {
         exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
     },
 
+    /**
+     * Get the information(ID, name, size, type) of the file from the server.
+     */
     getInfo: function()  {
         return this.plugin.getPromise(this, 'getInfo', []);
     },
 
+    /**
+     * Move to a new path.
+     * @param {string} destPath     The new path.
+     */
     moveTo: function(destPath) {
         return this.plugin.getPromise(this, 'moveTo', [destPath]);
     },
 
+    /**
+     * Copy to a new path.
+     * @param {string} newPath      The new path.
+     */
     copyTo: function(newPath) {
         return this.plugin.getPromise(this, 'copyTo', [newPath]);
     },
 
+    /**
+     * Delete.
+     */
     deleteItem: function() {
         return this.plugin.getPromise(this, 'deleteItem', []);
     },
 
+    /**
+     * Read data of a specified length sequentially.
+     * @param {number} length      The length of data to write.
+     */
     readData: function(length) {
         return this.plugin.getPromise(this, 'readData', [length]);
     },
 
+    /**
+     * Write local change on File.
+     * @param {string} data      The data to write.
+     */
     writeData: function(data) {
         return this.plugin.getPromise(this, 'writeData', [data]);
     },
 
+    /**
+     * Commit local change on File to backend.
+     */
     commit: function() {
         return this.plugin.getPromise(this, 'commitData', []);
     },
 
+    /**
+     * Discard local change on File.
+     * @param {Function} onSuccess  The function to call on success.
+     */
     discard: function(onSuccess) {
         exec(onSuccess, null, 'HivePlugin', 'discardData', [this.clazz, this.objId]);
     },
 }
 
+/**
+ * The class representing Directory.
+ * @class
+ */
 function Directory() {
     this.objId  = null;
     this.plugin = null;
@@ -77,14 +119,26 @@ function Directory() {
 Directory.prototype = {
     onstructor: Directory,
 
+    /**
+     * Get the information(ID, name, childCount) of the directory got last time.
+     * @param {Function} onSuccess  The function to call on success.
+     * @param {Function} onError    The function to call on error.
+     */
     getLastInfo: function(onSuccess, onError) {
         exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
     },
 
+    /**
+     * Get the information(ID, name, childCount) of the directory from the server.
+     */
     getInfo: function() {
         return this.plugin.getPromise(this, 'getInfo', []);
     },
 
+    /**
+     * Create directory with name.
+     * @param {string} name      The directory name.
+     */
     createDirectory: function(name) {
         var plugin = this.plugin;
         return this.plugin.getPromise(this, 'createDir', [name]).then(
@@ -97,6 +151,10 @@ Directory.prototype = {
         );
     },
 
+    /**
+     * Get the directory with a specified name.
+     * @param {string} name      The directory name.
+     */
     getDirectory: function(name) {
         var plugin = this.plugin;
         return this.plugin.getPromise(this, 'getDir', [name]).then(
@@ -109,6 +167,10 @@ Directory.prototype = {
         );
     },
 
+    /**
+     * Create file with name.
+     * @param {string} name      The file name.
+     */
     createFile: function(name) {
         var plugin = this.plugin;
         return this.plugin.getPromise(this, 'createFile', [name]).then(
@@ -121,6 +183,10 @@ Directory.prototype = {
         );
     },
 
+    /**
+     * Get the File with a specified name.
+     * @param {string} name      The file name.
+     */
     getFile: function(name) {
         var plugin = this.plugin;
         return this.plugin.getPromise(this, 'getFile', [name]).then(
@@ -133,6 +199,9 @@ Directory.prototype = {
         );
     },
 
+    /**
+     * Get children for current directory.
+     */
     getChildren: function() {
         return this.plugin.getPromise(this, 'getChildren', []).then(
             function(ret) {
@@ -141,19 +210,34 @@ Directory.prototype = {
         );
     },
 
+    /**
+     * Move to a new path.
+     * @param {string} destPath     The destination path.
+     */
     moveTo: function(destPath) {
         return this.plugin.getPromise(this, 'moveTo', [destPath]);
     },
 
+    /**
+     * Copy to a new path.
+     * @param {string} newPath      The new path.
+     */
     copyTo: function(newPath) {
         return this.plugin.getPromise(this, 'copyTo', [newPath]);
     },
 
+    /**
+     * Delete.
+     */
     deleteItem: function() {
         return this.plugin.getPromise(this, 'deleteItem', []);
     },
 }
 
+/**
+ * The class representing Drive.
+ * @class
+ */
 function Drive() {
     this.objId  = null;
     this.plugin = null;
@@ -163,14 +247,25 @@ function Drive() {
 Drive.prototype = {
     onstructor: Drive,
 
+    /**
+     * Get the information(ID) of the drive got last time.
+     * @param {Function} onSuccess  The function to call on success.
+     * @param {Function} onError    The function to call on error.
+     */
     getLastInfo: function(onSuccess, onError) {
         exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
     },
 
+    /**
+     * Get the information(ID) of the drive from the server.
+     */
     getInfo: function() {
         return this.plugin.getPromise(this, 'getInfo', []);
     },
 
+    /**
+     * Get the root directory.
+     */
     rootDirctory: function() {
         var plugin = this.plugin;
         return this.plugin.getPromise(this, 'rootDir', []).then(
@@ -183,6 +278,10 @@ Drive.prototype = {
         );
     },
 
+    /**
+     * Create directory with path.
+     * @param {string} path      The directory path.
+     */
     createDirectory: function(path) {
         var plugin = this.plugin;
         return this.plugin.getPromise(this, 'createDir', [path]).then(
@@ -195,6 +294,10 @@ Drive.prototype = {
         );
     },
 
+    /**
+     * Get the directory with a specified path.
+     * @param {string} path      The directory path.
+     */
     getDirectory: function(path) {
         var plugin = this.plugin;
         return this.plugin.getPromise(this, 'getDir', [path]).then(
@@ -207,6 +310,10 @@ Drive.prototype = {
         );
     },
 
+    /**
+     * Create file with path.
+     * @param {string} path      The file path.
+     */
     createFile: function(path) {
         var plugin = this.plugin;
         return this.plugin.getPromise(this, 'createFile', [path]).then(
@@ -219,6 +326,10 @@ Drive.prototype = {
         );
     },
 
+    /**
+     * Get the File with a specified path.
+     * @param {string} path      The file path.
+     */
     getFile: function(path) {
         var plugin = this.plugin;
         return this.plugin.getPromise(this, 'getFile', [path]).then(
@@ -231,11 +342,19 @@ Drive.prototype = {
         );
     },
 
+    /**
+     * Get the information(ID, name, size, type) of the drive with a specified path.
+     * @param {string} path      The drive path.
+     */
     getItemInfo: function(path) {
         return this.plugin.getPromise(this, 'getItemInfo', [path]);
     },
 }
 
+/**
+ * The class representing Client.
+ * @class
+ */
 function Client() {
     this.objId  = null;
     this.plugin = null;
@@ -245,23 +364,45 @@ function Client() {
 Client.prototype = {
     constructor: Client,
 
+    /**
+     * Associate a user with the Client.
+     * @param {Function} onSuccess  The function to call on success.
+     * @param {Function} onError    The function to call on error.
+     * @param {Function} handler    The function to call.
+     */
     login: function(onSuccess, onError, handler) {
         var handlerId = this.plugin.addLoginRequestCb(handler);
         exec(onSuccess, onError, 'HivePlugin', 'login', [this.clazz, this.objId, handlerId]);
     },
 
+    /**
+     * Dissociate the user from the Client.
+     * @param {Function} onSuccess  The function to call on success.
+     * @param {Function} onError    The function to call on error.
+     */
     logout: function(onSuccess, onError) {
         exec(onSuccess, onError, 'HivePlugin', 'logout', [this.clazz, this.objId]);
     },
 
+    /**
+     * Get the last associated user's information with client information.
+     * @param {Function} onSuccess  The function to call on success.
+     * @param {Function} onError    The function to call on error.
+     */
     getLastInfo: function(onSuccess, onError) {
         exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
     },
 
+    /**
+     * Get associated user's information with client information.
+     */
     getInfo: function() {
         return this.plugin.getPromise(this, 'getInfo', []);
     },
 
+    /**
+     * Get the current backend's Drive instance associated with the client's drive.
+     */
     getDefDrive: function() {
         var plugin = this.plugin;
         return this.plugin.getPromise(this, 'getDefDrive', []).then(
@@ -385,11 +526,12 @@ HivePlugin.prototype = {
         }
 
         if (typeof (options) == "undefined" || options == null ||
-            typeof (options.driveType) != "string")
+            typeof (options.driveType) != "string") {
             if (onError) {
                 onError("invalid options");
-                return;
             }
+            return;
+        }
 
         var configStr = JSON.stringify(options);
         exec(_onSuccess, onError, 'HivePlugin', 'createClient', ["im", configStr]);
