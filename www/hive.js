@@ -33,12 +33,14 @@ function File() {
 }
 
 File.prototype = {
-    onstructor: File,
+    constructor: File,
 
     /**
      * Get the information(ID, name size, type) of the file got last time.
      * @param {Function} onSuccess  The function to call on success.
      * @param {Function} onError    The function to call on error.
+     * @return
+     * onSuccess will be called on success, otherwise onError will be called.
      */
     getLastInfo: function(onSuccess, onError) {
         exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
@@ -46,6 +48,10 @@ File.prototype = {
 
     /**
      * Get the information(ID, name, size, type) of the file from the server.
+     * @return
+     * A promise object that contains the information(ID, name, size, type) of the file
+     * will be returned on success, otherwise a promise object that contains error
+     * information will be returned.
      */
     getInfo: function()  {
         return this.plugin.getPromise(this, 'getInfo', []);
@@ -54,6 +60,9 @@ File.prototype = {
     /**
      * Move to a new path.
      * @param {string} destPath     The new path.
+     * @return
+     * A promise object that contains success information will be returned on success,
+     * otherwise a promise object that contains error information will be returned.
      */
     moveTo: function(destPath) {
         return this.plugin.getPromise(this, 'moveTo', [destPath]);
@@ -62,6 +71,9 @@ File.prototype = {
     /**
      * Copy to a new path.
      * @param {string} newPath      The new path.
+     * @return
+     * A promise object that contains success information will be returned on success,
+     * otherwise a promise object that contains error information will be returned.
      */
     copyTo: function(newPath) {
         return this.plugin.getPromise(this, 'copyTo', [newPath]);
@@ -69,6 +81,9 @@ File.prototype = {
 
     /**
      * Delete.
+     * @return
+     * A promise object that contains success information will be returned on success,
+     * otherwise a promise object that contains error information will be returned.
      */
     deleteItem: function() {
         return this.plugin.getPromise(this, 'deleteItem', []);
@@ -77,6 +92,9 @@ File.prototype = {
     /**
      * Read data of a specified length sequentially.
      * @param {number} length      The length of data to write.
+     * @return
+     * A promise object that contains success information will be returned on success,
+     * otherwise a promise object that contains error information will be returned.
      */
     readData: function(length) {
         return this.plugin.getPromise(this, 'readData', [length]);
@@ -85,6 +103,9 @@ File.prototype = {
     /**
      * Write local change on File.
      * @param {string} data      The data to write.
+     * @return
+     * A promise object that contains success information will be returned on success,
+     * otherwise a promise object that contains error information will be returned.
      */
     writeData: function(data) {
         return this.plugin.getPromise(this, 'writeData', [data]);
@@ -92,6 +113,9 @@ File.prototype = {
 
     /**
      * Commit local change on File to backend.
+     * @return
+     * A promise object that contains success information will be returned on success,
+     * otherwise a promise object that contains error information will be returned.
      */
     commit: function() {
         return this.plugin.getPromise(this, 'commitData', []);
@@ -100,6 +124,8 @@ File.prototype = {
     /**
      * Discard local change on File.
      * @param {Function} onSuccess  The function to call on success.
+     * @return
+     * onSuccess will be called on success.
      */
     discard: function(onSuccess) {
         exec(onSuccess, null, 'HivePlugin', 'discardData', [this.clazz, this.objId]);
@@ -117,12 +143,14 @@ function Directory() {
 }
 
 Directory.prototype = {
-    onstructor: Directory,
+    constructor: Directory,
 
     /**
      * Get the information(ID, name, childCount) of the directory got last time.
      * @param {Function} onSuccess  The function to call on success.
      * @param {Function} onError    The function to call on error.
+     * @return
+     * onSuccess will be called on success, otherwise onError will be called.
      */
     getLastInfo: function(onSuccess, onError) {
         exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
@@ -130,6 +158,10 @@ Directory.prototype = {
 
     /**
      * Get the information(ID, name, childCount) of the directory from the server.
+     * @return
+     * A promise object that contains the information(ID, name, childCount) of the file
+     * will be returned on success, otherwise a promise object that contains error
+     * information will be returned.
      */
     getInfo: function() {
         return this.plugin.getPromise(this, 'getInfo', []);
@@ -138,6 +170,9 @@ Directory.prototype = {
     /**
      * Create directory with name.
      * @param {string} name      The directory name.
+     * @return
+     * A directory will be returned on success, otherwise a promise object that contains
+     * error information will be returned.
      */
     createDirectory: function(name) {
         var plugin = this.plugin;
@@ -154,6 +189,9 @@ Directory.prototype = {
     /**
      * Get the directory with a specified name.
      * @param {string} name      The directory name.
+     * @return
+     * A directory will be returned on success, otherwise a promise object that contains
+     * error information will be returned.
      */
     getDirectory: function(name) {
         var plugin = this.plugin;
@@ -170,6 +208,9 @@ Directory.prototype = {
     /**
      * Create file with name.
      * @param {string} name      The file name.
+     * @return
+     * A file will be returned on success, otherwise a promise object that contains
+     * error information will be returned.
      */
     createFile: function(name) {
         var plugin = this.plugin;
@@ -186,6 +227,9 @@ Directory.prototype = {
     /**
      * Get the File with a specified name.
      * @param {string} name      The file name.
+     * @return
+     * A file will be returned on success, otherwise a promise object that contains
+     * error information will be returned.
      */
     getFile: function(name) {
         var plugin = this.plugin;
@@ -201,6 +245,9 @@ Directory.prototype = {
 
     /**
      * Get children for current directory.
+     * @return
+     * The children for current directory will be returned on success, otherwise
+     * a promise object that contains error information will be returned.
      */
     getChildren: function() {
         return this.plugin.getPromise(this, 'getChildren', []).then(
@@ -213,6 +260,9 @@ Directory.prototype = {
     /**
      * Move to a new path.
      * @param {string} destPath     The destination path.
+     * @return
+     * A promise object that contains success information will be returned on success,
+     * otherwise a promise object that contains error information will be returned.
      */
     moveTo: function(destPath) {
         return this.plugin.getPromise(this, 'moveTo', [destPath]);
@@ -221,6 +271,9 @@ Directory.prototype = {
     /**
      * Copy to a new path.
      * @param {string} newPath      The new path.
+     * @return
+     * A promise object that contains success information will be returned on success,
+     * otherwise a promise object that contains error information will be returned.
      */
     copyTo: function(newPath) {
         return this.plugin.getPromise(this, 'copyTo', [newPath]);
@@ -228,6 +281,9 @@ Directory.prototype = {
 
     /**
      * Delete.
+     * @return
+     * A promise object that contains success information will be returned on success,
+     * otherwise a promise object that contains error information will be returned.
      */
     deleteItem: function() {
         return this.plugin.getPromise(this, 'deleteItem', []);
@@ -245,12 +301,14 @@ function Drive() {
 }
 
 Drive.prototype = {
-    onstructor: Drive,
+    constructor: Drive,
 
     /**
      * Get the information(ID) of the drive got last time.
      * @param {Function} onSuccess  The function to call on success.
      * @param {Function} onError    The function to call on error.
+     * @return
+     * onSuccess will be called on success, otherwise onError will be called.
      */
     getLastInfo: function(onSuccess, onError) {
         exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
@@ -258,6 +316,10 @@ Drive.prototype = {
 
     /**
      * Get the information(ID) of the drive from the server.
+     * @return
+     * A promise object that contains the information(ID) of the file
+     * will be returned on success, otherwise a promise that contains error information
+     * will be returned.
      */
     getInfo: function() {
         return this.plugin.getPromise(this, 'getInfo', []);
@@ -265,6 +327,9 @@ Drive.prototype = {
 
     /**
      * Get the root directory.
+     * @return
+     * A directory will be returned on success, otherwise a promise that contains
+     * error information will be returned.
      */
     rootDirctory: function() {
         var plugin = this.plugin;
@@ -281,6 +346,9 @@ Drive.prototype = {
     /**
      * Create directory with path.
      * @param {string} path      The directory path.
+     * @return
+     * A directory will be returned on success, otherwise a promise that contains
+     * error information will be returned.
      */
     createDirectory: function(path) {
         var plugin = this.plugin;
@@ -297,6 +365,9 @@ Drive.prototype = {
     /**
      * Get the directory with a specified path.
      * @param {string} path      The directory path.
+     * @return
+     * A directory will be returned on success, otherwise a promise that contains
+     * error information will be returned.
      */
     getDirectory: function(path) {
         var plugin = this.plugin;
@@ -313,6 +384,9 @@ Drive.prototype = {
     /**
      * Create file with path.
      * @param {string} path      The file path.
+     * @return
+     * A file will be returned on success, otherwise a promise that contains
+     * error information will be returned.
      */
     createFile: function(path) {
         var plugin = this.plugin;
@@ -329,6 +403,9 @@ Drive.prototype = {
     /**
      * Get the File with a specified path.
      * @param {string} path      The file path.
+     * @return
+     * A file will be returned on success, otherwise a promise that contains
+     * error information will be returned.
      */
     getFile: function(path) {
         var plugin = this.plugin;
@@ -345,6 +422,9 @@ Drive.prototype = {
     /**
      * Get the information(ID, name, size, type) of the drive with a specified path.
      * @param {string} path      The drive path.
+     * @return
+     * A promise object that contains success information will be returned on success,
+     * otherwise a promise that contains error information will be returned.
      */
     getItemInfo: function(path) {
         return this.plugin.getPromise(this, 'getItemInfo', [path]);
@@ -369,6 +449,8 @@ Client.prototype = {
      * @param {Function} onSuccess  The function to call on success.
      * @param {Function} onError    The function to call on error.
      * @param {Function} handler    The function to call.
+     * @return
+     * onSuccess will be called on success, otherwise onError will be called.
      */
     login: function(onSuccess, onError, handler) {
         var handlerId = this.plugin.addLoginRequestCb(handler);
@@ -379,6 +461,8 @@ Client.prototype = {
      * Dissociate the user from the Client.
      * @param {Function} onSuccess  The function to call on success.
      * @param {Function} onError    The function to call on error.
+     * @return
+     * onSuccess will be called on success, otherwise onError will be called.
      */
     logout: function(onSuccess, onError) {
         exec(onSuccess, onError, 'HivePlugin', 'logout', [this.clazz, this.objId]);
@@ -388,6 +472,8 @@ Client.prototype = {
      * Get the last associated user's information with client information.
      * @param {Function} onSuccess  The function to call on success.
      * @param {Function} onError    The function to call on error.
+     * @return
+     * onSuccess will be called on success, otherwise onError will be called.
      */
     getLastInfo: function(onSuccess, onError) {
         exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
@@ -395,6 +481,9 @@ Client.prototype = {
 
     /**
      * Get associated user's information with client information.
+     * @return
+     * A promise object that contains success information will be returned on success,
+     * otherwise a promise object that contains error information will be returned.
      */
     getInfo: function() {
         return this.plugin.getPromise(this, 'getInfo', []);
@@ -402,6 +491,9 @@ Client.prototype = {
 
     /**
      * Get the current backend's Drive instance associated with the client's drive.
+     * @return
+     * A drive will be returned on success, otherwise a promise object that contains
+     * error information will be returned.
      */
     getDefDrive: function() {
         var plugin = this.plugin;
