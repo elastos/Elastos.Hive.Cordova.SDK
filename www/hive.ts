@@ -22,7 +22,7 @@
 
 var exec = cordova.exec;
 
-class FileImpl implements Hive.File  {
+class FileImpl implements HivePlugin.File  {
     objId  = null;
     plugin = null;
     clazz  = 4;
@@ -47,7 +47,7 @@ class FileImpl implements Hive.File  {
         return this.plugin.getPromise(this, 'deleteItem', []);
     }
 
-    readData(length: Opaque<number, "Int">): Promise<any> {
+    readData(length: HivePlugin.Int): Promise<any> {
         return this.plugin.getPromise(this, 'readData', [length]);
     }
     
@@ -64,7 +64,7 @@ class FileImpl implements Hive.File  {
     }
 }
 
-class DirectoryImpl implements Hive.Directory {
+class DirectoryImpl implements HivePlugin.Directory {
     objId  = null;
     plugin = null;
     clazz  = 3;
@@ -136,7 +136,7 @@ class DirectoryImpl implements Hive.Directory {
         return this.plugin.getPromise(this, 'deleteItem', []);
     }
 }
-class DriveImpl implements Hive.Drive {
+class DriveImpl implements HivePlugin.Drive {
     objId  = null;
     plugin = null;
     clazz  = 2;
@@ -207,7 +207,7 @@ class DriveImpl implements Hive.Drive {
     }
 }
 
-class ClientImpl implements Hive.Client {
+class ClientImpl implements HivePlugin.Client {
     objId  = null;
     plugin = null;
     clazz  = 1;
@@ -246,7 +246,7 @@ type HivePluginEvent = {
     object: any;
 };
 
-class HivePluginImpl implements Hive.HivePlugin {
+class HiveManagerImpl implements HivePlugin.HiveManager {
     clients = [];
 
     resultIndex = 0;
@@ -256,7 +256,7 @@ class HivePluginImpl implements Hive.HivePlugin {
     loginEvent: HivePluginEvent;
 
     constructor() {
-        Object.freeze(HivePluginImpl.prototype);
+        Object.freeze(HiveManagerImpl.prototype);
         Object.freeze(ClientImpl.prototype);
         Object.freeze(DriveImpl.prototype);
         Object.freeze(DirectoryImpl.prototype);
@@ -354,4 +354,4 @@ class HivePluginImpl implements Hive.HivePlugin {
     }
 }
 
-export = new HivePluginImpl();
+export = new HiveManagerImpl();

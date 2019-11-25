@@ -2,7 +2,7 @@
 <plugin id="elastos-trinity-plugins-hive" version="0.0.1" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
     <name>Hive</name>
     <js-module name="HivePlugin" src="www/hive.js">
-        <clobbers target="hivePlugin" />
+        <clobbers target="hiveManager" />
     </js-module>
 
     <!-- <hook type="after_plugin_add" src="hooks/after_plugin_add.js" /> -->
