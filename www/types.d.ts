@@ -19,13 +19,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
-type Opaque<T, K> = T & { __opaque__: K };
-type Int = Opaque<number, 'Int'>;
-
 // TODO: Replace with accurate types everywhere there is "any" or "Function".
 
 declare module Hive {
+    type Opaque<T, K> = T & { __opaque__: K };
+    type Int = Opaque<number, 'Int'>;
+
     /**
      * The class representing File.
      * @class
