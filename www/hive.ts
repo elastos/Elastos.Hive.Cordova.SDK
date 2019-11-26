@@ -246,6 +246,23 @@ type HivePluginEvent = {
     object: any;
 };
 
+class IPFSClientCreationOptions implements HivePlugin.IPFSClientCreationOptions {
+    driveType: HivePlugin.DriveType.IPFS;
+}
+ 
+class OneDriveClientCreationOptions implements HivePlugin.IPFSClientCreationOptions {
+    driveType = HivePlugin.DriveType.ONEDRIVE;
+    clientId: string;
+    scope: string;
+    redirectUrl: string;
+
+    constructor(clientId: string, scope: string, redirectUrl: string) {
+        this.clientId = clientId;
+        this.scope = scope;
+        this.redirectUrl = redirectUrl;
+    }
+}
+
 class HiveManagerImpl implements HivePlugin.HiveManager {
     clients = [];
 
@@ -262,8 +279,21 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
         Object.freeze(DirectoryImpl.prototype);
         Object.freeze(FileImpl.prototype);
 
-        this.setListener(LISTENER_LOGIN,  this.onLoginRequest);
-        this.setListener(LISTENER_RESULT, this.onResultEvent);    
+        this.setListener(LISTENER_LOGIN, (event) => {
+            var id = event.id;
+            if (id == 0) {
+                this.loginEvent.callback(event.url);
+            }
+        });
+
+        this.setListener(LISTENER_RESULT, (event) => {
+            var id = event.hid;
+            event.hid = null;
+    
+            if (this.resultEvent[id].callback)  {
+                this.resultEvent[id].callback(event);
+            }
+        });    
     
         exec(function () {}, null, 'HivePlugin', 'initVal', []);
     }
@@ -278,13 +308,6 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
         return 0;
     }
 
-    onLoginRequest(event) {
-        var id = event.id;
-        if (id == 0) {
-            this.loginEvent.callback(event.url);
-        }
-    }
-
     addResultEventCb = function(callback, object) {
         var eventcb: HivePluginEvent = {
             callback: callback,
@@ -296,16 +319,7 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
         return this.resultIndex;
     }
 
-    onResultEvent(event) {
-        var id = event.hid;
-        event.hid = null;
-
-        if (this.resultEvent[id].callback)  {
-            this.resultEvent[id].callback(event);
-        }
-    }
-
-    getPromise(object, method, args) {
+    getPromise(object, method, args): Promise<any> {
         var me = this;
         return new Promise(function(resolve, reject) {
             var onResult = function(ret) {
@@ -332,7 +346,8 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
     setListener(type: any, eventCallback: Function) {
         exec(eventCallback, null, 'HivePlugin', 'setListener', [type]);
     }
-    createClient(options: any, onSuccess: (client: ClientImpl) => void, onError?: (err: string) => void) {
+    
+    createClient(options: HivePlugin.ClientCreationOptions, onSuccess: (client: ClientImpl) => void, onError?: (err: string) => void) {
         var client = new ClientImpl();
         var me = this;
 
