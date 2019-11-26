@@ -269,8 +269,10 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
     }
 
     addLoginRequestCb(callback) {
-        var eventcb: HivePluginEvent;
-        eventcb.callback = callback;
+        var eventcb: HivePluginEvent = {
+            callback: callback,
+            object: null
+        };
 
         this.loginEvent = eventcb;
         return 0;
@@ -284,9 +286,10 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
     }
 
     addResultEventCb = function(callback, object) {
-        var eventcb: HivePluginEvent;
-        eventcb.callback = callback;
-        eventcb.object = object;
+        var eventcb: HivePluginEvent = {
+            callback: callback,
+            object: object
+        }
 
         this.resultIndex++;
         this.resultEvent[this.resultIndex] = eventcb;
