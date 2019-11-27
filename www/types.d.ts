@@ -359,7 +359,7 @@ declare namespace HivePlugin {
         getDefDrive(): Promise<any>;
     }
 
-    enum DriveType {
+    const enum DriveType {
         NATIVE = 1,
         ONEDRIVE = 2,
         IPFS = 3
