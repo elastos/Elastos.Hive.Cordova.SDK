@@ -29,7 +29,7 @@ class ClientBuilder {
     private static let IPFS = 3
 
     private class func createForOneDrive(_ dataDir: String, _ option:Dictionary<String, String>) -> HiveClientHandle? {
-        let entry = OAuthEntry(option["client_id"]!, option["scope"]!,option["redirect_url"]!)
+        let entry = OAuthEntry(option["clientId"]!, option["scope"]!,option["redirectUrl"]!)
         HiveClientHandle.createInstance(OneDriveParameter(entry, dataDir))
         return HiveClientHandle.sharedInstance(type: .oneDrive)
     }
@@ -57,7 +57,7 @@ class ClientBuilder {
         print("decodedJsonDict=\(decodedDict)")
 
         var client: HiveClientHandle?
-        switch (Int(decodedDict["type"]!)) {
+        switch (Int(decodedDict["driveType"]!)) {
         case ONEDRIVE:
             client = createForOneDrive(dataDir, decodedDict)
 

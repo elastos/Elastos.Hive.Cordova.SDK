@@ -51,9 +51,9 @@ class ClientBuilder {
 
     private static Client createForOneDrive(String dir, JSONObject json) throws JSONException, HiveException {
         OAuthEntry entry = new OAuthEntry(
-            json.getString("client_id"),
+            json.getString("clientId"),
             json.getString("scope"),
-            json.getString("redirect_url")
+            json.getString("redirectUrl")
         );
         return Client.createInstance(new OneDriveParameter(entry, dir));
     }
@@ -71,7 +71,7 @@ class ClientBuilder {
 
     static Client create(String dir, String options, HivePlugin plugin) throws JSONException {
         JSONObject jsonObject = new JSONObject(options);
-        int type = jsonObject.getInt("type");
+        int type = jsonObject.getInt("driveType");
 
         Client client = null;
         try {
