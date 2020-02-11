@@ -33,7 +33,7 @@
         <source-file src="src/android/ObjectMap.java" target-dir="src/org/elastos/trinity/plugins/hive" />
         <framework src="src/android/hive.gradle" custom="true" type="gradleReference"/>
 	</platform>
-        <platform name="ios">
+    <platform name="ios">
         <config-file target="config.xml" parent="/*">
             <feature name="HivePlugin">
                 <param name="ios-package" value="HivePlugin" />
