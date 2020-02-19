@@ -25,9 +25,9 @@ repositories {
     flatDir{
         dirs 'src/main/libs'
     }
+    maven{ url 'https://dl.bintray.com/elastostest/Elastos.NET.Hive.Java.SDK'}
 }
 
 dependencies {
-    implementation 'com.google.code.gson:gson:2.8.6'
-    implementation 'org.elastos:hive:0.5.0'
+    implementation 'org.elastostest:hive:0.6.6'
 }

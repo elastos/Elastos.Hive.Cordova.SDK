@@ -22,188 +22,69 @@
 
 var exec = cordova.exec;
 
-class FileImpl implements HivePlugin.File  {
+class IPFSImpl implements HivePlugin.IPFS  {
     objId  = null;
     plugin = null;
     clazz  = 4;
 
-    getLastInfo(onSuccess: (info: any)=>void, onError?: (err: string)=>void) {
-        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
+    put(data: string): Promise<any> {
+        return this.plugin.getPromise(this, 'putStringIPFS', [this.objId, data]);
     }
 
-    getInfo(onSuccess: (info: any) => void, onError?: (err: string) => void): Promise<any> {
-        return this.plugin.getPromise(this, 'getInfo', []);
+    get(cid: string): Promise<any> {
+        return this.plugin.getPromise(this, 'getAsStringIPFS', [this.objId, cid]);
     }
 
-    moveTo(destPath: string): Promise<any> {
-        return this.plugin.getPromise(this, 'moveTo', [destPath]);
-    }
-
-    copyTo(newPath: string): Promise<any> {
-        return this.plugin.getPromise(this, 'copyTo', [newPath]);
-    }
-
-    deleteItem(): Promise<any> {
-        return this.plugin.getPromise(this, 'deleteItem', []);
-    }
-
-    readData(length: HivePlugin.Int): Promise<any> {
-        return this.plugin.getPromise(this, 'readData', [length]);
-    }
-    
-    writeData(data: any): Promise<any> {
-        return this.plugin.getPromise(this, 'writeData', [data]);
-    }
-
-    commit(): Promise<any> {
-        return this.plugin.getPromise(this, 'commitData', []);
-    }
-
-    discard(onSuccess?: () => void) {
-        exec(onSuccess, null, 'HivePlugin', 'discardData', [this.clazz, this.objId]);
+    size(cid: string): Promise<any> {
+        return this.plugin.getPromise(this, 'getSizeIPFS', [this.objId, cid]);
     }
 }
 
-class DirectoryImpl implements HivePlugin.Directory {
+class FilesImpl implements HivePlugin.Files  {
     objId  = null;
     plugin = null;
     clazz  = 3;
 
-    getLastInfo(onSuccess: (info: any)=>void, onError?: (err: string)=>void) {
-        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
+    put(remoteFile: string, data: string): Promise<any> {
+        return this.plugin.getPromise(this, 'putStringForFiles', [this.objId, remoteFile, data]);
     }
-    getInfo(): Promise<any> {
-        return this.plugin.getPromise(this, 'getInfo', []);
+
+    getAsString(remoteFile: string): Promise<any> {
+        return this.plugin.getPromise(this, 'getAsStringForFiles', [this.objId, remoteFile]);
     }
-    createDirectory(name: string): Promise<any> {
-        var plugin = this.plugin;
-        return this.plugin.getPromise(this, 'createDir', [name]).then(
-            function(ret) {
-                var directory = new DirectoryImpl();
-                directory.objId = ret.id;
-                directory.plugin  = plugin;
-                return directory;
-            }
-        );
+
+    size(remoteFile: string): Promise<any> {
+        return this.plugin.getPromise(this, 'sizeForFiles', [this.objId, remoteFile]);
     }
-    getDirectory(name: string): Promise<any> {
-        var plugin = this.plugin;
-        return this.plugin.getPromise(this, 'getDir', [name]).then(
-            function(ret) {
-                var directory = new DirectoryImpl();
-                directory.objId = ret.id;
-                directory.plugin  = plugin;
-                return directory;
-            }
-        );
+
+    deleteFile(remoteFile: string): Promise<any> {
+        return this.plugin.getPromise(this, 'deleteForFiles', [this.objId, remoteFile]);
     }
-    createFile(name: string): Promise<any> {
-        var plugin = this.plugin;
-        return this.plugin.getPromise(this, 'createFile', [name]).then(
-            function(ret) {
-                var file = new FileImpl();
-                file.objId = ret.id;
-                file.plugin = plugin;
-                return file;
-            }
-        );
-    }
-    getFile(name: string): Promise<any> {
-        var plugin = this.plugin;
-        return this.plugin.getPromise(this, 'getFile', [name]).then(
-            function(ret) {
-                var file = new FileImpl();
-                file.objId = ret.id;
-                file.plugin = plugin;
-                return file;
-            }
-        );
-    }
-    getChildren(): Promise<any> {
-        return this.plugin.getPromise(this, 'getChildren', []).then(
-            function(ret) {
-                return ret.items;
-            }
-        );
-    }
-    moveTo(destPath: string): Promise<any> {
-        return this.plugin.getPromise(this, 'moveTo', [destPath]);
-    }
-    copyTo(newPath: string): Promise<any> {
-        return this.plugin.getPromise(this, 'copyTo', [newPath]);
-    }
-    deleteItem(): Promise<any> {
-        return this.plugin.getPromise(this, 'deleteItem', []);
+
+    list(): Promise<any> {
+        return this.plugin.getPromise(this, 'listForFiles', [this.objId]);
     }
 }
-class DriveImpl implements HivePlugin.Drive {
+
+class KeyValuesImpl implements HivePlugin.KeyValues  {
     objId  = null;
     plugin = null;
     clazz  = 2;
 
-    getLastInfo(onSuccess: (info: any) => void, onError?: (err: string) => void) {
-        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
+    putValue(key: string, value: string): Promise<any> {
+        return this.plugin.getPromise(this, 'putValue', [this.objId, key, value]);
     }
-    getInfo(): Promise<any> {
-        return this.plugin.getPromise(this, 'getInfo', []);
+
+    setValue(key: string, value: string): Promise<any> {
+        return this.plugin.getPromise(this, 'setValue', [this.objId, key, value]);
     }
-    rootDirectory(): Promise<any> {
-        var plugin = this.plugin;
-        return this.plugin.getPromise(this, 'rootDir', []).then(
-            function(ret) {
-                var directory = new DirectoryImpl();
-                directory.objId = ret.id;
-                directory.plugin  = plugin;
-                return directory;
-            }
-        );
+
+    getValues(key: string): Promise<any> {
+        return this.plugin.getPromise(this, 'getValues', [this.objId, key]);
     }
-    createDirectory(path: string): Promise<any> {
-        var plugin = this.plugin;
-        return this.plugin.getPromise(this, 'createDir', [path]).then(
-            function(ret) {
-                var directory = new DirectoryImpl();
-                directory.objId = ret.id;
-                directory.plugin  = plugin;
-                return directory;
-            }
-        );
-    }
-    getDirectory(path: string): Promise<any> {
-        var plugin = this.plugin;
-        return this.plugin.getPromise(this, 'getDir', [path]).then(
-            function(ret) {
-                var directory = new DirectoryImpl();
-                directory.objId = ret.id;
-                directory.plugin  = plugin;
-                return directory;
-            }
-        );
-    }
-    createFile(path: string): Promise<any> {
-        var plugin = this.plugin;
-        return this.plugin.getPromise(this, 'createFile', [path]).then(
-            function(ret) {
-                var file = new FileImpl();
-                file.objId = ret.id;
-                file.plugin = plugin;
-                return file;
-            }
-        );
-    }
-    getFile(path: string): Promise<any> {
-        var plugin = this.plugin;
-        return this.plugin.getPromise(this, 'getFile', [path]).then(
-            function(ret) {
-                var file = new FileImpl();
-                file.objId = ret.id;
-                file.plugin = plugin;
-                return file;
-            }
-        );
-    }
-    getItemInfo(path: string): Promise<any> {
-        return this.plugin.getPromise(this, 'getItemInfo', [path]);
+
+    deleteKey(key: string): Promise<any> {
+        return this.plugin.getPromise(this, 'deleteKey', [this.objId, key]);
     }
 }
 
@@ -212,29 +93,74 @@ class ClientImpl implements HivePlugin.Client {
     plugin = null;
     clazz  = 1;
 
-    login(handler: Function, onSuccess?: () => void, onError?: (err: string) => void) {
-        var handlerId = this.plugin.addLoginRequestCb(handler);
-        exec(onSuccess, onError, 'HivePlugin', 'login', [this.clazz, this.objId, handlerId]);
+    ipfs = [];
+    files = [];
+    keyValues = [];
+
+    connect(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
+        var me = this;
+        var _onSuccess = function (ret) {
+            if (onSuccess)
+                onSuccess(ret.status);
+        };
+        exec(_onSuccess, onError, 'HivePlugin', 'connect', [this.objId]);
     }
-    logout(onSuccess?: () => void, onError?: (err: string) => void) {
-        exec(onSuccess, onError, 'HivePlugin', 'logout', [this.clazz, this.objId]);
+
+    disConnect(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
+        var me = this;
+        var _onSuccess = function (ret) {
+            if (onSuccess)
+                onSuccess(ret.status);
+        };
+        exec(_onSuccess, onError, 'HivePlugin', 'disConnect', [this.objId]);
     }
-    getLastInfo(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
-        exec(onSuccess, onError, 'HivePlugin', 'getLastInfo', [this.clazz, this.objId]);
+
+    isConnected(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
+        var me = this;
+        var _onSuccess = function (ret) {
+            if (onSuccess)
+                onSuccess(ret.isConnect);
+        };
+        exec(_onSuccess, onError, 'HivePlugin', 'isConnected', [this.objId]);
     }
-    getInfo(): Promise<any> {
-        return this.plugin.getPromise(this, 'getInfo', []);
+
+    getIPFS(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
+        var me = this;
+            var _onSuccess = function (ret) {
+                var ipfs = new IPFSImpl();
+                ipfs.objId = ret.ipfsId;
+                ipfs.plugin = me.plugin;
+                me.ipfs[ipfs.objId] = ipfs;
+                if (onSuccess)
+                    onSuccess(ipfs);
+            };
+            exec(_onSuccess, onError, 'HivePlugin', 'getIPFS', [this.objId]);
     }
-    getDefDrive(): Promise<any> {
-        var plugin = this.plugin;
-        return this.plugin.getPromise(this, 'getDefDrive', []).then(
-            function (ret) {
-                var drive = new DriveImpl();
-                drive.objId = ret.id;
-                drive.plugin = plugin;
-                return drive;
-            }
-        );
+    
+    getFiles(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
+        var me = this;
+        var _onSuccess = function (ret) {
+            var files = new FilesImpl();
+            files.objId = ret.filesId;
+            files.plugin = me.plugin;
+            me.files[files.objId] = files;
+            if (onSuccess)
+                onSuccess(files);
+        };
+        exec(_onSuccess, onError, 'HivePlugin', 'getFiles', [this.objId]);
+    }
+    
+    getKeyValues(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
+        var me = this;
+        var _onSuccess = function (ret) {
+            var keyValues = new KeyValuesImpl();
+            keyValues.objId = ret.keyValuesId;
+            keyValues.plugin = me.plugin;
+            me.keyValues[keyValues.objId] = keyValues;
+            if (onSuccess)
+                onSuccess(keyValues);
+        };
+        exec(_onSuccess, onError, 'HivePlugin', 'getKeyValues', [this.objId]);
     }
 }
 
@@ -253,12 +179,10 @@ class IPFSClientCreationOptions implements HivePlugin.IPFSClientCreationOptions 
 class OneDriveClientCreationOptions implements HivePlugin.IPFSClientCreationOptions {
     driveType = HivePlugin.DriveType.ONEDRIVE;
     clientId: string;
-    scope: string;
     redirectUrl: string;
 
-    constructor(clientId: string, scope: string, redirectUrl: string) {
+    constructor(clientId: string, redirectUrl: string) {
         this.clientId = clientId;
-        this.scope = scope;
         this.redirectUrl = redirectUrl;
     }
 }
@@ -275,9 +199,9 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
     constructor() {
         Object.freeze(HiveManagerImpl.prototype);
         Object.freeze(ClientImpl.prototype);
-        Object.freeze(DriveImpl.prototype);
-        Object.freeze(DirectoryImpl.prototype);
-        Object.freeze(FileImpl.prototype);
+        Object.freeze(IPFSImpl.prototype);
+        Object.freeze(FilesImpl.prototype);
+        Object.freeze(KeyValuesImpl.prototype);
 
         this.setListener(LISTENER_LOGIN, (event) => {
             var id = event.id;
@@ -328,14 +252,8 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
                 else
                     reject(ret.error);
             };
-
-            var _args = [
-                object.clazz,
-                object.objId,
-                me.addResultEventCb(onResult, object),
-            ];
-
-            exec(null, null, 'HivePlugin', method, _args.concat(args));
+            me.addResultEventCb(onResult, object),
+            exec(null, null, 'HivePlugin', method, args);
         });
     }
 
@@ -347,12 +265,12 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
         exec(eventCallback, null, 'HivePlugin', 'setListener', [type]);
     }
     
-    createClient(options: HivePlugin.ClientCreationOptions, onSuccess: (client: ClientImpl) => void, onError?: (err: string) => void) {
+    createClient(handler: Function, options: HivePlugin.ClientCreationOptions, onSuccess: (client: ClientImpl) => void, onError?: (err: string) => void) {
         var client = new ClientImpl();
         var me = this;
 
         var _onSuccess = function(ret) {
-            client.objId = ret.id;
+            client.objId = ret.clientId;
             client.plugin = me;
             me.clients[client.objId] = client;
             if (onSuccess)
@@ -368,7 +286,8 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
         }
 
         var configStr = JSON.stringify(options);
-        exec(_onSuccess, onError, 'HivePlugin', 'createClient', ["im", configStr]);
+        var handlerId = this.addLoginRequestCb(handler);
+        exec(_onSuccess, onError, 'HivePlugin', 'createClient', [configStr, handlerId]);
     }
 }
 

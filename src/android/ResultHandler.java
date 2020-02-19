@@ -22,35 +22,26 @@
 
 package org.elastos.trinity.plugins.hive;
 
-import android.telecom.Call;
-
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
+import org.elastos.hive.exception.HiveException;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import org.elastos.hive.*;
-import org.elastos.hive.Void;
-import org.elastos.hive.File;
 
-import java.nio.ByteBuffer;
+import java.util.ArrayList;
 
-class ResultHandler<T extends Result> implements Callback<T> {
+class ResultHandler<T> implements Callback<T> {
+    private final Type type;
     private final int handlerId;
     private final CallbackContext callbackContext;
-    private final ByteBuffer byteBuffer;
 
-    ResultHandler(int id, CallbackContext callbackContext) {
+    ResultHandler(int id, Type type, CallbackContext callbackContext) {
         this.handlerId = id;
         this.callbackContext = callbackContext;
-        this.byteBuffer = null;
-    }
-
-    ResultHandler(int id, CallbackContext callbackContext, ByteBuffer buffer) {
-        this.handlerId = id;
-        this.callbackContext = callbackContext;
-        this.byteBuffer = buffer;
+        this.type = type;
     }
 
     private void sendEvent(JSONObject info) throws JSONException {
@@ -65,172 +56,106 @@ class ResultHandler<T extends Result> implements Callback<T> {
     @Override
     public void onError(HiveException ex) {
         try {
-            JSONObject ret = new JSONObject();
-            ret.put("error", ex.getMessage());
-            sendEvent(ret);
+            sendEvent(errorJson(ex.getMessage()));
         } catch (JSONException e) {
             e.printStackTrace();
         }
     }
 
     @Override
-    public void onSuccess(T body) {
-        JSONObject ret;
-        try {
-            if (body instanceof Drive) {
-                ret = driveToJson((Drive)body);
-            } else if (body instanceof Directory) {
-                ret = directoryToJson((Directory)body);
-            } else if (body instanceof File) {
-                ret = fileToJson((File)body);
-            } else if (body instanceof Client.Info) {
-                ret = clientInfoToJson((Client.Info)body);
-            } else if (body instanceof Drive.Info) {
-                ret = driveInfoToJson((Drive.Info)body);
-            } else if (body instanceof Directory.Info) {
-                ret = dirInfoToJson((Directory.Info)body);
-            } else if (body instanceof File.Info) {
-                ret = fileInfoToJson((File.Info)body);
-            } else if (body instanceof ItemInfo) {
-                ret = itemInfoToJson((ItemInfo)body);
-            } else if (body instanceof Children) {
-                ret = childrenToJson((Children) body);
-            } else if (body instanceof Length) {
-                ret = lengthToJson((Length)body);
-            } else {
-                ret = hiveVoidToJson((Void)body);
-            }
+    public void onSuccess(T result) {
+        JSONObject ret = null;
 
-            if (ret != null) sendEvent(ret);
+        try {
+            switch (type) {
+                case Void:
+                    ret = voidToJson();
+                    break;
+                case Length:
+                    ret = lengthToJson((Long) result);
+                    break;
+                case Content:
+                    ret = contentToJson((String) result);
+                    break;
+                case FileList:
+                    ret = fileListToJson((ArrayList<String>) result);
+                    break;
+                case ValueList:
+                    ret = valueListToJson((ArrayList<byte[]>) result);
+                    break;
+                case CID:
+                    ret = cidToJSON((String) result);
+                    break;
+                default:
+                    break;
+            }
+            if (ret == null)
+                ret = errorJson("ret is null");
+
+            sendEvent(ret);
         } catch (JSONException e) {
             e.printStackTrace();
         }
     }
 
-    private JSONObject driveToJson(Drive drive) throws JSONException {
-        ObjectMap  map = ObjectMap.acquire(ObjectMap.DRIVE);
-        Integer  objId = System.identityHashCode(drive);
-        JSONObject ret = new JSONObject();
-
-        ObjectMap.toDriveMap(map).put(objId, drive);
-        ret.put("id", objId);
+    private JSONObject voidToJson() throws JSONException {
+        JSONObject ret = successJson();
         return ret;
     }
 
-    private JSONObject directoryToJson(Directory directory) throws JSONException {
-        ObjectMap  map = ObjectMap.acquire(ObjectMap.DIR);
-        Integer  objId = System.identityHashCode(directory);
-        JSONObject ret = new JSONObject();
-
-        ObjectMap.toDirMap(map).put(objId, directory);
-        ret.put("id", objId);
+    private JSONObject lengthToJson(long length) throws JSONException {
+        JSONObject ret = successJson();
+        ret.put("length", length);
         return ret;
     }
 
-    private JSONObject fileToJson(File file) throws JSONException {
-        ObjectMap  map = ObjectMap.acquire(ObjectMap.FILE);
-        Integer  objId = System.identityHashCode(file);
-        JSONObject ret = new JSONObject();
-
-        ObjectMap.toFileMap(map).put(objId, file);
-        ret.put("id", objId);
+    private JSONObject contentToJson(String content) throws JSONException {
+        JSONObject ret = successJson();
+        ret.put("content", content);
         return ret;
     }
 
-    private JSONObject clientInfoToJson(Client.Info info) throws JSONException {
-        JSONObjectHolder<Client.Info> holder;
-
-        holder = new JSONObjectHolder<Client.Info>(info);
-        holder.put(Client.Info.userId)
-              .put(Client.Info.name)
-              .put(Client.Info.email)
-              .put(Client.Info.phoneNo)
-              .put(Client.Info.region);
-
-        return holder.get();
+    private JSONObject fileListToJson(ArrayList<String> fileList) throws JSONException {
+        JSONObject ret = successJson();
+        JSONArray array = new JSONArray(fileList);
+        ret.put("fileList", array);
+        return ret;
     }
 
-    private JSONObject driveInfoToJson(Drive.Info info) throws JSONException {
-        JSONObjectHolder<Drive.Info> holder;
-
-        holder = new JSONObjectHolder<Drive.Info>(info);
-        holder.put(Drive.Info.driveId);
-
-        return holder.get();
-    }
-
-    private JSONObject dirInfoToJson(Directory.Info info) throws JSONException {
-        JSONObjectHolder<Directory.Info> holder;
-
-        holder = new JSONObjectHolder<Directory.Info>(info);
-        holder.put(Directory.Info.itemId)
-              .put(Directory.Info.name)
-              .put(Directory.Info.childCount);
-
-        return holder.get();
-    }
-
-    private JSONObject fileInfoToJson(File.Info info) throws JSONException {
-        JSONObjectHolder<File.Info> holder;
-
-        holder = new JSONObjectHolder<File.Info>(info);
-        holder.put(File.Info.itemId)
-              .put(File.Info.name)
-              .put(File.Info.size);
-
-        return holder.get();
-    }
-
-    private JSONObject itemInfoToJson(ItemInfo info) throws JSONException {
-        JSONObjectHolder<ItemInfo> holder;
-
-        holder = new JSONObjectHolder<ItemInfo>(info);
-        holder.put(ItemInfo.itemId)
-              .put(ItemInfo.name)
-              .put(ItemInfo.type)
-              .put(ItemInfo.size);
-
-        return holder.get();
-    }
-
-    private JSONObject childrenToJson(Children info) throws JSONException {
-        JSONObjectHolder<ItemInfo> holder;
+    private JSONObject valueListToJson(ArrayList<byte[]> valueList) throws JSONException {
+        JSONObject ret = successJson();
         JSONArray array = new JSONArray();
-
-        for(ItemInfo itemInfo: info.getContent()) {
-            holder = new JSONObjectHolder<>(itemInfo);
-            holder.put(ItemInfo.itemId)
-                  .put(ItemInfo.name)
-                  .put(ItemInfo.type)
-                  .put(ItemInfo.size);
-
-            try {
-                array.put(holder.get());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+        for (byte[] value :valueList){
+            array.put(new String(value));
         }
-
-        JSONObject json = new JSONObject();
-        json.put("items", array);
-        return json;
+        ret.put("valueList", array);
+        return ret;
+    }
+    private JSONObject cidToJSON(String cid) throws JSONException {
+        JSONObject ret = successJson();
+        ret.put("cid", cid);
+        return ret;
+    }
+    private JSONObject successJson() throws JSONException {
+        JSONObject ret = new JSONObject();
+        ret.put("status", "success");
+        return ret;
     }
 
-    private JSONObject hiveVoidToJson(Void padding) throws JSONException {
-        JSONObjectHolder<Void> holder;
+    private JSONObject errorJson(String errorMsg) throws JSONException {
+        JSONObject ret = new JSONObject();
+        ret.put("status", "error");
+        ret.put("error", errorMsg);
+        return ret;
 
-        holder = new JSONObjectHolder<Void>(padding);
-        holder.put();
-
-        return holder.get();
     }
 
-    private JSONObject lengthToJson(Length length) throws JSONException {
-        JSONObject json = new JSONObject();
-        json.put("length", length.getLength());
-        if (byteBuffer != null)
-            json.put("data", new String(byteBuffer.array()));
-
-        return json;
+    enum Type {
+        Void,
+        Length,
+        Content,
+        CID,
+        FileList,
+        ValueList
     }
 }

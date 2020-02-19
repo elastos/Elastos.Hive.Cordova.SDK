@@ -22,69 +22,60 @@
 
 package org.elastos.trinity.plugins.hive;
 
-import android.app.Activity;
-import android.content.res.Resources;
-
-import org.apache.cordova.CallbackContext;
-import org.apache.cordova.PluginResult;
-import org.elastos.trinity.runtime.R;
+import org.elastos.hive.exception.HiveException;
+import org.elastos.hive.vendor.ipfs.IPFSOptions;
+import org.elastos.hive.vendor.onedrive.OneDriveOptions;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.nio.charset.StandardCharsets;
-import java.util.List;
-import java.util.ArrayList;
-import java.io.File;
-
 import org.elastos.hive.*;
-import org.elastos.hive.HiveException;
-import org.elastos.hive.vendors.onedrive.OneDriveParameter;
-import org.elastos.hive.vendors.ipfs.IPFSParameter;
 
 class ClientBuilder {
     private static String TAG = "ClientBuilder";
 
-    private static final int NATIVE    = 1;
-    private static final int ONEDRIVE  = 2;
-    private static final int IPFS      = 3;
+    private static final int NATIVE = 1;
+    private static final int ONEDRIVE = 2;
+    private static final int IPFS = 3;
 
-    private static Client createForOneDrive(String dir, JSONObject json) throws JSONException, HiveException {
-        OAuthEntry entry = new OAuthEntry(
-            json.getString("clientId"),
-            json.getString("scope"),
-            json.getString("redirectUrl")
-        );
-        return Client.createInstance(new OneDriveParameter(entry, dir));
+    private static Client.Options createOneDriveOptions(String storePath, String jsonStr, Authenticator authenticator) throws JSONException, HiveException {
+        JSONObject json = new JSONObject(jsonStr);
+        String clientId = json.getString("clientId");
+        String redirectUrl = json.getString("redirectUrl");
+        return new OneDriveOptions
+                .Builder()
+                .setStorePath(storePath)
+                .setClientId(clientId)
+                .setRedirectUrl(redirectUrl)
+                .setAuthenticator(authenticator)
+                .build();
     }
 
-    private static Client createForIPFS(String dir, JSONObject json, HivePlugin plugin) throws HiveException {
-        ArrayList<IpfsNodesGetter.IpfsNode> list = IpfsNodesGetter.getIpfsNodes(plugin);
-        String[] array = new String[list.size()];
-        int i = 0;
-        for (IpfsNodesGetter.IpfsNode node: list) {
-            array[i++] = node.addr;
+    private static Client.Options createIPFSOptions(String storePath, String jsonStr) throws JSONException, HiveException {
+        IPFSOptions.Builder options = new IPFSOptions.Builder().setStorePath(storePath);
+        JSONObject json = new JSONObject(jsonStr);
+        JSONArray array = json.getJSONArray("nodes");
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject item = array.getJSONObject(i);
+            options.addRpcNode(new IPFSOptions.RpcNode(item.getString("ip"), item.getInt("port")));
         }
-
-        return Client.createInstance(new IPFSParameter(new IPFSEntry(null, array), dir));
+        return options.build();
     }
 
-    static Client create(String dir, String options, HivePlugin plugin) throws JSONException {
+    static Client createClient(String storePath, String options, Authenticator authenticator) throws Exception {
         JSONObject jsonObject = new JSONObject(options);
         int type = jsonObject.getInt("driveType");
+        Client client;
 
-        Client client = null;
-        try {
-            switch(type) {
+        switch (type) {
             case ONEDRIVE:
-                client = createForOneDrive(dir, jsonObject);
+                client = Client.createInstance(createOneDriveOptions(storePath, options, authenticator));
                 break;
 
             case IPFS:
-                client = createForIPFS(dir, jsonObject, plugin);
+                client = Client.createInstance(createIPFSOptions(storePath, options));
                 break;
-            }
-        } catch (HiveException e) {
+            default:
+                throw new IllegalStateException("Unexpected value: " + type);
         }
 
         return client;

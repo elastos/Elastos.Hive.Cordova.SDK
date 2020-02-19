@@ -20,589 +20,339 @@
  * SOFTWARE.
  */
 
-  package org.elastos.trinity.plugins.hive;
-
-  import android.telecom.Call;
-  import android.util.Base64;
-
-  import org.apache.cordova.CordovaPlugin;
-  import org.apache.cordova.CallbackContext;
-
-  import org.apache.cordova.PluginResult;
-  import org.elastos.trinity.runtime.TrinityPlugin;
-  import org.json.JSONArray;
-  import org.json.JSONException;
-  import org.json.JSONObject;
-
-  import java.nio.ByteBuffer;
-  import java.util.List;
-  import java.util.Map;
-  import java.util.HashMap;
-
-  import org.elastos.hive.*;
-  import org.elastos.hive.Void;
-  import org.elastos.hive.File;
-  import org.elastos.hive.HiveException;
-
-  /**
-   * This class echoes a string called from JavaScript.
-   */
-  public class HivePlugin extends TrinityPlugin {
-      private static final int LOGIN  = 1;
-      private static final int RESULT = 2;
-
-      private CallbackContext loginCallbackCtxt  = null;
-      private CallbackContext resultCallbackCtxt = null;
-
-      @Override
-      public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-          try {
-              switch(action) {
-              case "getVersion":
-                  this.getVersion(args, callbackContext);
-                  break;
-
-              case "setListener":
-                  this.setListener(args, callbackContext);
-                  break;
-
-              case "createClient":
-                  this.createClient(args, callbackContext);
-                  break;
-
-              case "login":
-                  this.login(args, callbackContext);
-                  break;
-
-              case "logout":
-                  this.logout(args, callbackContext);
-                  break;
-
-              case "getLastInfo":
-                  this.getLastInfo(args, callbackContext);
-                  break;
-
-              case "getInfo":
-                  this.getInfo(args, callbackContext);
-                  break;
-
-              case "getDefDrive":
-                  this.getDefDrive(args, callbackContext);
-                  break;
-
-              case "rootDir":
-                  this.rootDirectory(args, callbackContext);
-                  break;
-
-              case "createDir":
-                  this.createDirectory(args, callbackContext);
-                  break;
-
-              case "getDir":
-                  this.getDirectory(args, callbackContext);
-                  break;
-
-              case "createFile":
-                  this.createFile(args, callbackContext);
-                  break;
-
-              case "getFile":
-                  this.getFile(args, callbackContext);
-                  break;
-
-              case "getItemInfo":
-                  this.getItemInfo(args, callbackContext);
-                  break;
-
-              case "getChildren":
-                  this.getChildren(args, callbackContext);
-                  break;
-
-              case "moveTo":
-                  this.moveTo(args, callbackContext);
-                  break;
-
-              case "copyTo":
-                  this.copyTo(args, callbackContext);
-                  break;
-
-              case "deleteItem":
-                  this.deleteItem(args, callbackContext);
-                  break;
-
-              case "readData":
-                  this.readData(args, callbackContext);
-                  break;
-
-              case "writeData":
-                  this.writeData(args, callbackContext);
-                  break;
-
-              case "commitData":
-                  this.commitData(args, callbackContext);
-                  break;
-
-              case "discardData":
-                  this.discardData(args, callbackContext);
-                  break;
-
-              default:
-                  return false;
-              }
-          } catch (JSONException e) {
-              //e.printStack();
-          }
-          return true;
-      }
-
-      private void getVersion(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          String version = "ElastosHiveSDK-v0.1";
-          callbackContext.success(version);
-      }
-
-      private void setListener(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer type = args.getInt(0);
-
-          switch(type) {
-          case LOGIN:
-              loginCallbackCtxt = callbackContext;
-              break;
-
-          case RESULT:
-              resultCallbackCtxt = callbackContext;
-              break;
-          }
-
-          PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
-          result.setKeepCallback(true);
-          callbackContext.sendPluginResult(result);
-      }
-
-      private void createClient(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          String dataDir = cordova.getActivity().getFilesDir() + "/data/hive/" + args.getString(0);
-          String options = args.getString(1);
-
-          java.io.File dirFile = new java.io.File(dataDir);
-          if (!dirFile.exists())
-               dirFile.mkdirs();
-
-          ObjectMap map = ObjectMap.acquire(1);
-          Client client = ClientBuilder.create(dataDir, options, this);
-          Integer objId = System.identityHashCode(client);
-          ObjectMap.toClientMap(map).put(objId, client);
-
-          JSONObject ret= new JSONObject();
-          ret.put("id", objId);
-          callbackContext.success(ret);
-      }
-
-      private void login(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (!ObjectMap.isClientMap(map))
-              return;
-
-          JSONObject ret = new JSONObject();
-          new Thread(() -> {
-              try {
-                  ObjectMap.toClientMap(map).get(objId).login(
-                      new LoginHandler(handlerId, loginCallbackCtxt)
-                  );
-
-                  ret.put("result", "success");
-              } catch(JSONException e) {
-                  callbackContext.error("error");
-              } catch(HiveException e) {
-                  callbackContext.error("error");
-              }
-          }).start();
-          callbackContext.success(ret);
-      }
-
-      private void logout(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (!ObjectMap.isClientMap(map))
-              return;
-
-          new Thread(() -> {
-              try {
-                  ObjectMap.toClientMap(map).get(objId).logout();
-
-                  JSONObject ret = new JSONObject();
-                  ret.put("result", "success");
-                  callbackContext.success(ret);
-              } catch (JSONException e) {
-                  callbackContext.error("error");
-              } catch (HiveException e) {
-                  callbackContext.error("error");
-              }
-          }).start();
-      }
-
-      private void getLastInfo(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isClientMap(map)) {
-              JSONObjectHolder<Client.Info> holder;
-              Client.Info info;
-
-              info = ObjectMap.toClientMap(map).get(objId).getLastInfo();
-              if (info == null) {
-                  callbackContext.error("no info");
-                  return;
-              }
-
-              holder = new JSONObjectHolder<Client.Info>(info);
-              holder.put(Client.Info.userId)
-                    .put(Client.Info.name)
-                    .put(Client.Info.email)
-                    .put(Client.Info.phoneNo)
-                    .put(Client.Info.region);
-
-              callbackContext.success(holder.get());
-              return;
-          }
-
-          if (ObjectMap.isDriveMap(map)) {
-              JSONObjectHolder<Drive.Info> holder;
-              Drive.Info info;
-
-              info = ObjectMap.toDriveMap(map).get(objId).getLastInfo();
-              holder = new JSONObjectHolder<Drive.Info>(info);
-              holder.put(Drive.Info.driveId);
-
-              callbackContext.success(holder.get());
-              return;
-          }
-
-          if (ObjectMap.isDirMap(map)) {
-              JSONObjectHolder<Directory.Info> holder;
-              Directory.Info info;
-
-              info = ObjectMap.toDirMap(map).get(objId).getLastInfo();
-              holder = new JSONObjectHolder<Directory.Info>(info);
-              holder.put(Directory.Info.itemId)
-                    .put(Directory.Info.name)
-                    .put(Directory.Info.childCount);
-
-              callbackContext.success(holder.get());
-              return;
-          }
-
-          if (ObjectMap.isFileMap(map)) {
-              JSONObjectHolder<File.Info> holder;
-              File.Info info;
-
-              info = ObjectMap.toFileMap(map).get(objId).getLastInfo();
-              holder = new JSONObjectHolder<File.Info>(info);
-              holder.put(File.Info.itemId)
-                    .put(File.Info.name)
-                    .put(File.Info.size);
-
-              callbackContext.success(holder.get());
-              return;
-          }
-      }
-
-      private void getInfo(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isClientMap(map)) {
-              ObjectMap.toClientMap(map).get(objId).getInfo(
-                  new ResultHandler<Client.Info>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-
-          if (ObjectMap.isDriveMap(map)) {
-              ObjectMap.toDriveMap(map).get(objId).getInfo(
-                  new ResultHandler<Drive.Info>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-
-          if (ObjectMap.isDirMap(map)) {
-              ObjectMap.toDirMap(map).get(objId).getInfo(
-                  new ResultHandler<Directory.Info>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-
-          if (ObjectMap.isFileMap(map)) {
-              ObjectMap.toFileMap(map).get(objId).getInfo(
-                  new ResultHandler<File.Info>(handlerId, resultCallbackCtxt)
-              );
-          }
-      }
-
-      private void getDefDrive(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isClientMap(map)) {
-              ObjectMap.toClientMap(map).get(objId).getDefaultDrive(
-                  new ResultHandler<Drive>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-      }
-
-      private void rootDirectory(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isDriveMap(map)) {
-              ObjectMap.toDriveMap(map).get(objId).getRootDir(
-                  new ResultHandler<Directory>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-      }
-
-      private void createDirectory(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-          String  path  = args.getString(3);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isDriveMap(map)) {
-              ObjectMap.toDriveMap(map).get(objId).createDirectory(path,
-                  new ResultHandler<Directory>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-          if (ObjectMap.isDirMap(map)) {
-              ObjectMap.toDirMap(map).get(objId).createDirectory(path,
-                  new ResultHandler<Directory>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-      }
-
-      private void getDirectory(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-          String  path  = args.getString(3);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isDriveMap(map)) {
-              ObjectMap.toDriveMap(map).get(objId).getDirectory(path,
-                  new ResultHandler<Directory>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-          if (ObjectMap.isDirMap(map)) {
-              ObjectMap.toDirMap(map).get(objId).getDirectory(path,
-                  new ResultHandler<Directory>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-      }
-
-      private void createFile(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-          String  path  = args.getString(3);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isDriveMap(map)) {
-              ObjectMap.toDriveMap(map).get(objId).createFile(path,
-                  new ResultHandler<File>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-          if (ObjectMap.isDirMap(map)) {
-              ObjectMap.toDirMap(map).get(objId).createFile(path,
-                  new ResultHandler<File>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-      }
-
-      private void getFile(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-          String  path  = args.getString(3);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isDriveMap(map)) {
-              ObjectMap.toDriveMap(map).get(objId).getFile(path,
-                  new ResultHandler<File>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-          if (ObjectMap.isDirMap(map)) {
-              ObjectMap.toDirMap(map).get(objId).getFile(path,
-                  new ResultHandler<File>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-      }
-
-      private void getItemInfo(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-          String  path  = args.getString(3);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isDriveMap(map)) {
-              ObjectMap.toDriveMap(map).get(objId).getItemInfo(path,
-                  new ResultHandler<ItemInfo>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-      }
-
-      private void getChildren(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isDirMap(map)) {
-              ObjectMap.toDirMap(map).get(objId).getChildren(
-                  new ResultHandler<Children>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-      }
-
-      private void moveTo(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-          String  path  = args.getString(3);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isDirMap(map)) {
-              ObjectMap.toDirMap(map).get(objId).moveTo(path,
-                  new ResultHandler<Void>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-          if (ObjectMap.isFileMap(map)) {
-              ObjectMap.toFileMap(map).get(objId).moveTo(path,
-                  new ResultHandler<Void>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-      }
-
-      private void copyTo(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-          String  path  = args.getString(3);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isDirMap(map)) {
-              ObjectMap.toDirMap(map).get(objId).copyTo(path,
-                  new ResultHandler<Void>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-          if (ObjectMap.isFileMap(map)) {
-              ObjectMap.toFileMap(map).get(objId).copyTo(path,
-                  new ResultHandler<Void>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-      }
-
-      private void deleteItem(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isDirMap(map)) {
-              ObjectMap.toDirMap(map).get(objId).deleteItem(
-                  new ResultHandler<Void>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-          if (ObjectMap.isFileMap(map)) {
-              ObjectMap.toFileMap(map).get(objId).deleteItem(
-                  new ResultHandler<Void>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-      }
-
-      private void readData(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-          int length    = args.getInt(3);
-
-          ByteBuffer buffer = ByteBuffer.allocate(length);
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isFileMap(map)) {
-              ObjectMap.toFileMap(map).get(objId).read(buffer,
-                  new ResultHandler<Length>(handlerId, resultCallbackCtxt, buffer)
-              );
-              return;
-          }
-      }
-
-      private void writeData(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-          String  data  = args.getString(3);
-
-          ByteBuffer buffer = ByteBuffer.wrap(data.getBytes());
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isFileMap(map)) {
-              ObjectMap.toFileMap(map).get(objId).write(buffer,
-                  new ResultHandler<Length>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-      }
-
-      private void commitData(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-          int handlerId = args.getInt(2);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isFileMap(map)) {
-              ObjectMap.toFileMap(map).get(objId).commit(
-                  new ResultHandler<Void>(handlerId, resultCallbackCtxt)
-              );
-              return;
-          }
-      }
-
-      private void discardData(JSONArray args, CallbackContext callbackContext) throws JSONException {
-          Integer mapId = args.getInt(0);
-          Integer objId = args.getInt(1);
-
-          ObjectMap map = ObjectMap.acquire(mapId);
-          if (ObjectMap.isFileMap(map))
-              ObjectMap.toFileMap(map).get(objId).discard();
-
-          callbackContext.success();
-      }
-  }
+package org.elastos.trinity.plugins.hive;
+
+import org.apache.cordova.CallbackContext;
+
+import org.apache.cordova.PluginResult;
+import org.elastos.hive.Client;
+import org.elastos.hive.interfaces.Files;
+import org.elastos.hive.interfaces.IPFS;
+import org.elastos.hive.interfaces.KeyValues;
+import org.elastos.trinity.runtime.TrinityPlugin;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.HashMap;
+
+/**
+ * This class echoes a string called from JavaScript.
+ */
+public class
+
+
+HivePlugin extends TrinityPlugin {
+    private static final int LOGIN = 1;
+    private static final int RESULT = 2;
+
+    private HashMap<Integer, Client> hiveClientMap = new HashMap<>();
+    private HashMap<Integer, IPFS> ipfsMap = new HashMap<>();
+    private HashMap<Integer, Files> filesMap = new HashMap<>();
+    private HashMap<Integer, KeyValues> keyValuesMap = new HashMap<>();
+
+
+    private static final String SUCCESS = "Success!";
+    private static final String INVALID_ID = "Id invalid!";
+
+    private CallbackContext loginCallbackCtxt = null;
+    private CallbackContext resultCallbackCtxt = null;
+
+    private int resultId = 0;
+
+    @Override
+    public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
+        try {
+            switch (action) {
+                case "getVersion":
+                    this.getVersion(args, callbackContext);
+                    break;
+                case "setListener":
+                    this.setListener(args, callbackContext);
+                    break;
+                case "createClient":
+                    this.createClient(args, callbackContext);
+                case "connect":
+                    this.connect(args, callbackContext);
+                    break;
+                case "disconnect":
+                    this.disConnect(args, callbackContext);
+                    break;
+                case "isConnected":
+                    this.isConnected(args, callbackContext);
+                    break;
+                case "getIPFS":
+                    this.getIPFS(args, callbackContext);
+                    break;
+                case "getFiles":
+                    this.getFiles(args, callbackContext);
+                    break;
+                case "getKeyValues":
+                    this.getKeyValues(args, callbackContext);
+                    break;
+                case "putStringForFiles":
+                    this.putStringForFiles(args, callbackContext);
+                    break;
+                case "getAsStringForFiles":
+                    this.getAsStringForFiles(args, callbackContext);
+                    break;
+                case "sizeForFiles":
+                    this.sizeForFiles(args, callbackContext);
+                    break;
+                case "deleteForFiles":
+                    this.deleteForFiles(args, callbackContext);
+                    break;
+                case "listForFiles":
+                    this.listForFiles(args, callbackContext);
+                    break;
+                case "putStringIPFS":
+                    this.putStringIPFS(args, callbackContext);
+                    break;
+                case "getAsStringIPFS":
+                    this.getAsStringIPFS(args, callbackContext);
+                    break;
+                case "getSizeIPFS":
+                    this.getSizeIPFS(args, callbackContext);
+                    break;
+                case "putValue":
+                    this.putValue(args, callbackContext);
+                    break;
+                case "setValue":
+                    this.setValue(args, callbackContext);
+                    break;
+                case "getValues":
+                    this.getValues(args, callbackContext);
+                    break;
+                case "deleteKey":
+                    this.deleteKey(args, callbackContext);
+                    break;
+                default:
+                    return false;
+            }
+        } catch (JSONException e) {
+            callbackContext.error(e.getLocalizedMessage());
+        }
+        return true;
+    }
+
+    private void getVersion(JSONArray args, CallbackContext callbackContext) {
+        String version = "ElastosHiveSDK-v0.2";
+        callbackContext.success(version);
+    }
+
+    private void setListener(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        Integer type = args.getInt(0);
+
+        switch (type) {
+            case LOGIN:
+                loginCallbackCtxt = callbackContext;
+                break;
+
+            case RESULT:
+                resultCallbackCtxt = callbackContext;
+                break;
+        }
+
+        PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
+        result.setKeepCallback(true);
+        callbackContext.sendPluginResult(result);
+    }
+
+    private void createClient(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String dataDir = cordova.getActivity().getFilesDir() + "/data/hive/" + args.getString(0);
+        String options = args.getString(0);
+        int handlerId = args.getInt(1);
+        java.io.File dirFile = new java.io.File(dataDir);
+        if (!dirFile.exists()) dirFile.mkdirs();
+        try {
+            Client client = ClientBuilder.createClient(dataPath, options, new LoginHandler(handlerId, loginCallbackCtxt));
+            int clientObjId = System.identityHashCode(client);
+            hiveClientMap.put(clientObjId, client);
+            JSONObject ret = new JSONObject();
+            ret.put("clientId", clientObjId);
+
+            callbackContext.success(ret);
+        } catch (Exception e) {
+            callbackContext.error(e.getLocalizedMessage());
+        }
+    }
+
+    private void isConnected(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int clientId = args.getInt(0);
+        Client client = hiveClientMap.get(clientId);
+        boolean isConnect = client.isConnected();
+        JSONObject ret = new JSONObject();
+        ret.put("isConnect", isConnect);
+        callbackContext.success(ret);
+    }
+
+    private void connect(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int clientId = args.getInt(0);
+        Client client = hiveClientMap.get(clientId);
+        new Thread(() -> {
+            try {
+                client.connect();
+                JSONObject ret = new JSONObject();
+                ret.put("status","success");
+                callbackContext.success(ret);
+            } catch (Exception e) {
+                callbackContext.success(e.getLocalizedMessage());
+            }
+        }).start();
+    }
+
+    private void disConnect(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int clientId = args.getInt(0);
+        Client client = hiveClientMap.get(clientId);
+        client.disconnect();
+        JSONObject ret = new JSONObject();
+        ret.put("status","success");
+        callbackContext.success(ret);
+    }
+
+    private void getIPFS(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int clientId = args.getInt(0);
+        Client client = hiveClientMap.get(clientId);
+
+        IPFS ipfs = client.getIPFS();
+
+        int ipfsObjId = System.identityHashCode(ipfs);
+
+        ipfsMap.put(ipfsObjId,ipfs);
+
+        JSONObject ret = new JSONObject();
+        ret.put("ipfsId", ipfsObjId);
+        callbackContext.success(ret);
+    }
+
+    private void getFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int clientId = args.getInt(0);
+        Client client = hiveClientMap.get(clientId);
+        Files files = client.getFiles();
+        int filesObjId = System.identityHashCode(files);
+
+        filesMap.put(filesObjId,files);
+
+        JSONObject ret = new JSONObject();
+        ret.put("filesId", filesObjId);
+        callbackContext.success(ret);
+    }
+
+    private void getKeyValues(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int clientId = args.getInt(0);
+        Client client = hiveClientMap.get(clientId);
+        KeyValues keyValues = client.getKeyValues();
+        int keyValuesObjId = System.identityHashCode(keyValues);
+
+
+        keyValuesMap.put(keyValuesObjId,keyValues);
+
+        JSONObject ret = new JSONObject();
+        ret.put("keyValuesId", keyValuesObjId);
+        callbackContext.success(ret);
+    }
+
+
+    private void putStringForFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int filesId = args.getInt(0);
+        String remoteFile = args.getString(1);
+        String data = args.getString(2);
+
+        Files api = filesMap.get(filesId);
+        api.put(data, remoteFile, crateResultHandler(ResultHandler.Type.Void));
+    }
+
+    private void getAsStringForFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int filesId = args.getInt(0);
+        String remoteFile = args.getString(1);
+
+        Files api = filesMap.get(filesId);
+        api.getAsString(remoteFile, crateResultHandler(ResultHandler.Type.Content));
+    }
+
+    private void sizeForFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int filesId = args.getInt(0);
+        String remoteFile = args.getString(1);
+
+        Files api = filesMap.get(filesId);
+        api.size(remoteFile, crateResultHandler(ResultHandler.Type.Length));
+    }
+
+    private void deleteForFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int filesId = args.getInt(0);
+        String remoteFile = args.getString(1);
+
+        Files api = filesMap.get(filesId);
+        api.delete(remoteFile, crateResultHandler(ResultHandler.Type.Void));
+    }
+
+    private void listForFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int filesId = args.getInt(0);
+
+        Files api = filesMap.get(filesId);
+        api.list(crateResultHandler(ResultHandler.Type.FileList));
+    }
+
+    private void putStringIPFS(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int ipfsId = args.getInt(0);
+        String data = args.getString(1);
+
+        IPFS api = ipfsMap.get(ipfsId);
+        api.put(data, crateResultHandler(ResultHandler.Type.CID));
+    }
+
+    private void getAsStringIPFS(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int ipfsId = args.getInt(0);
+        String cid = args.getString(1);
+
+        IPFS api = ipfsMap.get(ipfsId);
+        api.getAsString(cid, crateResultHandler(ResultHandler.Type.Content));
+    }
+
+    private void getSizeIPFS(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int ipfsId = args.getInt(0);
+        String cid = args.getString(1);
+
+        IPFS api = ipfsMap.get(ipfsId);
+        api.size(cid, crateResultHandler(ResultHandler.Type.Length));
+    }
+
+    private void putValue(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int keyValuesId = args.getInt(0);
+        String key = args.getString(1);
+        String value = args.getString(2);
+
+        KeyValues api = keyValuesMap.get(keyValuesId);
+        api.putValue(key, value, crateResultHandler(ResultHandler.Type.Void));
+    }
+
+    private void setValue(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int keyValuesId = args.getInt(0);
+        String key = args.getString(1);
+        String value = args.getString(2);
+
+        KeyValues api = keyValuesMap.get(keyValuesId);
+        api.setValue(key, value, crateResultHandler(ResultHandler.Type.Void));
+    }
+
+    private void getValues(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int keyValuesId = args.getInt(0);
+        String key = args.getString(1);
+
+        KeyValues api = keyValuesMap.get(keyValuesId);
+        api.getValues(key, crateResultHandler(ResultHandler.Type.ValueList));
+    }
+
+    private void deleteKey(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        int keyValuesId = args.getInt(0);
+        String key = args.getString(1);
+
+        KeyValues api = keyValuesMap.get(keyValuesId);
+        api.deleteKey(key, crateResultHandler(ResultHandler.Type.Void));
+    }
+
+    private ResultHandler crateResultHandler(ResultHandler.Type type) {
+        resultId ++;
+        return new ResultHandler(resultId, type, resultCallbackCtxt);
+    }
+}
