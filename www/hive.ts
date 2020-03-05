@@ -28,15 +28,15 @@ class IPFSImpl implements HivePlugin.IPFS  {
     clazz  = 4;
 
     put(data: string): Promise<any> {
-        return this.plugin.getPromise(this, 'putStringIPFS', [this.objId, data]);
+        return this.plugin.getPromise(this, 'putStringByPFS', [this.objId, data]);
     }
 
     get(cid: string): Promise<any> {
-        return this.plugin.getPromise(this, 'getAsStringIPFS', [this.objId, cid]);
+        return this.plugin.getPromise(this, 'getStringByIPFS', [this.objId, cid]);
     }
 
     size(cid: string): Promise<any> {
-        return this.plugin.getPromise(this, 'getSizeIPFS', [this.objId, cid]);
+        return this.plugin.getPromise(this, 'getSizeByIPFS', [this.objId, cid]);
     }
 }
 
@@ -46,23 +46,23 @@ class FilesImpl implements HivePlugin.Files  {
     clazz  = 3;
 
     put(remoteFile: string, data: string): Promise<any> {
-        return this.plugin.getPromise(this, 'putStringForFiles', [this.objId, remoteFile, data]);
+        return this.plugin.getPromise(this, 'putStringByFiles', [this.objId, remoteFile, data]);
     }
 
     getAsString(remoteFile: string): Promise<any> {
-        return this.plugin.getPromise(this, 'getAsStringForFiles', [this.objId, remoteFile]);
+        return this.plugin.getPromise(this, 'getStringByFiles', [this.objId, remoteFile]);
     }
 
     size(remoteFile: string): Promise<any> {
-        return this.plugin.getPromise(this, 'sizeForFiles', [this.objId, remoteFile]);
+        return this.plugin.getPromise(this, 'getSizeByFiles', [this.objId, remoteFile]);
     }
 
     deleteFile(remoteFile: string): Promise<any> {
-        return this.plugin.getPromise(this, 'deleteForFiles', [this.objId, remoteFile]);
+        return this.plugin.getPromise(this, 'deleteFileByFiles', [this.objId, remoteFile]);
     }
 
     list(): Promise<any> {
-        return this.plugin.getPromise(this, 'listForFiles', [this.objId]);
+        return this.plugin.getPromise(this, 'listFilesByFiles', [this.objId]);
     }
 }
 
@@ -72,19 +72,19 @@ class KeyValuesImpl implements HivePlugin.KeyValues  {
     clazz  = 2;
 
     putValue(key: string, value: string): Promise<any> {
-        return this.plugin.getPromise(this, 'putValue', [this.objId, key, value]);
+        return this.plugin.getPromise(this, 'putValueByKV', [this.objId, key, value]);
     }
 
     setValue(key: string, value: string): Promise<any> {
-        return this.plugin.getPromise(this, 'setValue', [this.objId, key, value]);
+        return this.plugin.getPromise(this, 'setValueByKV', [this.objId, key, value]);
     }
 
     getValues(key: string): Promise<any> {
-        return this.plugin.getPromise(this, 'getValues', [this.objId, key]);
+        return this.plugin.getPromise(this, 'getValuesByKV', [this.objId, key]);
     }
 
     deleteKey(key: string): Promise<any> {
-        return this.plugin.getPromise(this, 'deleteKey', [this.objId, key]);
+        return this.plugin.getPromise(this, 'deleteKeyByKV', [this.objId, key]);
     }
 }
 
@@ -126,17 +126,17 @@ class ClientImpl implements HivePlugin.Client {
 
     getIPFS(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
         var me = this;
-            var _onSuccess = function (ret) {
-                var ipfs = new IPFSImpl();
-                ipfs.objId = ret.ipfsId;
-                ipfs.plugin = me.plugin;
-                me.ipfs[ipfs.objId] = ipfs;
-                if (onSuccess)
-                    onSuccess(ipfs);
-            };
-            exec(_onSuccess, onError, 'HivePlugin', 'getIPFS', [this.objId]);
+        var _onSuccess = function (ret) {
+            var ipfs = new IPFSImpl();
+            ipfs.objId = ret.ipfsId;
+            ipfs.plugin = me.plugin;
+            me.ipfs[ipfs.objId] = ipfs;
+            if (onSuccess)
+                onSuccess(ipfs);
+        };
+        exec(_onSuccess, onError, 'HivePlugin', 'getIPFS', [this.objId]);
     }
-    
+
     getFiles(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
         var me = this;
         var _onSuccess = function (ret) {
@@ -149,7 +149,7 @@ class ClientImpl implements HivePlugin.Client {
         };
         exec(_onSuccess, onError, 'HivePlugin', 'getFiles', [this.objId]);
     }
-    
+
     getKeyValues(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
         var me = this;
         var _onSuccess = function (ret) {
@@ -175,7 +175,7 @@ type HivePluginEvent = {
 class IPFSClientCreationOptions implements HivePlugin.IPFSClientCreationOptions {
     driveType: HivePlugin.DriveType.IPFS;
 }
- 
+
 class OneDriveClientCreationOptions implements HivePlugin.IPFSClientCreationOptions {
     driveType = HivePlugin.DriveType.ONEDRIVE;
     clientId: string;
@@ -213,12 +213,12 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
         this.setListener(LISTENER_RESULT, (event) => {
             var id = event.hid;
             event.hid = null;
-    
+
             if (this.resultEvent[id].callback)  {
                 this.resultEvent[id].callback(event);
             }
-        });    
-    
+        });
+
         exec(function () {}, null, 'HivePlugin', 'initVal', []);
     }
 
@@ -264,7 +264,7 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
     setListener(type: any, eventCallback: Function) {
         exec(eventCallback, null, 'HivePlugin', 'setListener', [type]);
     }
-    
+
     createClient(handler: Function, options: HivePlugin.ClientCreationOptions, onSuccess: (client: ClientImpl) => void, onError?: (err: string) => void) {
         var client = new ClientImpl();
         var me = this;

@@ -161,15 +161,19 @@ HivePlugin extends TrinityPlugin {
     private void createClient(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String dataDir = cordova.getActivity().getFilesDir() + "/data/hive/" + args.getString(0);
         String options = args.getString(0);
-        int handlerId = args.getInt(1);
+        int  handlerId = args.getInt(1);
+
         java.io.File dirFile = new java.io.File(dataDir);
-        if (!dirFile.exists()) dirFile.mkdirs();
+        if (!dirFile.exists())
+            dirFile.mkdirs();
+
         try {
             Client client = ClientBuilder.createClient(dataPath, options, new LoginHandler(handlerId, loginCallbackCtxt));
-            int clientObjId = System.identityHashCode(client);
-            hiveClientMap.put(clientObjId, client);
+            int  clientId = System.identityHashCode(client);
+            hiveClientMap.put(clientId, client);
+
             JSONObject ret = new JSONObject();
-            ret.put("clientId", clientObjId);
+            ret.put("clientId", clientId);
 
             callbackContext.success(ret);
         } catch (Exception e) {
@@ -196,7 +200,7 @@ HivePlugin extends TrinityPlugin {
                 ret.put("status","success");
                 callbackContext.success(ret);
             } catch (Exception e) {
-                callbackContext.success(e.getLocalizedMessage());
+                callbackContext.error(e.getLocalizedMessage());
             }
         }).start();
     }
@@ -205,6 +209,7 @@ HivePlugin extends TrinityPlugin {
         int clientId = args.getInt(0);
         Client client = hiveClientMap.get(clientId);
         client.disconnect();
+
         JSONObject ret = new JSONObject();
         ret.put("status","success");
         callbackContext.success(ret);
@@ -215,13 +220,11 @@ HivePlugin extends TrinityPlugin {
         Client client = hiveClientMap.get(clientId);
 
         IPFS ipfs = client.getIPFS();
-
-        int ipfsObjId = System.identityHashCode(ipfs);
-
-        ipfsMap.put(ipfsObjId,ipfs);
+        int ipfsId = System.identityHashCode(ipfs);
+        ipfsMap.put(ipfsId,ipfs);
 
         JSONObject ret = new JSONObject();
-        ret.put("ipfsId", ipfsObjId);
+        ret.put("ipfsId", ipfsId);
         callbackContext.success(ret);
     }
 
@@ -244,7 +247,6 @@ HivePlugin extends TrinityPlugin {
         KeyValues keyValues = client.getKeyValues();
         int keyValuesObjId = System.identityHashCode(keyValues);
 
-
         keyValuesMap.put(keyValuesObjId,keyValues);
 
         JSONObject ret = new JSONObject();
@@ -253,105 +255,105 @@ HivePlugin extends TrinityPlugin {
     }
 
 
-    private void putStringForFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void putStringByFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
         int filesId = args.getInt(0);
         String remoteFile = args.getString(1);
         String data = args.getString(2);
 
         Files api = filesMap.get(filesId);
-        api.put(data, remoteFile, crateResultHandler(ResultHandler.Type.Void));
+        api.put(data, remoteFile, createResultHandler(ResultHandler.Type.Void));
     }
 
-    private void getAsStringForFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void getStringByFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
         int filesId = args.getInt(0);
         String remoteFile = args.getString(1);
 
         Files api = filesMap.get(filesId);
-        api.getAsString(remoteFile, crateResultHandler(ResultHandler.Type.Content));
+        api.getAsString(remoteFile, createResultHandler(ResultHandler.Type.Content));
     }
 
-    private void sizeForFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void getSizeByFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
         int filesId = args.getInt(0);
         String remoteFile = args.getString(1);
 
         Files api = filesMap.get(filesId);
-        api.size(remoteFile, crateResultHandler(ResultHandler.Type.Length));
+        api.size(remoteFile, createResultHandler(ResultHandler.Type.Length));
     }
 
-    private void deleteForFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void deleteFileByFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
         int filesId = args.getInt(0);
         String remoteFile = args.getString(1);
 
         Files api = filesMap.get(filesId);
-        api.delete(remoteFile, crateResultHandler(ResultHandler.Type.Void));
+        api.delete(remoteFile, createResultHandler(ResultHandler.Type.Void));
     }
 
-    private void listForFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void listFilesByFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
         int filesId = args.getInt(0);
 
         Files api = filesMap.get(filesId);
-        api.list(crateResultHandler(ResultHandler.Type.FileList));
+        api.list(createResultHandler(ResultHandler.Type.FileList));
     }
 
-    private void putStringIPFS(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void putStringByIPFS(JSONArray args, CallbackContext callbackContext) throws JSONException {
         int ipfsId = args.getInt(0);
         String data = args.getString(1);
 
         IPFS api = ipfsMap.get(ipfsId);
-        api.put(data, crateResultHandler(ResultHandler.Type.CID));
+        api.put(data, createResultHandler(ResultHandler.Type.CID));
     }
 
-    private void getAsStringIPFS(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void getStringByIPFS(JSONArray args, CallbackContext callbackContext) throws JSONException {
         int ipfsId = args.getInt(0);
         String cid = args.getString(1);
 
         IPFS api = ipfsMap.get(ipfsId);
-        api.getAsString(cid, crateResultHandler(ResultHandler.Type.Content));
+        api.getAsString(cid, createResultHandler(ResultHandler.Type.Content));
     }
 
-    private void getSizeIPFS(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void getSizeByIPFS(JSONArray args, CallbackContext callbackContext) throws JSONException {
         int ipfsId = args.getInt(0);
         String cid = args.getString(1);
 
         IPFS api = ipfsMap.get(ipfsId);
-        api.size(cid, crateResultHandler(ResultHandler.Type.Length));
+        api.size(cid, createResultHandler(ResultHandler.Type.Length));
     }
 
-    private void putValue(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void putValueByKV(JSONArray args, CallbackContext callbackContext) throws JSONException {
         int keyValuesId = args.getInt(0);
         String key = args.getString(1);
         String value = args.getString(2);
 
         KeyValues api = keyValuesMap.get(keyValuesId);
-        api.putValue(key, value, crateResultHandler(ResultHandler.Type.Void));
+        api.putValue(key, value, createResultHandler(ResultHandler.Type.Void));
     }
 
-    private void setValue(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void setValueByKV(JSONArray args, CallbackContext callbackContext) throws JSONException {
         int keyValuesId = args.getInt(0);
         String key = args.getString(1);
         String value = args.getString(2);
 
         KeyValues api = keyValuesMap.get(keyValuesId);
-        api.setValue(key, value, crateResultHandler(ResultHandler.Type.Void));
+        api.setValue(key, value, createResultHandler(ResultHandler.Type.Void));
     }
 
-    private void getValues(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void getValuesByKV(JSONArray args, CallbackContext callbackContext) throws JSONException {
         int keyValuesId = args.getInt(0);
         String key = args.getString(1);
 
         KeyValues api = keyValuesMap.get(keyValuesId);
-        api.getValues(key, crateResultHandler(ResultHandler.Type.ValueList));
+        api.getValues(key, createResultHandler(ResultHandler.Type.ValueList));
     }
 
-    private void deleteKey(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void deleteKeyByKV(JSONArray args, CallbackContext callbackContext) throws JSONException {
         int keyValuesId = args.getInt(0);
         String key = args.getString(1);
 
         KeyValues api = keyValuesMap.get(keyValuesId);
-        api.deleteKey(key, crateResultHandler(ResultHandler.Type.Void));
+        api.deleteKey(key, createResultHandler(ResultHandler.Type.Void));
     }
 
-    private ResultHandler crateResultHandler(ResultHandler.Type type) {
+    private ResultHandler createResultHandler(ResultHandler.Type type) {
         resultId ++;
         return new ResultHandler(resultId, type, resultCallbackCtxt);
     }
