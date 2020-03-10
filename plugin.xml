@@ -42,6 +42,7 @@
         <source-file src="src/ios/HivePlugin.swift" />
         <source-file src="src/ios/ClientBuilder.swift" />
         <source-file src="src/ios/LoginHandler.swift" />
+        <source-file src="src/ios/ResultHandler.swift" />
         <framework src="src/ios/libs/ElastosHiveSDK.framework" custom="true" embed="true" />
         <framework src="src/ios/libs/Alamofire.framework" custom="true" embed="true" />
         <framework src="src/ios/libs/PromiseKit.framework" custom="true" embed="true" />

@@ -35,7 +35,7 @@ class ClientBuilder {
             let opts = try OneDriveClientOptionsBuilder()
                             .withClientId(options["clientId"]!)
                             .withRedirectUrl(options["redirectUrl"]!)
-                            .withStorePath(using: options["storePath"]!)
+                            .withStorePath(using: dataDir)
                             .withAuthenticator(loginHandler)
                             .build()
 
@@ -63,7 +63,7 @@ class ClientBuilder {
         do {
             let opts = try IPFSClientOptionsBuilder()
                             .appendRpcNodes(array)
-                            .withStorePath(using: options["storePaht"]!)
+                            .withStorePath(using: dataDir)
                             .build()
 
             return try HiveClientHandle.createInstance(withOptions: opts)

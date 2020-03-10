@@ -33,15 +33,13 @@ class HivePlugin : TrinityPlugin {
     private var filesMap  = Dictionary<Int, FilesProtocol>()
     private var keyValuesMap = Dictionary<Int, KeyValuesProtocol>()
 
-    private var clientIndex = 0
-    private var ipfsIndex = 0
-    private var filesIndex = 0
-    private var keyValuesIndex = 0
+    private var clientIndex: Int = 1
+    private var ipfsIndex: Int = 1
+    private var filesIndex: Int = 1
+    private var keyValuesIndex: Int = 1
 
     internal var loginCallbackId:  String = ""
     internal var resultCallbackId: String = ""
-
-    var callbackId: String = ""
 
     @objc func initVal(_ command: CDVInvokedUrlCommand) {
     }
@@ -106,7 +104,6 @@ class HivePlugin : TrinityPlugin {
         clientIndex += 1
         clientMap[clientId] = client
 
-
         let ret: NSDictionary = [ "clientId": clientId ]
         self.success(command, retAsDict: ret);
     }
@@ -152,16 +149,11 @@ class HivePlugin : TrinityPlugin {
         let client = clientMap[clientId]!
         let ipfs = client.asIPFS()
 
-        guard let _ = ipfs else {
-            self.error(command, retAsString: "can not get IPFS interface")
-            return
-        }
-
         let ipfsId = ipfsIndex
         ipfsIndex += 1
         ipfsMap[ipfsId] = ipfs
 
-        let ret: Dictionary<String, Any> = ["id": ipfsId]
+        let ret: Dictionary<String, Any> = ["ipfsId": ipfsId]
         self.success(command, retAsDict: ret as NSDictionary)
     }
 
@@ -170,16 +162,11 @@ class HivePlugin : TrinityPlugin {
         let client = clientMap[clientId]!
         let files = client.asFiles()
 
-        guard let _ = files else {
-            self.error(command, retAsString: "can not get Files interface")
-            return
-        }
-
         let filesId = filesIndex
         filesIndex += 1
         filesMap[filesId] = files
 
-        let ret: Dictionary<String, Any> = ["id": filesId]
+        let ret: Dictionary<String, Any> = ["filesId": filesId]
         self.success(command, retAsDict: ret as NSDictionary)
     }
 
@@ -188,16 +175,11 @@ class HivePlugin : TrinityPlugin {
         let client = clientMap[clientId]!
         let keyValues = client.asKeyValues()
 
-        guard let _ = keyValues else {
-            self.error(command, retAsString: "can not get KeyValues interface")
-            return
-        }
-
         let keyValuesId = keyValuesIndex
         keyValuesIndex += 1
         keyValuesMap[keyValuesId] = keyValues
 
-        let ret: Dictionary<String, Any> = ["id": keyValuesId]
+        let ret: Dictionary<String, Any> = ["keyValuesId": keyValuesId]
         self.success(command, retAsDict: ret as NSDictionary)
     }
 
@@ -205,240 +187,109 @@ class HivePlugin : TrinityPlugin {
         let filesId = command.arguments[0] as? Int ?? 0
         let remoteFile = command.arguments[1] as? String ?? ""
         let data = command.arguments[2] as? String ?? ""
+        let handlerId = command.arguments[3] as? Int ?? 0
 
-        guard !remoteFile.isEmpty && !data.isEmpty else {
-            self.error(command, retAsString: "invalid arguments")
-            return
-        }
-
-        filesMap[filesId]!.putString(data, asRemoteFile: remoteFile)
-        .done {
-            let ret = ["status": "success"]
-            self.success(command, retAsDict: ret as NSDictionary)
-        }.catch { error in
-            self.error(command, retAsString: error.localizedDescription)
-        }
+        _ = filesMap[filesId]!.putString(data, asRemoteFile: remoteFile,
+                handler: ResultHandler<Void>(handlerId, .Void, self.resultCallbackId, self.commandDelegate))
     }
 
     @objc func getStringByFiles(_ command: CDVInvokedUrlCommand) {
         let filesId = command.arguments[0] as? Int ?? 0
         let remoteFile = command.arguments[1] as? String ?? ""
+        let handlerId = command.arguments[2] as? Int ?? 0
 
-        guard !remoteFile.isEmpty else {
-            self.error(command, retAsString: "invalid arguments")
-            return
-        }
-
-        filesMap[filesId]!.getString(fromRemoteFile: remoteFile)
-        .done { data in
-            let ret = [
-                    "status": "success",
-                    "content": data
-                ]
-            self.success(command, retAsDict: ret as NSDictionary)
-        }.catch { error in
-            self.error(command, retAsString: error.localizedDescription)
-        }
+        _ = filesMap[filesId]!.getString(fromRemoteFile: remoteFile,
+                handler: ResultHandler<String>(handlerId, .Content, self.resultCallbackId, self.commandDelegate))
     }
 
     @objc func getSizeByFiles(_ command: CDVInvokedUrlCommand) {
         let filesId = command.arguments[0] as? Int ?? 0
         let remoteFile = command.arguments[1] as? String ?? ""
+        let handlerId = command.arguments[2] as? Int ?? 0
 
-        guard !remoteFile.isEmpty else {
-            self.error(command, retAsString: "invalid arguments")
-            return
-        }
-
-        filesMap[filesId]!.sizeofRemoteFile(remoteFile)
-        .done { size in
-            let ret: Dictionary<String, Any> = [
-                "status": "success",
-                "length": size
-            ]
-            self.success(command, retAsDict: ret as NSDictionary)
-        }.catch { error in
-            self.error(command, retAsString: error.localizedDescription)
-        }
+        _ = filesMap[filesId]!.sizeofRemoteFile(remoteFile,
+                handler: ResultHandler<UInt64>(handlerId, .Length, self.resultCallbackId, self.commandDelegate))
     }
 
     @objc func deleteFileByFiles(_ command: CDVInvokedUrlCommand) {
         let filesId = command.arguments[0] as? Int ?? 0
         let remoteFile = command.arguments[1] as? String ?? ""
+        let handlerId = command.arguments[2] as? Int ?? 0
 
-        guard !remoteFile.isEmpty else {
-            self.error(command, retAsString: "invalid arguments")
-            return
-        }
-
-        filesMap[filesId]!.deleteRemoteFile(remoteFile)
-        .done { size in
-            let ret = ["status": "success"]
-            self.success(command, retAsDict: ret as NSDictionary)
-        }.catch { error in
-            self.error(command, retAsString: error.localizedDescription)
-        }
+        _ = filesMap[filesId]!.deleteRemoteFile(remoteFile,
+                handler: ResultHandler<Void>(handlerId, .Void, self.resultCallbackId, self.commandDelegate))
     }
 
     @objc func listFilesByFiles(_ command: CDVInvokedUrlCommand) {
         let filesId = command.arguments[0] as? Int ?? 0
-        let remoteFile = command.arguments[1] as? String ?? ""
+        let handlerId = command.arguments[1] as? Int ?? 0
 
-        guard !remoteFile.isEmpty else {
-            self.error(command, retAsString: "invalid arguments")
-            return
-        }
-        filesMap[filesId]!.listRemoteFiles()
-        .done { fileList in
-            let ret: Dictionary<String, Any> = [
-                "status": "success",
-                "fileList": fileList
-            ]
-            self.success(command, retAsDict: ret as NSDictionary)
-        }.catch { error in
-            self.error(command, retAsString: error.localizedDescription)
-        }
+        _ = filesMap[filesId]!.listRemoteFiles(
+                handler: ResultHandler<Array<String>>(handlerId, .FileList, self.resultCallbackId, self.commandDelegate))
     }
 
-    @objc func pugStringByIPFS(_ command: CDVInvokedUrlCommand) {
+    @objc func putStringByIPFS(_ command: CDVInvokedUrlCommand) {
         let ipfsId = command.arguments[0] as? Int ?? 0
         let data = command.arguments[1] as? String ?? ""
+        let handlerId = command.arguments[2] as? Int ?? 0
 
-        guard !data.isEmpty else {
-            self.error(command, retAsString: "invalid arguments")
-            return
-        }
-
-        ipfsMap[ipfsId]!.putString(data)
-        .done { hash in
-            let ret: Dictionary<String, Any> = [
-                "status": "success",
-                "value": hash
-            ]
-            self.success(command, retAsDict: ret as NSDictionary)
-        }.catch { error in
-            self.error(command, retAsString: error.localizedDescription)
-        }
+        _ = ipfsMap[ipfsId]!.putString(data,
+                handler: ResultHandler<Hash>(handlerId, .CID, self.resultCallbackId, self.commandDelegate))
     }
 
     @objc func getStringByIPFS(_ command: CDVInvokedUrlCommand) {
         let ipfsId = command.arguments[0] as? Int ?? 0
         let cid = command.arguments[1] as? Hash ?? ""
+        let handlerId = command.arguments[2] as? Int ?? 0
 
-        guard !cid.isEmpty else {
-            self.error(command, retAsString: "invalid arguments")
-            return
-        }
-
-        ipfsMap[ipfsId]!.getString(fromRemoteFile: cid)
-        .done { data in
-            let ret = ["status": "success",
-                       "content": data]
-            self.success(command, retAsDict: ret as NSDictionary)
-        }.catch { error in
-            self.error(command, retAsString: error.localizedDescription)
-        }
+        _ = ipfsMap[ipfsId]!.getData(fromRemoteFile: cid,
+                handler: ResultHandler<Data>(handlerId, .Data, self.resultCallbackId, self.commandDelegate))
     }
 
     @objc func getSizeByIPFS(_ command: CDVInvokedUrlCommand) {
         let ipfsId = command.arguments[0] as? Int ?? 0
         let cid = command.arguments[1] as? Hash ?? ""
+        let handlerId = command.arguments[2] as? Int ?? 0
 
-        guard !cid.isEmpty else {
-            self.error(command, retAsString: "invalid arguments")
-            return
-        }
-
-        ipfsMap[ipfsId]!.sizeofRemoteFile(cid)
-        .done { size in
-            let ret: Dictionary<String, Any> = [
-                "status": "success",
-                "length": size
-            ]
-            self.success(command, retAsDict: ret as NSDictionary)
-        }.catch { error in
-            self.error(command, retAsString: error.localizedDescription)
-        }
+        _ = ipfsMap[ipfsId]!.sizeofRemoteFile(cid,
+                handler: ResultHandler<UInt64>(handlerId, .Length, self.resultCallbackId, self.commandDelegate))
     }
 
     @objc func putValueByKV(_ command: CDVInvokedUrlCommand) {
         let kvId = command.arguments[0] as? Int ?? 0
         let key  = command.arguments[1] as? String ?? ""
         let val  = command.arguments[2] as? String ?? ""
+        let handlerId = command.arguments[3] as? Int ?? 0
 
-        guard !key.isEmpty && !val.isEmpty else {
-            self.error(command, retAsString: "invalid arguments")
-            return
-        }
-
-        keyValuesMap[kvId]!.putValue(val, forKey: key)
-        .done {
-            let ret = ["status": "success"]
-            self.success(command, retAsDict: ret as NSDictionary)
-        }.catch { error in
-            self.error(command, retAsString: error.localizedDescription)
-        }
+        _ = keyValuesMap[kvId]!.putValue(val, forKey: key,
+                handler: ResultHandler<Void>(handlerId, .Void, self.resultCallbackId, self.commandDelegate))
     }
 
     @objc func setValueByKV(_ command: CDVInvokedUrlCommand) {
         let kvId = command.arguments[0] as? Int ?? 0
         let key  = command.arguments[1] as? String ?? ""
         let val  = command.arguments[2] as? String ?? ""
+        let handlerId = command.arguments[3] as? Int ?? 0
 
-        guard !key.isEmpty && !val.isEmpty else {
-            self.error(command, retAsString: "invalid arguments")
-            return
-        }
-
-        keyValuesMap[kvId]!.setValue(val, forKey: key)
-        .done {
-            let ret = ["status": "success"]
-            self.success(command, retAsDict: ret as NSDictionary)
-        }.catch { error in
-            self.error(command, retAsString: error.localizedDescription)
-        }
+        _ = keyValuesMap[kvId]!.setValue(val, forKey: key,
+                handler: ResultHandler<Void>(handlerId, .Void, self.resultCallbackId, self.commandDelegate))
     }
 
     @objc func getValuesByKV(_ command: CDVInvokedUrlCommand) {
         let kvId = command.arguments[0] as? Int ?? 0
         let key  = command.arguments[1] as? String ?? ""
+        let handlerId = command.arguments[2] as? Int ?? 0
 
-        guard !key.isEmpty else {
-            self.error(command, retAsString: "invalid arguments")
-            return
-        }
-
-        keyValuesMap[kvId]!.values(ofKey: key)
-        .done { dataList in
-            var valueList = Array<String>()
-            for data in dataList {
-                valueList.append(String(data: data, encoding: .utf8)!)
-            }
-            let ret: Dictionary<String, Any> = [
-                "status": "success",
-                "valueList": valueList
-            ]
-            self.success(command, retAsDict: ret as NSDictionary)
-        }.catch { error in
-            self.error(command, retAsString: error.localizedDescription)
-        }
+        _ = keyValuesMap[kvId]!.values(ofKey: key,
+                handler: ResultHandler<Array<Data>>(handlerId, .ValueList, self.resultCallbackId, self.commandDelegate))
     }
 
     @objc func deleteKeyByKV(_ command: CDVInvokedUrlCommand) {
         let kvId = command.arguments[0] as? Int ?? 0
         let key  = command.arguments[1] as? String ?? ""
+        let handlerId = command.arguments[2] as? Int ?? 0
 
-        guard !key.isEmpty else {
-            self.error(command, retAsString: "invalid arguments")
-            return
-        }
-
-        keyValuesMap[kvId]!.deleteValues(forKey: key)
-        .done {
-            let ret = ["status": "success"]
-            self.success(command, retAsDict: ret as NSDictionary)
-        }.catch { error in
-            self.error(command, retAsString: error.localizedDescription)
-        }
+        _ = keyValuesMap[kvId]!.deleteValues(forKey: key,
+                handler: ResultHandler<Void>(handlerId, .Void, self.resultCallbackId, self.commandDelegate))
     }
 }

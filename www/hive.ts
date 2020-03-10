@@ -252,8 +252,9 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
                 else
                     reject(ret.error);
             };
-            me.addResultEventCb(onResult, object),
-            exec(null, null, 'HivePlugin', method, args);
+            var _args = args;
+            _args.push(me.addResultEventCb(onResult, object))
+            exec(null, null, 'HivePlugin', method, _args);
         });
     }
 
@@ -287,7 +288,7 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
 
         var configStr = JSON.stringify(options);
         var handlerId = this.addLoginRequestCb(handler);
-        exec(_onSuccess, onError, 'HivePlugin', 'createClient', [configStr, handlerId]);
+        exec(_onSuccess, onError, 'HivePlugin', 'createClient', ["im", configStr, handlerId]);
     }
 }
 
