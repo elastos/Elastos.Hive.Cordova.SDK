@@ -23,12 +23,15 @@
 package org.elastos.trinity.plugins.hive;
 
 import org.elastos.hive.exception.HiveException;
+import org.elastos.hive.interfaces.IPFS;
 import org.elastos.hive.vendor.ipfs.IPFSOptions;
 import org.elastos.hive.vendor.onedrive.OneDriveOptions;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.elastos.hive.*;
+
+import java.util.ArrayList;
 
 class ClientBuilder {
     private static String TAG = "ClientBuilder";
@@ -50,18 +53,23 @@ class ClientBuilder {
                 .build();
     }
 
-    private static Client.Options createIPFSOptions(String storePath, String jsonStr) throws JSONException, HiveException {
+    private static Client.Options createIPFSOptions(String storePath, HivePlugin plugin) throws JSONException, HiveException {
         IPFSOptions.Builder options = new IPFSOptions.Builder().setStorePath(storePath);
-        JSONObject json = new JSONObject(jsonStr);
-        JSONArray array = json.getJSONArray("nodes");
-        for (int i = 0; i < array.length(); i++) {
-            JSONObject item = array.getJSONObject(i);
-            options.addRpcNode(new IPFSOptions.RpcNode(item.getString("ip"), item.getInt("port")));
+        ArrayList<IpfsNodesGetter.IpfsNode> list = IpfsNodesGetter.getIpfsNodes(plugin);
+
+        IPFSOptions.Builder builder = new IPFSOptions
+                .Builder()
+                .setStorePath(storePath);
+
+        for (IpfsNodesGetter.IpfsNode node: list) {
+            String part[] = node.addr.split(":");
+            builder.addRpcNode(new IPFSOptions.RpcNode(part[0], Integer.valueOf(part[1])));
         }
-        return options.build();
+
+        return builder.build();
     }
 
-    static Client createClient(String storePath, String options, Authenticator authenticator) throws Exception {
+    static Client createClient(String storePath, String options, HivePlugin plugin, Authenticator authenticator) throws Exception {
         JSONObject jsonObject = new JSONObject(options);
         int type = jsonObject.getInt("driveType");
         Client client;
@@ -72,7 +80,7 @@ class ClientBuilder {
                 break;
 
             case IPFS:
-                client = Client.createInstance(createIPFSOptions(storePath, options));
+                client = Client.createInstance(createIPFSOptions(storePath, plugin));
                 break;
             default:
                 throw new IllegalStateException("Unexpected value: " + type);

@@ -28,7 +28,7 @@ class IPFSImpl implements HivePlugin.IPFS  {
     clazz  = 4;
 
     put(data: string): Promise<any> {
-        return this.plugin.getPromise(this, 'putStringByPFS', [this.objId, data]);
+        return this.plugin.getPromise(this, 'putStringByIPFS', [this.objId, data]);
     }
 
     get(cid: string): Promise<any> {

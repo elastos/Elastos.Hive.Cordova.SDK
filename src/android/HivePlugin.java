@@ -90,41 +90,41 @@ HivePlugin extends TrinityPlugin {
                 case "getKeyValues":
                     this.getKeyValues(args, callbackContext);
                     break;
-                case "putStringForFiles":
-                    this.putStringForFiles(args, callbackContext);
+                case "putStringByFiles":
+                    this.putStringByFiles(args, callbackContext);
                     break;
-                case "getAsStringForFiles":
-                    this.getAsStringForFiles(args, callbackContext);
+                case "getStringByFiles":
+                    this.getStringByFiles(args, callbackContext);
                     break;
-                case "sizeForFiles":
-                    this.sizeForFiles(args, callbackContext);
+                case "getSizeByFiles":
+                    this.getSizeByFiles(args, callbackContext);
                     break;
-                case "deleteForFiles":
-                    this.deleteForFiles(args, callbackContext);
+                case "deleteFileByFiles":
+                    this.deleteFileByFiles(args, callbackContext);
                     break;
-                case "listForFiles":
-                    this.listForFiles(args, callbackContext);
+                case "listFilesByFiles":
+                    this.listFilesByFiles(args, callbackContext);
                     break;
-                case "putStringIPFS":
-                    this.putStringIPFS(args, callbackContext);
+                case "putStringByIPFS":
+                    this.putStringByIPFS(args, callbackContext);
                     break;
-                case "getAsStringIPFS":
-                    this.getAsStringIPFS(args, callbackContext);
+                case "getStringByIPFS":
+                    this.getStringByIPFS(args, callbackContext);
                     break;
-                case "getSizeIPFS":
-                    this.getSizeIPFS(args, callbackContext);
+                case "getSizeByIPFS":
+                    this.getSizeByIPFS(args, callbackContext);
                     break;
-                case "putValue":
-                    this.putValue(args, callbackContext);
+                case "putValueByKV":
+                    this.putValueByKV(args, callbackContext);
                     break;
-                case "setValue":
-                    this.setValue(args, callbackContext);
+                case "setValueByKV":
+                    this.setValueByKV(args, callbackContext);
                     break;
-                case "getValues":
-                    this.getValues(args, callbackContext);
+                case "getValuesByKV":
+                    this.getValuesByKV(args, callbackContext);
                     break;
-                case "deleteKey":
-                    this.deleteKey(args, callbackContext);
+                case "deleteKeyByKV":
+                    this.deleteKeyByKV(args, callbackContext);
                     break;
                 default:
                     return false;
@@ -168,7 +168,7 @@ HivePlugin extends TrinityPlugin {
             dirFile.mkdirs();
 
         try {
-            Client client = ClientBuilder.createClient(dataPath, options, new LoginHandler(handlerId, loginCallbackCtxt));
+            Client client = ClientBuilder.createClient(dataPath, options, this, new LoginHandler(handlerId, loginCallbackCtxt));
             int  clientId = System.identityHashCode(client);
             hiveClientMap.put(clientId, client);
 
