@@ -66,7 +66,7 @@ class HivePlugin : TrinityPlugin {
     }
 
     @objc func getVersion(_ command: CDVInvokedUrlCommand) {
-        self.success(command, retAsString: "ElastosHiveSDK-v0.2");
+        self.success(command, retAsString: "ElastosHiveSDK-v1.0");
     }
 
     @objc func setListener(_ command: CDVInvokedUrlCommand) {

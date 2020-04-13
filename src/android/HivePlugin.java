@@ -136,7 +136,7 @@ HivePlugin extends TrinityPlugin {
     }
 
     private void getVersion(JSONArray args, CallbackContext callbackContext) {
-        String version = "ElastosHiveSDK-v0.2";
+        String version = "ElastosHiveSDK-v1.0";
         callbackContext.success(version);
     }
 

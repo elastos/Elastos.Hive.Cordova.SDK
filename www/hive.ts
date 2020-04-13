@@ -258,7 +258,7 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
         });
     }
 
-    getVersion(onSuccess?: ()=>void, onError?: (err: string)=>void) {
+    getVersion(onSuccess: (version: string)=>void, onError?: (err: string)=>void) {
         exec(onSuccess, onError, 'HivePlugin', 'getVersion', [])
     }
 
