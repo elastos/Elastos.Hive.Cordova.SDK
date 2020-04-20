@@ -75,7 +75,7 @@ HivePlugin extends TrinityPlugin {
                 case "connect":
                     this.connect(args, callbackContext);
                     break;
-                case "disconnect":
+                case "disConnect":
                     this.disConnect(args, callbackContext);
                     break;
                 case "isConnected":

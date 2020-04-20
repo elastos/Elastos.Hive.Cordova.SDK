@@ -132,7 +132,7 @@ class HivePlugin : TrinityPlugin {
         }
     }
 
-    @objc func disconnect(_ command: CDVInvokedUrlCommand) {
+    @objc func disConnect(_ command: CDVInvokedUrlCommand) {
         let clientId = command.arguments[0] as? Int ?? 0
         let client = clientMap[clientId]!
 
