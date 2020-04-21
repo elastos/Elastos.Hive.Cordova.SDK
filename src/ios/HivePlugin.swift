@@ -41,9 +41,6 @@ class HivePlugin : TrinityPlugin {
     internal var loginCallbackId:  String = ""
     internal var resultCallbackId: String = ""
 
-    @objc func initVal(_ command: CDVInvokedUrlCommand) {
-    }
-
     @objc func success(_ command: CDVInvokedUrlCommand, retAsString: String) {
         let result = CDVPluginResult(status: CDVCommandStatus_OK,
                                      messageAs: retAsString);

@@ -218,8 +218,6 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
                 this.resultEvent[id].callback(event);
             }
         });
-
-        exec(function () {}, null, 'HivePlugin', 'initVal', []);
     }
 
     addLoginRequestCb(callback) {
