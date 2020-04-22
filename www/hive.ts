@@ -196,28 +196,14 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
     loginRequest = [];
     loginEvent: HivePluginEvent;
 
+    hasSetListener = false;
+
     constructor() {
         Object.freeze(HiveManagerImpl.prototype);
         Object.freeze(ClientImpl.prototype);
         Object.freeze(IPFSImpl.prototype);
         Object.freeze(FilesImpl.prototype);
         Object.freeze(KeyValuesImpl.prototype);
-
-        this.setListener(LISTENER_LOGIN, (event) => {
-            var id = event.id;
-            if (id == 0) {
-                this.loginEvent.callback(event.url);
-            }
-        });
-
-        this.setListener(LISTENER_RESULT, (event) => {
-            var id = event.hid;
-            event.hid = null;
-
-            if (this.resultEvent[id].callback)  {
-                this.resultEvent[id].callback(event);
-            }
-        });
     }
 
     addLoginRequestCb(callback) {
@@ -256,6 +242,28 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
         });
     }
 
+    initListener() {
+        if (!this.hasSetListener) {
+            this.setListener(LISTENER_LOGIN, (event) => {
+                var id = event.id;
+                if (id == 0) {
+                    this.loginEvent.callback(event.url);
+                }
+            });
+
+            this.setListener(LISTENER_RESULT, (event) => {
+                var id = event.hid;
+                event.hid = null;
+
+                if (this.resultEvent[id].callback)  {
+                    this.resultEvent[id].callback(event);
+                }
+            });
+
+            this.hasSetListener = true;
+        }
+    }
+
     getVersion(onSuccess: (version: string)=>void, onError?: (err: string)=>void) {
         exec(onSuccess, onError, 'HivePlugin', 'getVersion', [])
     }
@@ -265,6 +273,8 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
     }
 
     createClient(handler: Function, options: HivePlugin.ClientCreationOptions, onSuccess: (client: ClientImpl) => void, onError?: (err: string) => void) {
+        this.initListener();
+
         var client = new ClientImpl();
         var me = this;
 
