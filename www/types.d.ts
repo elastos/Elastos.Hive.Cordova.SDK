@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Elastos Foundation
+ * Copyright (c) 2020 Elastos Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -19,246 +19,332 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-// TODO: Replace with accurate types everywhere there is "any" or "Function".
 
 /**
-* This is about Hive which provides the IPFS(InterPlanetary File System, a protocol and
-* peer-to-peer network for storing and sharing data in a distributed file system)-based
-* APIs.
+* Hive is the Elastos storage solution. It lets users deploy their own hive vaults in any location and 
+* keep ownership of their data.
+*
+* Hive can manage database data, files, server side scripting a with limited set of instructions. 
+* It uses DID to authenticate users and applications before giving access to data.
+*
 * <br><br>
-* Please use 'HivePlugin' as the plugin name in the manifest.json if you want to use
-* this facility.
-* <br><br>
-* Usage:
+* Declaration:
 * <br>
 * declare let hiveManager: HivePlugin.HiveManager;
+* ...
+* let hiveClient = await hiveManager.createClient(...);
 */
 
 declare namespace HivePlugin {
     type Opaque<T, K> = T & { __opaque__: K };
     type Int = Opaque<number, 'Int'>;
 
-    /**
-     * The class representing IPFS.
-     */
-    interface IPFS {
-        /**
-         * Put data to IPFS backend.
-         *
-         * @param data     The data to write.
-         * @return
-         * A promise object that contains success information will be returned on success,
-         * otherwise a promise object that contains error information will be returned.
-         */
-        put(data: string): Promise<any>;
-
-        /**
-         * Get IPFS backend data through cid.
-         *
-         * @param data     Content identifiers.
-         * @return
-         * A promise object that contains success information will be returned on success,
-         * otherwise a promise object that contains error information will be returned.
-         */
-        get(cid: string): Promise<any>;
-
-        /**
-         * Get IPFS backend data length.
-         *
-         * @param data     Content identifiers.
-         * @return
-         * A promise object that contains success information will be returned on success,
-         * otherwise a promise object that contains error information will be returned.
-         */
-        size(cid: string): Promise<any>;
+    export class JSONObject {
+        [k:string]: JSONObject | JSONObject[] | string | number | boolean
     }
 
-    /**
-     * The class representing Files.
-     */
-    interface Files {
-        /**
-         * Put data to backend.
-         *
-         * @param remoteFile    Remote file name.
-         * @param data          The data to write.
-         * @return
-         * A promise object that contains success information will be returned on success,
-         * otherwise a promise object that contains error information will be returned.
-         */
-        put(remoteFile: string, data: string): Promise<any>;
+    // TODO: what's the meaning of "remoteFile": url? path? string? What's the format?
+    export interface Files {
+        createFile(remoteFile: string): Promise<string>;
 
-        /**
-         * Get backend data as string.
-         *
-         * @param remoteFile    Remote file name.
-         * @return
-         * A promise object that contains success information will be returned on success,
-         * otherwise a promise object that contains error information will be returned.
-         */
-        getAsString(remoteFile: string): Promise<any>;
+        // TODO: check byte[] type for data?
+        upload(url: string, data: Uint8Array, remoteFile: string): Promise<void>;
+    
+        // TODO: should rename to download() ? 
+        // TODO: what is the equivalent "outputstream" way in TS?
+        downloader(remoteFile: string, outputStream: any /* TODO */): Promise<number>;
+            
+        deleteFile(remoteFile: string): Promise<void>;
+        
+        // TODO: folder "name" ? or path?
+        createFolder(folder: string): Promise<void>;
+    
+        // TODO: src and dst formats? works for both files and folders?
+        move(src: string, dst: string): Promise<void>;
+        
+        // TODO: src and dst formats? works for both files and folders? recursive?
+        copy(src: string, dst: string): Promise<void>;
+    
+        // TODO: what's this for? Hashes but returns void ? Is this a java issue?
+        // TODO CompletableFuture<Void> hash(String remoteFile);
+    
+        // TODO: folder name? path? -> rename
+        list(folder: String): Promise<string[]>;
+    
+        size(remoteFile: string): Promise<number>;
+    }
+    
+    namespace Database {
+        export type CreateCollectionOptions = {
+            // Nothing supported for now
+        }
 
-        /**
-         * Get backend data length.
-         *
-         * @param remoteFile    Remote file name.
-         * @return
-         * A promise object that contains success information will be returned on success,
-         * otherwise a promise object that contains error information will be returned.
-         */
-        size(remoteFile: string): Promise<any>;
+        export type CountOptions = {
+            limit?: number;
+            skip?: number;
+        }
 
-        /**
-         * Delete files on the backend.
-         *
-         * @param remoteFile    Remote file name.
-         * @return
-         * A promise object that contains success information will be returned on success,
-         * otherwise a promise object that contains error information will be returned.
-         */
-        deleteFile(remoteFile: string): Promise<any>;
+        export type FindOptions = {
+            limit?: number;
+            skip?: number;
+            sort?: JSONObject | JSONObject[];
+            projection?: JSONObject;
+        }
 
-        /**
-         * List the files name on the backend.
-         *
-         * @return
-         * A promise object that contains success information will be returned on success,
-         * otherwise a promise object that contains error information will be returned.
-         */
-        list(): Promise<any>;
+        export type InsertOptions = {
+            // Nothing supported for now
+        }
+
+        export type UpdateOptions = {
+            // Nothing supported for now
+        }
+
+        export type DeleteOptions = {
+            // Nothing supported for now
+        }
+        
+        export type InsertResult = {
+            insertedCount: number;
+            insertedIds: string[]
+        }
+
+        export interface Database {
+            /**
+             * Creates a new collection with the given name.
+             */
+            createCollection(collectionName: string, options?: CreateCollectionOptions): Promise<void>;
+
+            /**
+             * Inserts a new document in the given collection, into current user's personal vault.
+             * 
+             * @returns The inserted entry ID
+             */
+            insertOne(collectionName: string, document: JSONObject, options?: InsertOptions): Promise<InsertResult>;
+
+            /**
+             * Returns the number of documents matching the given query and options.
+             */
+            countDocuments(collectionName: string, query: JSONObject, options?: CountOptions): Promise<number>;
+
+            /**
+             * Queries the database for some specific documents based on the given query.
+             * 
+             * @returns List of results matching the query
+             */
+            findOne(collectionName: string, query: JSONObject, options?: FindOptions): Promise<JSONObject>;
+            findMany(collectionName: string, query: JSONObject, options?: FindOptions): Promise<JSONObject[]>;
+            
+            /**
+             * Updates one or more existing documents based on the given query filter and using the given 
+             * update query.
+             */
+            // TODO: update result type
+            updateOne(collectionName: string, filter: JSONObject, updateQuery: JSONObject, options?: UpdateOptions): Promise<void>;
+            updateMany(collectionName: string, filter: JSONObject, updateQuery: JSONObject, options?: UpdateOptions): Promise<void>;
+
+            /**
+             * Deletes one or more existing documents based on the given deletion filter.
+             */
+            // TODO: delete result type
+            deleteOne(collectionName: string, filter: JSONObject, options?: DeleteOptions): Promise<void>;
+            deleteMany(collectionName: string, filter: JSONObject, options?: DeleteOptions): Promise<void>;
+        }
     }
 
-    /**
-     * The class representing KeyValues.
-     */
-    interface KeyValues {
-        /**
-         * Put the value of the key on the backend.
-         *
-         * @param key       Key that needs to be set.
-         * @param value     The value to write.
-         * @return
-         * A promise object that contains success information will be returned on success,
-         * otherwise a promise object that contains error information will be returned.
-         */
-        putValue(key: string, value: string): Promise<any>;
-
-        /**
-         * Set the value of the key on the backend.
-         *
-         * @param key       Key that needs to be set.
-         * @param value     The data to write.
-         * @return
-         * A promise object that contains success information will be returned on success,
-         * otherwise a promise object that contains error information will be returned.
-         */
-        setValue(key: string, value: string): Promise<any>;
-
-        /**
-         * Get the value of the key on the backend.
-         *
-         * @param key       Key that needs to be set.
-         * @return
-         * A promise object that contains success information will be returned on success,
-         * otherwise a promise object that contains error information will be returned.
-         */
-        getValues(key: string): Promise<any>;
-
-        /**
-         * Delete the key on the backend.
-         *
-         * @param key       Key that needs to be set.
-         * @return
-         * A promise object that contains success information will be returned on success,
-         * otherwise a promise object that contains error information will be returned.
-         */
-        deleteKey(key: string): Promise<any>;
+    // TODO: what's this?
+    export interface Authenticator {
+        // TODO
+        requestAuthentication(requestUrl: string);
     }
 
-    /**
-     * The class representing Client.
-     */
-    interface Client {
-        /**
-         * Connect to backend.
-         *
-         * @param onSuccess  The function to call on success.
-         * @param onError    The function to call on error.
-         * @return
-         * onSuccess will be called on success, otherwise onError will be called.
-         */
-        connect(onSuccess?: (info: any)=>void, onError?: (err: string)=>void);
+    export namespace Conditions {
+        export namespace Database {
+            /**
+             * Vault script condition to check if a database query returns results or not.
+             * This is a way for example to check is a user is in a group, if a message contains comments, if a user
+             * is in a list, etc.
+             */
+            export interface QueryHasResultsCondition extends Condition {
+                constructor(collectionName: string, queryParameters: JSONObject);
+            }
+        }
 
         /**
-         * Disconnect from backend.
-         *
-         * @param onSuccess  The function to call on success.
-         * @param onError    The function to call on error.
-         * @return
-         * onSuccess will be called on success, otherwise onError will be called.
+         * Base interface for all vault script conditions.
          */
-        disConnect(onSuccess?: (info: any)=>void, onError?: (err: string)=>void);
+        export interface Condition {
+            toJSON(): JSONObject;
+        }
 
         /**
-         * Get the connection status.
-         *
-         * @param onSuccess  The function to call on success.
-         * @param onError    The function to call on error.
-         * @return
-         * onSuccess will be called on success, otherwise onError will be called.
+         * Represents a sub-condition execution, previously registered in the ACL manager.
+         * This way, several scripts can rely on simply the sub-condition name, without rewriting the condition content itself.
          */
-        isConnected(onSuccess?: (info: any)=>void, onError?: (err: string)=>void);
+        export interface SubCondition extends Condition {
+            constructor(subConditionName: string);
+        }
 
         /**
-         * Get the IPFS interface.
-         *
-         * @param onSuccess  The function to call on success.
-         * @param onError    The function to call on error.
-         * @return
-         * onSuccess will be called on success, otherwise onError will be called.
+         * Vault script condition that succeeds if at least one of the contained conditions are successful.
+         * Contained conditions are tested in the given order, and test stops as soon as one successful condition
+         * succeeds.
          */
-        getIPFS(onSuccess?: (info: any)=>void, onError?: (err: string)=>void);
+        export interface OrCondition extends Condition {
+            constructor(conditions: Condition[]);
+        }
 
         /**
-         * Get the Files interface.
-         *
-         * @param onSuccess  The function to call on success.
-         * @param onError    The function to call on error.
-         * @return
-         * onSuccess will be called on success, otherwise onError will be called.
+         * Vault script condition that succeeds only if all the contained conditions are successful.
          */
-        getFiles(onSuccess?: (info: any)=>void, onError?: (err: string)=>void);
-
-        /**
-         * Get the KeyValues interface.
-         *
-         * @param onSuccess  The function to call on success.
-         * @param onError    The function to call on error.
-         * @return
-         * onSuccess will be called on success, otherwise onError will be called.
-         */
-        getKeyValues(onSuccess?: (info: any)=>void, onError?: (err: string)=>void);
+        export interface AndCondition extends Condition {
+            constructor(conditions: Condition[]);
+        }
     }
 
-    const enum DriveType {
-        NATIVE = 1,
-        ONEDRIVE = 2,
-        IPFS = 3
+    export interface Scripting {
+        /**
+         * Registers a sub-condition on the backend. Sub conditions can be referenced from the client side, by the vault owner,
+         * while registering scripts using Scripting.setScript().
+         */
+        registerSubCondition(conditionName: string, condition: Conditions.Condition): Promise<void>;
+
+        /**
+         * Lets the vault owner register a script on his vault for a given app. The script is built on the client side, then
+         * serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can
+         * use Scripting.call() to execute one of those scripts and get results/data.
+         */
+        setScript(functionName: string, executionSequence: Executables.ExecutionSequence, accessCondition?: Conditions.Condition);
+
+        /**
+         * Executes a previously registered server side script using Scripting.setScript(). Vault owner or external users are
+         * allowed to call scripts on someone's vault.
+         *
+         * Call parameters (params field) are meant to be used by scripts on the server side, for example as injected parameters
+         * to mongo queries. Ex: if "params" contains a field "name":"someone", then the called script is able to reference this parameter
+         * using "$params.name".
+         */
+        call(functionName: string, params?: JSONObject);
     }
 
-    abstract class ClientCreationOptions {
-        driveType: DriveType;
+    export namespace Executables {
+        /**
+         * Client side representation of back-end executables.
+         * Executables are predefined, and are executed by the hive back-end when running vault scripts.
+         * For example, a Database.FindQuery executable type will execute a mongo query and return a list of results.
+         */
+        export interface Executable {
+            toJSON(): JSONObject;
+        }
+
+        /**
+         * Convenient interface to store and serialize a sequence of executables.
+         */
+        // TODO: type or class?
+        export type ExecutionSequence = {
+            constructor(executables: Executable[]);
+
+            toJSON(): JSONObject[];
+        }
+
+        export namespace Database {
+            /**
+             * Client side representation of a back-end execution that runs a mongo "find" query and returns some items
+             * as a result.
+             */
+            // TODO IMPORTANT: how to deal with cursors here? If a script wants to return 1000 messages ?
+            export class FindQuery {
+                constructor(collectionName: String, query?: JSONObject);
+            }
+
+            /**
+             * Client side representation of a back-end execution that runs a mongo "insert" query.
+             */
+            export class InsertQuery {
+                constructor(collectionName: String, document: JSONObject);
+            }
+    
+            /**
+             * Client side representation of a back-end execution that runs a mongo "update" query, 
+             * overwriting the whole target object with the new content.
+             */
+            // TODO: eve protocol is restricting us a bit too much here compared to mongo
+            export class OverwriteQuery {
+                constructor(collectionName: String, id: string, newItem: JSONObject);
+            }
+
+            /**
+             * Client side representation of a back-end execution that runs a mongo "update" query, 
+             * updating only specific fields of the document with the new content.
+             */
+            // TODO: eve protocol is restricting us a bit too much here compared to mongo
+            export class UpdateQuery {
+                constructor(collectionName: String, id: string, updatedFields: JSONObject);
+            }
+    
+            // TODO: java sdk currently deletes one specific ID only, not by query
+            // TODO: eve protocol is restricting us a bit too much here compared to mongo
+            export class DeleteQuery {
+                constructor(collectionName: String, deleteQuery: JSONObject);
+            }
+        }
+    }
+
+    interface VaultProviderBase {
+        address: string; // Vault provider carrier or http address
+
+        files: Files;
+        scripts: Scripting;
+    }
+
+    export interface RemoteVaultProvider extends VaultProviderBase {
         constructor();
     }
 
-    interface IPFSClientCreationOptions extends ClientCreationOptions {}
-    interface OneDriveClientCreationOptions extends ClientCreationOptions {
-        constructor(clientId: string, scope: string, redirectUrl: string);
+    export interface OwnVaultProvider extends VaultProviderBase {
+        database: Database.Database;
+
+        constructor();
+    }
+
+    /**
+     * TODO
+     */
+    interface Client {
+        /**
+         * Gives access to database features for this client.
+         */
+        getDatabase(): Promise<Database.Database>
+
+        /**
+         * Gives access to files features for this client.
+         */
+        getFiles(): Promise<Files>;
+
+        /**
+         * Gives access to all vault scripting features for this client.
+         */
+        getScripting(): Promise<Scripting>;
+    }
+
+    type ClientCreationOptions = {
+        authenticator?: Authenticator;
     }
 
     interface HiveManager {
-        getVersion(onSuccess: (version: string)=>void, onError?: (err: string)=>void);
-        setListener(type: any, eventCallback: Function);
-        createClient(handler: Function, options: ClientCreationOptions, onSuccess: (client: Client)=>void, onError?: (err: string)=>void);
+        /**
+         * Creates a new instance of a hive client, base for every further operation in hive.
+         */
+        createClient(options: ClientCreationOptions): Promise<Client>;
+
+        /**
+         * Resolves the provider of the currently signed in user.
+         */
+        resolveOwnVaultProvider(): Promise<OwnVaultProvider>;
+
+        /**
+         * Resolves the provider of another user. The provider address must be located in the DID 
+         * document of that user on the ID sidechain.
+         */
+        resolveRemoteProvider(userDID: string): Promise<RemoteVaultProvider>;
     }
 }
