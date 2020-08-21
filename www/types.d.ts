@@ -32,7 +32,8 @@
 * <br>
 * declare let hiveManager: HivePlugin.HiveManager;
 * ...
-* let hiveClient = await hiveManager.createClient(...);
+* let userVault = await hiveManager.connectToVault(...);
+* userVault.getDatabase().insertOne(...);
 */
 
 declare namespace HivePlugin {
@@ -435,76 +436,73 @@ declare namespace HivePlugin {
         // TODO
     }
 
-    interface VaultProviderBase {
-        /** Vault provider carrier or http address */
-        address: string;
+    interface Vault {
+        /**
+         * Vault provider address (carrier or http)
+         */
+        getVaultProviderAddress(): string;
 
-        /** Access to file operations on a vault */
-        files: Files.Files;
+        /**
+         * DID string of this vault owner
+         */
+        getVaultOwnerDid(): string;
 
-        /** Access to script operations on a vault */
-        scripts: Scripting.Scripting;
+        /**
+         * Gives access to database features on this vault.
+         *
+         * Returns null in case we are accessing a vault that is not the current user's.
+         */
+        getDatabase(): Database.Database;
+
+        /**
+         * Gives access to files features on this vault.
+         */
+        getFiles(): Files.Files;
+
+        /**
+         * Gives access to all vault scripting features on this vault.
+         */
+        getScripting(): Scripting.Scripting;
     }
 
     /**
-     * Represents a vault provider that is not controlled by the currently signed in user.
+     * Represents a vault that is not controlled by the currently signed in user.
      * Used to communicate with a friend/other user's vault space in order to access his data.
      */
-    export interface RemoteVaultProvider extends VaultProviderBase {
-        constructor();
-    }
+    //export interface RemoteVault extends Vault {
+    //}
 
     /**
-     * Vault provider for the currently signed in user.
+     * Vault for the currently signed in user.
      */
-    export interface OwnVaultProvider extends VaultProviderBase {
-        /** Access to database operations on a vault */
-        database: Database.Database;
-
-        constructor();
-    }
+    //export interface OwnVault extends Vault {
+    //}
 
     /**
      * Represents a hive client that gives access to all storage operations: database,
      * files, scripting.
      */
-    interface Client {
-        /**
-         * Gives access to database features for this client.
-         */
-        getDatabase(): Promise<Database.Database>
+    //interface Client {
+    //}
 
-        /**
-         * Gives access to files features for this client.
-         */
-        getFiles(): Promise<Files.Files>;
-
-        /**
-         * Gives access to all vault scripting features for this client.
-         */
-        getScripting(): Promise<Scripting.Scripting>;
-    }
-
-    type ClientCreationOptions = {
+    /*type ClientCreationOptions = {
         authenticator?: Authenticator;
-    }
+    }*/
 
     interface HiveManager {
+        /**
+         * Initiates a connection (resolve, authenticate) to a personal vault or another user's vault.
+         * The resulting Vault object is used to access the vault features.
+         *
+         * @param vaultProviderAddress Address of the back-end service that hosts user's vault
+         * @param vaultOwnerDid: Target user DID for which we want to get vault access
+         */
+        connectToVault(vaultProviderAddress: string, vaultOwnerDid: string): Promise<Vault>;
+
         /**
          * Gets the singleton hive client instance for this application context, base for all
          * further operations.
          */
-        getClient(options: ClientCreationOptions): Promise<Client>;
-
-        /**
-         * Resolves the provider of the currently signed in user.
-         */
-        resolveOwnVaultProvider(): Promise<OwnVaultProvider>;
-
-        /**
-         * Resolves the provider of another user. The provider address must be located in the DID
-         * document of that user on the ID sidechain.
-         */
-        resolveRemoteProvider(userDID: string): Promise<RemoteVaultProvider>;
+        //getClient(options: ClientCreationOptions): Promise<Client>;
     }
 }
