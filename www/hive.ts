@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Elastos Foundation
+ * Copyright (c) 2020 Elastos Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -22,281 +22,157 @@
 
 var exec = cordova.exec;
 
-class IPFSImpl implements HivePlugin.IPFS  {
-    objId  = null;
-    plugin = null;
-    clazz  = 4;
+function execAsPromise(method: string, params: any[] = []): Promise<any> {
+    return new Promise((resolve, reject)=>{
+        exec((result)=>{
+            resolve(result);
+        }, (err)=>{
+            reject(err);
+        }, 'HivePlugin', method, params);
+    });
+}
 
-    put(data: string): Promise<any> {
-        return this.plugin.getPromise(this, 'putStringByIPFS', [this.objId, data]);
+class DatabaseImpl implements HivePlugin.Database.Database {
+    createCollection(collectionName: string, options?: HivePlugin.Database.CreateCollectionOptions): Promise<void> {
+        return execAsPromise("database_createCollection", [collectionName, options]);
     }
 
-    get(cid: string): Promise<any> {
-        return this.plugin.getPromise(this, 'getStringByIPFS', [this.objId, cid]);
+    insertOne(collectionName: string, document: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions): Promise<HivePlugin.Database.InsertResult> {
+        return execAsPromise("database_insertOne", [collectionName, document, options]);
     }
 
-    size(cid: string): Promise<any> {
-        return this.plugin.getPromise(this, 'getSizeByIPFS', [this.objId, cid]);
+    countDocuments(collectionName: string, query: HivePlugin.JSONObject, options?: HivePlugin.Database.CountOptions): Promise<number> {
+        throw new Error("Method not implemented.");
+    }
+
+    findOne(collectionName: string, query: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions): Promise<HivePlugin.JSONObject> {
+        throw new Error("Method not implemented.");
+    }
+
+    findMany(collectionName: string, query: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions): Promise<HivePlugin.JSONObject[]> {
+        throw new Error("Method not implemented.");
+    }
+
+    updateOne(collectionName: string, filter: HivePlugin.JSONObject, updateQuery: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions): Promise<void> {
+        throw new Error("Method not implemented.");
+    }
+
+    updateMany(collectionName: string, filter: HivePlugin.JSONObject, updateQuery: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions): Promise<void> {
+        throw new Error("Method not implemented.");
+    }
+
+    deleteOne(collectionName: string, filter: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions): Promise<void> {
+        throw new Error("Method not implemented.");
+    }
+
+    deleteMany(collectionName: string, filter: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions): Promise<void> {
+        throw new Error("Method not implemented.");
     }
 }
 
-class FilesImpl implements HivePlugin.Files  {
-    objId  = null;
-    plugin = null;
-    clazz  = 3;
-
-    put(remoteFile: string, data: string): Promise<any> {
-        return this.plugin.getPromise(this, 'putStringByFiles', [this.objId, remoteFile, data]);
+class FilesImpl implements HivePlugin.Files.Files  {
+    createFile(remoteFile: string): Promise<string> {
+        throw new Error("Method not implemented.");
     }
 
-    getAsString(remoteFile: string): Promise<any> {
-        return this.plugin.getPromise(this, 'getStringByFiles', [this.objId, remoteFile]);
+    upload(url: string, filePath: string): Promise<HivePlugin.Files.Writer> {
+        throw new Error("Method not implemented.");
     }
 
-    size(remoteFile: string): Promise<any> {
-        return this.plugin.getPromise(this, 'getSizeByFiles', [this.objId, remoteFile]);
+    download(filePath: string): Promise<HivePlugin.Files.Reader> {
+        throw new Error("Method not implemented.");
     }
 
-    deleteFile(remoteFile: string): Promise<any> {
-        return this.plugin.getPromise(this, 'deleteFileByFiles', [this.objId, remoteFile]);
+    delete(filePath: string): Promise<void> {
+        throw new Error("Method not implemented.");
     }
 
-    list(): Promise<any> {
-        return this.plugin.getPromise(this, 'listFilesByFiles', [this.objId]);
+    createFolder(folder: string): Promise<void> {
+        throw new Error("Method not implemented.");
+    }
+
+    move(remotePathSrc: string, remotePathDst: string): Promise<void> {
+        throw new Error("Method not implemented.");
+    }
+
+    copy(remotePathSrc: string, remotePathDst: string): Promise<void> {
+        throw new Error("Method not implemented.");
+    }
+
+    hash(filePath: String): Promise<string> {
+        throw new Error("Method not implemented.");
+    }
+
+    listFiles(folderPath: String): Promise<string[]> {
+        throw new Error("Method not implemented.");
+    }
+
+    fileSize(remoteFile: string): Promise<number> {
+        throw new Error("Method not implemented.");
     }
 }
 
-class KeyValuesImpl implements HivePlugin.KeyValues  {
-    objId  = null;
-    plugin = null;
-    clazz  = 2;
-
-    putValue(key: string, value: string): Promise<any> {
-        return this.plugin.getPromise(this, 'putValueByKV', [this.objId, key, value]);
+class ScriptingImpl implements HivePlugin.Scripting.Scripting {
+    registerSubCondition(conditionName: string, condition: HivePlugin.Scripting.Conditions.Condition): Promise<void> {
+        throw new Error("Method not implemented.");
     }
-
-    setValue(key: string, value: string): Promise<any> {
-        return this.plugin.getPromise(this, 'setValueByKV', [this.objId, key, value]);
+    setScript(functionName: string, executionSequence: HivePlugin.Scripting.Executables.ExecutionSequence, accessCondition?: HivePlugin.Scripting.Conditions.Condition) {
+        throw new Error("Method not implemented.");
     }
-
-    getValues(key: string): Promise<any> {
-        return this.plugin.getPromise(this, 'getValuesByKV', [this.objId, key]);
-    }
-
-    deleteKey(key: string): Promise<any> {
-        return this.plugin.getPromise(this, 'deleteKeyByKV', [this.objId, key]);
+    call(functionName: string, params?: HivePlugin.JSONObject) {
+        throw new Error("Method not implemented.");
     }
 }
 
 class ClientImpl implements HivePlugin.Client {
-    objId  = null;
-    plugin = null;
-    clazz  = 1;
+    private database: DatabaseImpl;
+    private files: FilesImpl;
+    private scripting: ScriptingImpl;
 
-    ipfs = [];
-    files = [];
-    keyValues = [];
-
-    connect(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
-        var me = this;
-        var _onSuccess = function (ret) {
-            if (onSuccess)
-                onSuccess(ret.status);
-        };
-        exec(_onSuccess, onError, 'HivePlugin', 'connect', [this.objId]);
+    constructor(options: HivePlugin.ClientCreationOptions) {
+        this.database = new DatabaseImpl();
+        this.files = new FilesImpl();
+        this.scripting = new ScriptingImpl();
     }
 
-    disConnect(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
-        var me = this;
-        var _onSuccess = function (ret) {
-            if (onSuccess)
-                onSuccess(ret.status);
-        };
-        exec(_onSuccess, onError, 'HivePlugin', 'disConnect', [this.objId]);
+    async getDatabase(): Promise<HivePlugin.Database.Database> {
+        return this.database;
     }
 
-    isConnected(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
-        var me = this;
-        var _onSuccess = function (ret) {
-            if (onSuccess)
-                onSuccess(ret.isConnect);
-        };
-        exec(_onSuccess, onError, 'HivePlugin', 'isConnected', [this.objId]);
+    async getFiles(): Promise<HivePlugin.Files.Files> {
+        return this.files;
     }
 
-    getIPFS(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
-        var me = this;
-        var _onSuccess = function (ret) {
-            var ipfs = new IPFSImpl();
-            ipfs.objId = ret.ipfsId;
-            ipfs.plugin = me.plugin;
-            me.ipfs[ipfs.objId] = ipfs;
-            if (onSuccess)
-                onSuccess(ipfs);
-        };
-        exec(_onSuccess, onError, 'HivePlugin', 'getIPFS', [this.objId]);
-    }
-
-    getFiles(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
-        var me = this;
-        var _onSuccess = function (ret) {
-            var files = new FilesImpl();
-            files.objId = ret.filesId;
-            files.plugin = me.plugin;
-            me.files[files.objId] = files;
-            if (onSuccess)
-                onSuccess(files);
-        };
-        exec(_onSuccess, onError, 'HivePlugin', 'getFiles', [this.objId]);
-    }
-
-    getKeyValues(onSuccess?: (info: any) => void, onError?: (err: string) => void) {
-        var me = this;
-        var _onSuccess = function (ret) {
-            var keyValues = new KeyValuesImpl();
-            keyValues.objId = ret.keyValuesId;
-            keyValues.plugin = me.plugin;
-            me.keyValues[keyValues.objId] = keyValues;
-            if (onSuccess)
-                onSuccess(keyValues);
-        };
-        exec(_onSuccess, onError, 'HivePlugin', 'getKeyValues', [this.objId]);
-    }
-}
-
-const LISTENER_LOGIN  = 1;
-const LISTENER_RESULT = 2;
-
-type HivePluginEvent = {
-    callback: Function;
-    object: any;
-};
-
-class IPFSClientCreationOptions implements HivePlugin.IPFSClientCreationOptions {
-    driveType: HivePlugin.DriveType.IPFS;
-}
-
-class OneDriveClientCreationOptions implements HivePlugin.IPFSClientCreationOptions {
-    driveType = HivePlugin.DriveType.ONEDRIVE;
-    clientId: string;
-    redirectUrl: string;
-
-    constructor(clientId: string, redirectUrl: string) {
-        this.clientId = clientId;
-        this.redirectUrl = redirectUrl;
+    async getScripting(): Promise<HivePlugin.Scripting.Scripting> {
+        return this.scripting;
     }
 }
 
 class HiveManagerImpl implements HivePlugin.HiveManager {
-    clients = [];
-
-    resultIndex = 0;
-    resultEvent: HivePluginEvent[] = [];
-    loginCount  = 0;
-    loginRequest = [];
-    loginEvent: HivePluginEvent;
-
-    hasSetListener = false;
+    private client: HivePlugin.Client = null;
 
     constructor() {
         Object.freeze(HiveManagerImpl.prototype);
         Object.freeze(ClientImpl.prototype);
-        Object.freeze(IPFSImpl.prototype);
+        Object.freeze(DatabaseImpl.prototype);
         Object.freeze(FilesImpl.prototype);
-        Object.freeze(KeyValuesImpl.prototype);
+        Object.freeze(ScriptingImpl.prototype);
     }
 
-    addLoginRequestCb(callback) {
-        var eventcb: HivePluginEvent = {
-            callback: callback,
-            object: null
-        };
-
-        this.loginEvent = eventcb;
-        return 0;
-    }
-
-    addResultEventCb = function(callback, object) {
-        var eventcb: HivePluginEvent = {
-            callback: callback,
-            object: object
+    async getClient(options: HivePlugin.ClientCreationOptions): Promise<HivePlugin.Client> {
+        if (!this.client) {
+            // TODO: call native create client
+            this.client = new ClientImpl(options);
         }
-
-        this.resultIndex++;
-        this.resultEvent[this.resultIndex] = eventcb;
-        return this.resultIndex;
+        return this.client;
     }
 
-    getPromise(object, method, args): Promise<any> {
-        var me = this;
-        return new Promise(function(resolve, reject) {
-            var onResult = function(ret) {
-                if (null == ret.error)
-                    resolve(ret);
-                else
-                    reject(ret.error);
-            };
-            var _args = args;
-            _args.push(me.addResultEventCb(onResult, object))
-            exec(null, null, 'HivePlugin', method, _args);
-        });
+    resolveOwnVaultProvider(): Promise<HivePlugin.OwnVaultProvider> {
+        throw new Error("Method not implemented.");
     }
 
-    initListener() {
-        if (!this.hasSetListener) {
-            this.setListener(LISTENER_LOGIN, (event) => {
-                var id = event.id;
-                if (id == 0) {
-                    this.loginEvent.callback(event.url);
-                }
-            });
-
-            this.setListener(LISTENER_RESULT, (event) => {
-                var id = event.hid;
-                event.hid = null;
-
-                if (this.resultEvent[id].callback)  {
-                    this.resultEvent[id].callback(event);
-                }
-            });
-
-            this.hasSetListener = true;
-        }
-    }
-
-    getVersion(onSuccess: (version: string)=>void, onError?: (err: string)=>void) {
-        exec(onSuccess, onError, 'HivePlugin', 'getVersion', [])
-    }
-
-    setListener(type: any, eventCallback: Function) {
-        exec(eventCallback, null, 'HivePlugin', 'setListener', [type]);
-    }
-
-    createClient(handler: Function, options: HivePlugin.ClientCreationOptions, onSuccess: (client: ClientImpl) => void, onError?: (err: string) => void) {
-        this.initListener();
-
-        var client = new ClientImpl();
-        var me = this;
-
-        var _onSuccess = function(ret) {
-            client.objId = ret.clientId;
-            client.plugin = me;
-            me.clients[client.objId] = client;
-            if (onSuccess)
-                onSuccess(client);
-        }
-
-        if (typeof (options) == "undefined" || options == null ||
-            typeof (options.driveType) != "string") {
-            if (onError) {
-                onError("invalid options");
-            }
-            return;
-        }
-
-        var configStr = JSON.stringify(options);
-        var handlerId = this.addLoginRequestCb(handler);
-        exec(_onSuccess, onError, 'HivePlugin', 'createClient', ["im", configStr, handlerId]);
+    resolveRemoteProvider(userDID: string): Promise<HivePlugin.RemoteVaultProvider> {
+        throw new Error("Method not implemented.");
     }
 }
 

@@ -21,10 +21,10 @@
  */
 
 /**
-* Hive is the Elastos storage solution. It lets users deploy their own hive vaults in any location and 
+* Hive is the Elastos storage solution. It lets users deploy their own hive vaults in any location and
 * keep ownership of their data.
 *
-* Hive can manage database data, files, server side scripting a with limited set of instructions. 
+* Hive can manage database data, files, server side scripting a with limited set of instructions.
 * It uses DID to authenticate users and applications before giving access to data.
 *
 * <br><br>
@@ -43,69 +43,200 @@ declare namespace HivePlugin {
         [k:string]: JSONObject | JSONObject[] | string | number | boolean
     }
 
-    // TODO: what's the meaning of "remoteFile": url? path? string? What's the format?
-    export interface Files {
-        createFile(remoteFile: string): Promise<string>;
+    export namespace Files {
+        /**
+         * File reader to retrieve remote file data.
+         */
+        export interface Reader {
+            /**
+             * Reads at most bytesCount bytes from the file.
+             */
+            read(bytesCount: number): Promise<Blob>;
 
-        // TODO: check byte[] type for data?
-        upload(url: string, data: Uint8Array, remoteFile: string): Promise<void>;
-    
-        // TODO: should rename to download() ? 
-        // TODO: what is the equivalent "outputstream" way in TS?
-        downloader(remoteFile: string, outputStream: any /* TODO */): Promise<number>;
-            
-        deleteFile(remoteFile: string): Promise<void>;
-        
-        // TODO: folder "name" ? or path?
-        createFolder(folder: string): Promise<void>;
-    
-        // TODO: src and dst formats? works for both files and folders?
-        move(src: string, dst: string): Promise<void>;
-        
-        // TODO: src and dst formats? works for both files and folders? recursive?
-        copy(src: string, dst: string): Promise<void>;
-    
-        // TODO: what's this for? Hashes but returns void ? Is this a java issue?
-        // TODO CompletableFuture<Void> hash(String remoteFile);
-    
-        // TODO: folder name? path? -> rename
-        list(folder: String): Promise<string[]>;
-    
-        size(remoteFile: string): Promise<number>;
+            /**
+             * Convenient way to read a whole file at once. This method may be used only
+             * for small files.
+             */
+            readAll(): Promise<Blob>;
+
+            /**
+             * Closes and frees reader's resources.
+             */
+            close(): Promise<void>;
+        }
+
+        /**
+         * File write to write then upload data into a remote file.
+         */
+        export interface Writer {
+            /**
+             * Appends the given data to the current file buffer.
+             */
+            write(data: Blob): Promise<number>;
+
+            /**
+             * Flushes buffered data previously written with write() to the remote file.
+             */
+            flush(): Promise<void>;
+
+            /**
+             * Closes and frees writer's resources.
+             */
+            close(): Promise<void>;
+        }
+
+        /** Represents a file path on the back-end side. */
+        export type FilePath = string;
+
+        /** Represents a folder path on the back-end side. */
+        export type FolderPath = string;
+
+        /**
+         * Type of a remote file or folder.
+         */
+        export const enum FileType {
+            FILE,
+            FOLDER
+        }
+
+        /**
+         * File information about a remote file or folder.
+         */
+        export type FileInfo = {
+            /** File name */
+            name: string;
+            /** Size of the file in bytes. Undefined for folders. */
+            size?: number;
+            /** Last modification date */
+            lastModified?: Date;
+            /** File or folder? */
+            type: FileType;
+        }
+
+        export interface Files {
+            /**
+             * Initiates an upload sequence by returning a Write object that can be used to write
+             * small file chunks. After writing, flush() must be called to actually send the data
+             * remotely.
+             */
+            upload(path: FilePath): Promise<Writer>;
+
+            /**
+             * Initiates a download sequence by returning a Reader object that can be used to read
+             * the downloaded file in chunks.
+             */
+            download(path: FilePath): Promise<Reader>;
+
+            /**
+             * Deletes a file, or a folder. In case the given path is a folder, deletion is recursive.
+             */
+            delete(path: FilePath | FolderPath): Promise<boolean>;
+
+            /**
+             * Creates a new folder.
+             */
+            createFolder(path: FolderPath): Promise<boolean>;
+
+            /**
+             * Moves (or renames) a file or a folder.
+             */
+            move(srcPath: FilePath | FolderPath, dstpath: FilePath | FolderPath): Promise<boolean>;
+
+            /**
+             * Copies a file or a folder (recursively).
+             */
+            copy(srcPath: FilePath | FolderPath, dstpath: FilePath | FolderPath): Promise<boolean>;
+
+            /**
+             * Returns the SHA256 hash of the given file
+             */
+            hash(path: FilePath): Promise<string>;
+
+            /**
+             * Returns the list of all files in a given folder.
+             */
+            list(path: FolderPath): Promise<FileInfo[]>;
+
+            /**
+             * Information about the target file or folder.
+             */
+            stat(path: FilePath | FolderPath): Promise<FileInfo>;
+        }
     }
-    
+
     namespace Database {
+        /**
+         * Options used during collection creation.
+         */
         export type CreateCollectionOptions = {
             // Nothing supported for now
         }
 
+        /**
+         * Options used during a call to count().
+         */
         export type CountOptions = {
+            /** Maximum number of results to count */
             limit?: number;
+            /** Number of results to skip before starting counting */
             skip?: number;
         }
 
+        /**
+         * Options used for findOne(), findMany() operations.
+         */
         export type FindOptions = {
+            /** Maximum number of results to return */
             limit?: number;
+            /** Number of results to skip in the matching list */
             skip?: number;
+            /** Fields to be used (and direction) to sort the results */
             sort?: JSONObject | JSONObject[];
+            /** Fields to return. By default, all fields are returned */
             projection?: JSONObject;
         }
 
+        /**
+         * Options used for insertOne() operations.
+         */
         export type InsertOptions = {
             // Nothing supported for now
         }
 
+        /**
+         * Options used for updateOne(), updateMany() operations.
+         */
         export type UpdateOptions = {
             // Nothing supported for now
         }
 
+        /**
+         * Options used for delete() operations.
+         */
         export type DeleteOptions = {
             // Nothing supported for now
         }
-        
+
+        /**
+         * Result after calls to insert operations.
+         */
         export type InsertResult = {
             insertedCount: number;
             insertedIds: string[]
+        }
+
+        /**
+         * Result after calls to update operations.
+         */
+        export type UpdateResult = {
+            updatedCount: number;
+        }
+
+        /**
+         * Result after calls to delete operations.
+         */
+        export type DeleteResult = {
+            deletedCount: number;
         }
 
         export interface Database {
@@ -115,199 +246,227 @@ declare namespace HivePlugin {
             createCollection(collectionName: string, options?: CreateCollectionOptions): Promise<void>;
 
             /**
-             * Inserts a new document in the given collection, into current user's personal vault.
-             * 
-             * @returns The inserted entry ID
-             */
-            insertOne(collectionName: string, document: JSONObject, options?: InsertOptions): Promise<InsertResult>;
-
-            /**
              * Returns the number of documents matching the given query and options.
              */
             countDocuments(collectionName: string, query: JSONObject, options?: CountOptions): Promise<number>;
 
             /**
-             * Queries the database for some specific documents based on the given query.
-             * 
-             * @returns List of results matching the query
+             * Queries the database for some specific documents based on the given query and returns at most
+             * one document.
              */
             findOne(collectionName: string, query: JSONObject, options?: FindOptions): Promise<JSONObject>;
-            findMany(collectionName: string, query: JSONObject, options?: FindOptions): Promise<JSONObject[]>;
-            
-            /**
-             * Updates one or more existing documents based on the given query filter and using the given 
-             * update query.
-             */
-            // TODO: update result type
-            updateOne(collectionName: string, filter: JSONObject, updateQuery: JSONObject, options?: UpdateOptions): Promise<void>;
-            updateMany(collectionName: string, filter: JSONObject, updateQuery: JSONObject, options?: UpdateOptions): Promise<void>;
 
             /**
-             * Deletes one or more existing documents based on the given deletion filter.
+             * Queries the database for some specific documents based on the given query and returns a list of
+             * documents.
+             *
+             * @returns List of results matching the query
              */
-            // TODO: delete result type
-            deleteOne(collectionName: string, filter: JSONObject, options?: DeleteOptions): Promise<void>;
-            deleteMany(collectionName: string, filter: JSONObject, options?: DeleteOptions): Promise<void>;
+            findMany(collectionName: string, query: JSONObject, options?: FindOptions): Promise<JSONObject[]>;
+
+            /**
+             * Inserts a new document in the given collection, into current user's personal vault.
+             */
+            insertOne(collectionName: string, document: JSONObject, options?: InsertOptions): Promise<InsertResult>;
+
+            /**
+             * Updates at most one existing document based on the given query filter and using the given
+             * update query, which can be a fully new document, or a partial update ($set).
+             */
+            updateOne(collectionName: string, filter: JSONObject, updateQuery: JSONObject, options?: UpdateOptions): Promise<UpdateResult>;
+
+            /**
+             * Updates all documents matching the given query filter, using the given
+             * update query, which can be a fully new document, or a partial update ($set).
+             */
+            updateMany(collectionName: string, filter: JSONObject, updateQuery: JSONObject, options?: UpdateOptions): Promise<UpdateResult>;
+
+            /**
+             * Deletes at most one document based on the given deletion filter.
+             */
+            deleteOne(collectionName: string, filter: JSONObject, options?: DeleteOptions): Promise<DeleteResult>;
+
+            /**
+             * Deletes all documents matching the given deletion filter.
+             */
+            deleteMany(collectionName: string, filter: JSONObject, options?: DeleteOptions): Promise<DeleteResult>;
         }
     }
 
-    // TODO: what's this?
     export interface Authenticator {
-        // TODO
+        // TODO - How to manage DID auth?
         requestAuthentication(requestUrl: string);
     }
 
-    export namespace Conditions {
-        export namespace Database {
+    export namespace Scripting {
+        export namespace Conditions {
+            export namespace Database {
+                /**
+                 * Vault script condition to check if a database query returns results or not.
+                 * This is a way for example to check is a user is in a group, if a message contains comments, if a user
+                 * is in a list, etc.
+                 */
+                export interface QueryHasResultsCondition extends Condition {
+                    constructor(collectionName: string, queryParameters: JSONObject);
+                }
+            }
+
             /**
-             * Vault script condition to check if a database query returns results or not.
-             * This is a way for example to check is a user is in a group, if a message contains comments, if a user
-             * is in a list, etc.
+             * Base interface for all vault script conditions.
              */
-            export interface QueryHasResultsCondition extends Condition {
-                constructor(collectionName: string, queryParameters: JSONObject);
+            export interface Condition {
+                toJSON(): JSONObject;
+            }
+
+            /**
+             * Represents a sub-condition execution, previously registered in the ACL manager.
+             * This way, several scripts can rely on simply the sub-condition name, without rewriting the condition content itself.
+             */
+            export interface SubCondition extends Condition {
+                constructor(subConditionName: string);
+            }
+
+            /**
+             * Vault script condition that succeeds if at least one of the contained conditions are successful.
+             * Contained conditions are tested in the given order, and test stops as soon as one successful condition
+             * succeeds.
+             */
+            export interface OrCondition extends Condition {
+                constructor(conditions: Condition[]);
+            }
+
+            /**
+             * Vault script condition that succeeds only if all the contained conditions are successful.
+             */
+            export interface AndCondition extends Condition {
+                constructor(conditions: Condition[]);
             }
         }
 
-        /**
-         * Base interface for all vault script conditions.
-         */
-        export interface Condition {
-            toJSON(): JSONObject;
+        export namespace Executables {
+            /**
+             * Client side representation of back-end executables.
+             * Executables are predefined, and are executed by the hive back-end when running vault scripts.
+             * For example, a Database.FindQuery executable type will execute a mongo query and return a list of results.
+             */
+            export interface Executable {
+                toJSON(): JSONObject;
+            }
+
+            /**
+             * Convenient interface to store and serialize a sequence of executables.
+             */
+            export class ExecutionSequence {
+                constructor(executables: Executable[]);
+
+                toJSON(): JSONObject[];
+            }
+
+            export namespace Database {
+                /**
+                 * Client side representation of a back-end execution that runs a mongo "find one" query and returns zero or one item
+                 * as a result.
+                 */
+                export class FindOneQuery {
+                    constructor(collectionName: String, query?: JSONObject, options?: HivePlugin.Database.FindOptions);
+                }
+
+                /**
+                 * Client side representation of a back-end execution that runs a mongo "find" query and returns some items
+                 * as a result.
+                 *
+                 * The hive back-end may truncate the number of returned results for performance reasons. Pagination
+                 * must be handled on the application level.
+                 */
+                export class FindManyQuery {
+                    constructor(collectionName: String, query?: JSONObject, options?: HivePlugin.Database.FindOptions);
+                }
+
+                /**
+                 * Client side representation of a back-end execution that runs a mongo "insert one" query.
+                 */
+                export class InsertQuery {
+                    constructor(collectionName: String, document: JSONObject);
+                }
+
+                /**
+                 * Client side representation of a back-end execution that runs a mongo "update many" query.
+                 */
+                export class UpdateQuery {
+                    constructor(collectionName: String, filter: JSONObject, updateQuery: JSONObject);
+                }
+
+                /**
+                 * Client side representation of a back-end execution that runs a mongo "delete many" query.
+                 */
+                export class DeleteQuery {
+                    constructor(collectionName: String, deleteQuery: JSONObject);
+                }
+            }
         }
 
-        /**
-         * Represents a sub-condition execution, previously registered in the ACL manager.
-         * This way, several scripts can rely on simply the sub-condition name, without rewriting the condition content itself.
-         */
-        export interface SubCondition extends Condition {
-            constructor(subConditionName: string);
-        }
+        export interface Scripting {
+            /**
+             * Registers a sub-condition on the backend. Sub conditions can be referenced from the client side, by the vault owner,
+             * while registering scripts using Scripting.setScript().
+             */
+            registerSubCondition(conditionName: string, condition: Conditions.Condition): Promise<void>;
 
-        /**
-         * Vault script condition that succeeds if at least one of the contained conditions are successful.
-         * Contained conditions are tested in the given order, and test stops as soon as one successful condition
-         * succeeds.
-         */
-        export interface OrCondition extends Condition {
-            constructor(conditions: Condition[]);
-        }
+            /**
+             * Lets the vault owner register a script on his vault for a given app. The script is built on the client side, then
+             * serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can
+             * use Scripting.call() to execute one of those scripts and get results/data.
+             */
+            setScript(functionName: string, executionSequence: Executables.ExecutionSequence, accessCondition?: Conditions.Condition);
 
-        /**
-         * Vault script condition that succeeds only if all the contained conditions are successful.
-         */
-        export interface AndCondition extends Condition {
-            constructor(conditions: Condition[]);
+            /**
+             * Executes a previously registered server side script using Scripting.setScript(). Vault owner or external users are
+             * allowed to call scripts on someone's vault.
+             *
+             * Call parameters (params field) are meant to be used by scripts on the server side, for example as injected parameters
+             * to mongo queries. Ex: if "params" contains a field "name":"someone", then the called script is able to reference this parameter
+             * using "$params.name".
+             */
+            call(functionName: string, params?: JSONObject);
         }
     }
 
-    export interface Scripting {
-        /**
-         * Registers a sub-condition on the backend. Sub conditions can be referenced from the client side, by the vault owner,
-         * while registering scripts using Scripting.setScript().
-         */
-        registerSubCondition(conditionName: string, condition: Conditions.Condition): Promise<void>;
-
-        /**
-         * Lets the vault owner register a script on his vault for a given app. The script is built on the client side, then
-         * serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can
-         * use Scripting.call() to execute one of those scripts and get results/data.
-         */
-        setScript(functionName: string, executionSequence: Executables.ExecutionSequence, accessCondition?: Conditions.Condition);
-
-        /**
-         * Executes a previously registered server side script using Scripting.setScript(). Vault owner or external users are
-         * allowed to call scripts on someone's vault.
-         *
-         * Call parameters (params field) are meant to be used by scripts on the server side, for example as injected parameters
-         * to mongo queries. Ex: if "params" contains a field "name":"someone", then the called script is able to reference this parameter
-         * using "$params.name".
-         */
-        call(functionName: string, params?: JSONObject);
-    }
-
-    export namespace Executables {
-        /**
-         * Client side representation of back-end executables.
-         * Executables are predefined, and are executed by the hive back-end when running vault scripts.
-         * For example, a Database.FindQuery executable type will execute a mongo query and return a list of results.
-         */
-        export interface Executable {
-            toJSON(): JSONObject;
-        }
-
-        /**
-         * Convenient interface to store and serialize a sequence of executables.
-         */
-        // TODO: type or class?
-        export type ExecutionSequence = {
-            constructor(executables: Executable[]);
-
-            toJSON(): JSONObject[];
-        }
-
-        export namespace Database {
-            /**
-             * Client side representation of a back-end execution that runs a mongo "find" query and returns some items
-             * as a result.
-             */
-            // TODO IMPORTANT: how to deal with cursors here? If a script wants to return 1000 messages ?
-            export class FindQuery {
-                constructor(collectionName: String, query?: JSONObject);
-            }
-
-            /**
-             * Client side representation of a back-end execution that runs a mongo "insert" query.
-             */
-            export class InsertQuery {
-                constructor(collectionName: String, document: JSONObject);
-            }
-    
-            /**
-             * Client side representation of a back-end execution that runs a mongo "update" query, 
-             * overwriting the whole target object with the new content.
-             */
-            // TODO: eve protocol is restricting us a bit too much here compared to mongo
-            export class OverwriteQuery {
-                constructor(collectionName: String, id: string, newItem: JSONObject);
-            }
-
-            /**
-             * Client side representation of a back-end execution that runs a mongo "update" query, 
-             * updating only specific fields of the document with the new content.
-             */
-            // TODO: eve protocol is restricting us a bit too much here compared to mongo
-            export class UpdateQuery {
-                constructor(collectionName: String, id: string, updatedFields: JSONObject);
-            }
-    
-            // TODO: java sdk currently deletes one specific ID only, not by query
-            // TODO: eve protocol is restricting us a bit too much here compared to mongo
-            export class DeleteQuery {
-                constructor(collectionName: String, deleteQuery: JSONObject);
-            }
-        }
+    namespace KeyValues {
+        // TODO
     }
 
     interface VaultProviderBase {
-        address: string; // Vault provider carrier or http address
+        /** Vault provider carrier or http address */
+        address: string;
 
-        files: Files;
-        scripts: Scripting;
+        /** Access to file operations on a vault */
+        files: Files.Files;
+
+        /** Access to script operations on a vault */
+        scripts: Scripting.Scripting;
     }
 
+    /**
+     * Represents a vault provider that is not controlled by the currently signed in user.
+     * Used to communicate with a friend/other user's vault space in order to access his data.
+     */
     export interface RemoteVaultProvider extends VaultProviderBase {
         constructor();
     }
 
+    /**
+     * Vault provider for the currently signed in user.
+     */
     export interface OwnVaultProvider extends VaultProviderBase {
+        /** Access to database operations on a vault */
         database: Database.Database;
 
         constructor();
     }
 
     /**
-     * TODO
+     * Represents a hive client that gives access to all storage operations: database,
+     * files, scripting.
      */
     interface Client {
         /**
@@ -318,12 +477,12 @@ declare namespace HivePlugin {
         /**
          * Gives access to files features for this client.
          */
-        getFiles(): Promise<Files>;
+        getFiles(): Promise<Files.Files>;
 
         /**
          * Gives access to all vault scripting features for this client.
          */
-        getScripting(): Promise<Scripting>;
+        getScripting(): Promise<Scripting.Scripting>;
     }
 
     type ClientCreationOptions = {
@@ -332,9 +491,10 @@ declare namespace HivePlugin {
 
     interface HiveManager {
         /**
-         * Creates a new instance of a hive client, base for every further operation in hive.
+         * Gets the singleton hive client instance for this application context, base for all
+         * further operations.
          */
-        createClient(options: ClientCreationOptions): Promise<Client>;
+        getClient(options: ClientCreationOptions): Promise<Client>;
 
         /**
          * Resolves the provider of the currently signed in user.
@@ -342,7 +502,7 @@ declare namespace HivePlugin {
         resolveOwnVaultProvider(): Promise<OwnVaultProvider>;
 
         /**
-         * Resolves the provider of another user. The provider address must be located in the DID 
+         * Resolves the provider of another user. The provider address must be located in the DID
          * document of that user on the ID sidechain.
          */
         resolveRemoteProvider(userDID: string): Promise<RemoteVaultProvider>;
