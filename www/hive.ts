@@ -24,12 +24,45 @@ var exec = cordova.exec;
 
 function execAsPromise<T>(method: string, params: any[] = []): Promise<T> {
     return new Promise((resolve, reject)=>{
-        exec((result)=>{
+        exec((result: any)=>{
             resolve(result);
-        }, (err)=>{
+        }, (err: any)=>{
             reject(err);
         }, 'HivePlugin', method, params);
     });
+}
+
+class InsertResultImpl implements HivePlugin.Database.InsertResult {
+    insertedCount: number;
+    insertedIds: string[];
+
+    static fromJson(json: HivePlugin.JSONObject): InsertResultImpl {
+        let result = new InsertResultImpl();
+        Object.assign(result, json);
+        return result;
+    }
+}
+
+class UpdateResultImpl implements HivePlugin.Database.UpdateResult {
+    updatedCount: number;
+    updatedIds: string[];
+
+    static fromJson(json: HivePlugin.JSONObject): UpdateResultImpl {
+        let result = new UpdateResultImpl();
+        Object.assign(result, json);
+        return result;
+    }
+}
+
+class DeleteResultImpl implements HivePlugin.Database.DeleteResult {
+    deletedCount: number;
+    deletedIds: string[];
+
+    static fromJson(json: HivePlugin.JSONObject): DeleteResultImpl {
+        let result = new DeleteResultImpl();
+        Object.assign(result, json);
+        return result;
+    }
 }
 
 class DatabaseImpl implements HivePlugin.Database.Database {
@@ -39,78 +72,160 @@ class DatabaseImpl implements HivePlugin.Database.Database {
         return execAsPromise<void>("database_createCollection", [this.vault.objectId, collectionName, options]);
     }
 
-    insertOne(collectionName: string, document: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions): Promise<HivePlugin.Database.InsertResult> {
-        return execAsPromise("database_insertOne", [collectionName, document, options]);
+    async insertOne(collectionName: string, document: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions): Promise<HivePlugin.Database.InsertResult> {
+        let resultJson = await execAsPromise<HivePlugin.JSONObject>("database_insertOne", [this.vault.objectId, collectionName, document, options]);
+        return InsertResultImpl.fromJson(resultJson);
     }
 
     countDocuments(collectionName: string, query: HivePlugin.JSONObject, options?: HivePlugin.Database.CountOptions): Promise<number> {
-        throw new Error("Method not implemented.");
+        return execAsPromise<number>("database_countDocuments", [this.vault.objectId, collectionName, query, options]);
     }
 
     findOne(collectionName: string, query: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions): Promise<HivePlugin.JSONObject> {
-        throw new Error("Method not implemented.");
+        return execAsPromise<HivePlugin.JSONObject>("database_findOne", [this.vault.objectId, collectionName, query, options]);
     }
 
     findMany(collectionName: string, query: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions): Promise<HivePlugin.JSONObject[]> {
-        throw new Error("Method not implemented.");
+        return execAsPromise<HivePlugin.JSONObject[]>("database_findMany", [this.vault.objectId, collectionName, query, options]);
     }
 
-    updateOne(collectionName: string, filter: HivePlugin.JSONObject, updateQuery: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions): Promise<HivePlugin.Database.UpdateResult> {
-        throw new Error("Method not implemented.");
+    async updateOne(collectionName: string, filter: HivePlugin.JSONObject, updateQuery: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions): Promise<HivePlugin.Database.UpdateResult> {
+        let resultJson = await execAsPromise<HivePlugin.Database.UpdateResult>("database_updateOne", [this.vault.objectId, collectionName, filter, updateQuery, options]);
+        return UpdateResultImpl.fromJson(resultJson);
     }
 
-    updateMany(collectionName: string, filter: HivePlugin.JSONObject, updateQuery: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions): Promise<HivePlugin.Database.UpdateResult> {
-        throw new Error("Method not implemented.");
+    async updateMany(collectionName: string, filter: HivePlugin.JSONObject, updateQuery: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions): Promise<HivePlugin.Database.UpdateResult> {
+        let resultJson = await execAsPromise<HivePlugin.Database.UpdateResult>("database_updateMany", [this.vault.objectId, collectionName, filter, updateQuery, options]);
+        return UpdateResultImpl.fromJson(resultJson);
     }
 
-    deleteOne(collectionName: string, filter: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions): Promise<HivePlugin.Database.DeleteResult> {
-        throw new Error("Method not implemented.");
+    async deleteOne(collectionName: string, filter: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions): Promise<HivePlugin.Database.DeleteResult> {
+        let resultJson = await execAsPromise<HivePlugin.JSONObject>("database_deleteOne", [this.vault.objectId, collectionName, filter, options]);
+        return DeleteResultImpl.fromJson(resultJson);
     }
 
-    deleteMany(collectionName: string, filter: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions): Promise<HivePlugin.Database.DeleteResult> {
-        throw new Error("Method not implemented.");
+    async deleteMany(collectionName: string, filter: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions): Promise<HivePlugin.Database.DeleteResult> {
+        let resultJson = await execAsPromise<HivePlugin.JSONObject>("database_deleteMany", [this.vault.objectId, collectionName, filter, options]);
+        return DeleteResultImpl.fromJson(resultJson);
+    }
+}
+
+class WriterImpl implements HivePlugin.Files.Writer {
+    write(data: Blob): Promise<number> {
+        return execAsPromise<number>("writer_write", [data]);
+    }
+    flush(): Promise<void> {
+        return execAsPromise<void>("writer_flush", []);
+    }
+    close(): Promise<void> {
+        return execAsPromise<void>("writer_close", []);
+    }
+
+    static fromJson(json: HivePlugin.JSONObject): WriterImpl {
+        let result = new WriterImpl();
+        Object.assign(result, json);
+        return result;
+    }
+}
+
+class ReaderImpl implements HivePlugin.Files.Reader {
+    read(bytesCount: number): Promise<Blob> {
+        return execAsPromise<Blob>("reader_read", [bytesCount]);
+    }
+    readAll(): Promise<Blob> {
+        return execAsPromise<Blob>("reader_readAll", []);
+    }
+    close(): Promise<void> {
+        return execAsPromise<void>("reader_close", []);
+    }
+
+    static fromJson(json: HivePlugin.JSONObject): ReaderImpl {
+        let result = new ReaderImpl();
+        Object.assign(result, json);
+        return result;
+    }
+}
+
+class FileInfoImpl implements HivePlugin.Files.FileInfo {
+    name: string;
+    size?: number;
+    lastModified?: Date;
+    type: HivePlugin.Files.FileType;
+
+    static fromJson(json: HivePlugin.JSONObject): FileInfoImpl {
+        let result = new FileInfoImpl();
+        Object.assign(result, json);
+        return result;
     }
 }
 
 class FilesImpl implements HivePlugin.Files.Files  {
-    upload(path: string): Promise<HivePlugin.Files.Writer> {
-        throw new Error("Method not implemented.");
+    constructor(private vault: VaultImpl) {}
+
+    async upload(path: string): Promise<HivePlugin.Files.Writer> {
+        let resultJson = await execAsPromise<HivePlugin.JSONObject>("files_upload", [this.vault.objectId, path]);
+        return WriterImpl.fromJson(resultJson);
     }
-    download(path: string): Promise<HivePlugin.Files.Reader> {
-        throw new Error("Method not implemented.");
+
+    async download(path: string): Promise<HivePlugin.Files.Reader> {
+        let resultJson = await execAsPromise<HivePlugin.JSONObject>("files_download", [this.vault.objectId, path]);
+        return ReaderImpl.fromJson(resultJson);
     }
+
     delete(path: string): Promise<boolean> {
-        throw new Error("Method not implemented.");
+        return execAsPromise<boolean>("files_delete", [this.vault.objectId, path]);
     }
+
     createFolder(path: string): Promise<boolean> {
-        throw new Error("Method not implemented.");
+        return execAsPromise<boolean>("files_createFolder", [this.vault.objectId, path]);
     }
+
     move(srcPath: string, dstpath: string): Promise<boolean> {
-        throw new Error("Method not implemented.");
+        return execAsPromise<boolean>("files_move", [this.vault.objectId, srcPath, dstpath]);
     }
+
     copy(srcPath: string, dstpath: string): Promise<boolean> {
-        throw new Error("Method not implemented.");
+        return execAsPromise<boolean>("files_copy", [this.vault.objectId, srcPath, dstpath]);
     }
+
     hash(path: string): Promise<string> {
-        throw new Error("Method not implemented.");
+        return execAsPromise<string>("files_hash", [this.vault.objectId, path]);
     }
-    list(path: string): Promise<HivePlugin.Files.FileInfo[]> {
-        throw new Error("Method not implemented.");
+
+    async list(path: string): Promise<HivePlugin.Files.FileInfo[]> {
+        let resultsJson = await execAsPromise<HivePlugin.JSONObject[]>("files_list", [this.vault.objectId, path]);
+        let fileInfos: HivePlugin.Files.FileInfo[] = [];
+        for (let resultJson of resultsJson) {
+            fileInfos.push(FileInfoImpl.fromJson(resultJson));
+        }
+        return fileInfos;
     }
-    stat(path: string): Promise<HivePlugin.Files.FileInfo> {
+
+    async stat(path: string): Promise<HivePlugin.Files.FileInfo> {
+        let resultJson = await execAsPromise<HivePlugin.JSONObject>("files_stat", [this.vault.objectId, path]);
+        return FileInfoImpl.fromJson(resultJson);
+    }
+}
+
+class ExecutionSequenceImpl implements HivePlugin.Scripting.Executables.ExecutionSequence {
+    constructor(public executables: HivePlugin.Scripting.Executables.Executable[]) {}
+
+    toJSON(): HivePlugin.JSONObject[] {
         throw new Error("Method not implemented.");
     }
 }
 
 class ScriptingImpl implements HivePlugin.Scripting.Scripting {
+    constructor(private vault: VaultImpl) {}
+
     registerSubCondition(conditionName: string, condition: HivePlugin.Scripting.Conditions.Condition): Promise<void> {
-        throw new Error("Method not implemented.");
+        return execAsPromise<void>("scripting_registerSubCondition", [this.vault.objectId, conditionName, condition]);
     }
-    setScript(functionName: string, executionSequence: HivePlugin.Scripting.Executables.ExecutionSequence, accessCondition?: HivePlugin.Scripting.Conditions.Condition) {
-        throw new Error("Method not implemented.");
+    setScript(functionName: string, executionSequence: HivePlugin.Scripting.Executables.ExecutionSequence, accessCondition?: HivePlugin.Scripting.Conditions.Condition): Promise<void> {
+        return execAsPromise<void>("scripting_setScript", [this.vault.objectId, functionName, executionSequence, accessCondition]);
     }
-    call(functionName: string, params?: HivePlugin.JSONObject) {
-        throw new Error("Method not implemented.");
+    call(functionName: string, params?: HivePlugin.JSONObject): Promise<HivePlugin.JSONObject> {
+        return execAsPromise<HivePlugin.JSONObject>("scripting_call", [this.vault.objectId, functionName, params]);
     }
 }
 
@@ -129,8 +244,8 @@ class VaultImpl implements HivePlugin.Vault {
         this.vaultOwnerDid = vaultOwnerDid;
 
         this.database = new DatabaseImpl(this);
-        this.files = new FilesImpl();
-        this.scripting = new ScriptingImpl();
+        this.files = new FilesImpl(this);
+        this.scripting = new ScriptingImpl(this);
     }
 
     static fromJson(json: HivePlugin.JSONObject): VaultImpl {
@@ -161,18 +276,57 @@ class VaultImpl implements HivePlugin.Vault {
 }
 
 class HiveManagerImpl implements HivePlugin.HiveManager {
+    Scripting: {
+        Executables: {
+            newExecutionSequence: (executables: HivePlugin.Scripting.Executables.Executable[]) => HivePlugin.Scripting.Executables.ExecutionSequence;
+
+            Database: {
+                newFindOneQuery(collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions);
+                newFindManyQuery(collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions);
+            }
+        };
+    };
+
     constructor() {
         Object.freeze(HiveManagerImpl.prototype);
         Object.freeze(VaultImpl.prototype);
         Object.freeze(DatabaseImpl.prototype);
         Object.freeze(FilesImpl.prototype);
         Object.freeze(ScriptingImpl.prototype);
+
+        this.Scripting = {
+            Executables: {
+                newExecutionSequence: function(executables: HivePlugin.Scripting.Executables.Executable[]): HivePlugin.Scripting.Executables.ExecutionSequence {
+                    return new ExecutionSequenceImpl(executables);
+                },
+
+                Database: {
+                    newFindOneQuery: function(collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions): HivePlugin.Scripting.Executables.Database.FindOneQuery {
+                        return null; // TODO
+                    },
+
+                    newFindManyQuery: function(collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions): HivePlugin.Scripting.Executables.Database.FindOneQuery {
+                        return null; // TODO
+                    }
+                }
+            }
+        };
     }
 
     async connectToVault(vaultProviderAddress: string, vaultOwnerDid: string): Promise<HivePlugin.Vault> {
         let vaultJson = await execAsPromise<HivePlugin.JSONObject>("connectToVault", [vaultProviderAddress, vaultOwnerDid]);
-        let vault = VaultImpl.fromJson(vaultJson);
-        return vault;
+        return VaultImpl.fromJson(vaultJson);
+    }
+}
+
+class ExecutionSequence implements HivePlugin.Scripting.Executables.ExecutionSequence {
+    test() {
+        console.log("test");
+    }
+
+    toJSON(): HivePlugin.JSONObject[] {
+        console.log("TO JSON");
+        return null;
     }
 }
 

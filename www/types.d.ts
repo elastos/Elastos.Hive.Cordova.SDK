@@ -296,7 +296,7 @@ declare namespace HivePlugin {
 
     export interface Authenticator {
         // TODO - How to manage DID auth?
-        requestAuthentication(requestUrl: string);
+        requestAuthentication(requestUrl: string): Promise<void>;
     }
 
     export namespace Scripting {
@@ -357,9 +357,7 @@ declare namespace HivePlugin {
             /**
              * Convenient interface to store and serialize a sequence of executables.
              */
-            export class ExecutionSequence {
-                constructor(executables: Executable[]);
-
+            export interface ExecutionSequence {
                 toJSON(): JSONObject[];
             }
 
@@ -418,7 +416,7 @@ declare namespace HivePlugin {
              * serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can
              * use Scripting.call() to execute one of those scripts and get results/data.
              */
-            setScript(functionName: string, executionSequence: Executables.ExecutionSequence, accessCondition?: Conditions.Condition);
+            setScript(functionName: string, executionSequence: Executables.ExecutionSequence, accessCondition?: Conditions.Condition): Promise<void>;
 
             /**
              * Executes a previously registered server side script using Scripting.setScript(). Vault owner or external users are
@@ -428,7 +426,7 @@ declare namespace HivePlugin {
              * to mongo queries. Ex: if "params" contains a field "name":"someone", then the called script is able to reference this parameter
              * using "$params.name".
              */
-            call(functionName: string, params?: JSONObject);
+            call(functionName: string, params?: JSONObject): Promise<JSONObject>;
         }
     }
 
@@ -490,6 +488,17 @@ declare namespace HivePlugin {
     }*/
 
     interface HiveManager {
+        Scripting: {
+            Executables: {
+                newExecutionSequence: (executables: Scripting.Executables.Executable[]) => Scripting.Executables.ExecutionSequence;
+
+                Database: {
+                    newFindOneQuery: (collectionName: String, query?: JSONObject, options?: HivePlugin.Database.FindOptions) => Scripting.Executables.Database.FindOneQuery;
+                    newFindManyQuery: (collectionName: String, query?: JSONObject, options?: HivePlugin.Database.FindOptions) => Scripting.Executables.Database.FindManyQuery;
+                }
+            }
+        }
+
         /**
          * Initiates a connection (resolve, authenticate) to a personal vault or another user's vault.
          * The resulting Vault object is used to access the vault features.
