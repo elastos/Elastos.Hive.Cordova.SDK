@@ -192,7 +192,7 @@ declare namespace HivePlugin {
             /** Number of results to skip in the matching list */
             skip?: number;
             /** Fields to be used (and direction) to sort the results */
-            sort?: JSONObject | JSONObject[];
+            sort?: JSONObject;
             /** Fields to return. By default, all fields are returned */
             projection?: JSONObject;
         }
@@ -366,9 +366,7 @@ declare namespace HivePlugin {
                  * Client side representation of a back-end execution that runs a mongo "find one" query and returns zero or one item
                  * as a result.
                  */
-                export class FindOneQuery {
-                    constructor(collectionName: String, query?: JSONObject, options?: HivePlugin.Database.FindOptions);
-                }
+                export interface FindOneQuery extends Executable {}
 
                 /**
                  * Client side representation of a back-end execution that runs a mongo "find" query and returns some items
@@ -377,16 +375,12 @@ declare namespace HivePlugin {
                  * The hive back-end may truncate the number of returned results for performance reasons. Pagination
                  * must be handled on the application level.
                  */
-                export class FindManyQuery {
-                    constructor(collectionName: String, query?: JSONObject, options?: HivePlugin.Database.FindOptions);
-                }
+                export interface FindManyQuery extends Executable {}
 
                 /**
                  * Client side representation of a back-end execution that runs a mongo "insert one" query.
                  */
-                export class InsertQuery {
-                    constructor(collectionName: String, document: JSONObject);
-                }
+                export interface InsertQuery {}
 
                 /**
                  * Client side representation of a back-end execution that runs a mongo "update many" query.
@@ -495,6 +489,9 @@ declare namespace HivePlugin {
                 Database: {
                     newFindOneQuery: (collectionName: String, query?: JSONObject, options?: HivePlugin.Database.FindOptions) => Scripting.Executables.Database.FindOneQuery;
                     newFindManyQuery: (collectionName: String, query?: JSONObject, options?: HivePlugin.Database.FindOptions) => Scripting.Executables.Database.FindManyQuery;
+                    newInsertQuery: (collectionName: String, query?: JSONObject, options?: HivePlugin.Database.InsertOptions) => Scripting.Executables.Database.InsertQuery;
+                    newUpdateQuery: (collectionName: String, query?: JSONObject, options?: HivePlugin.Database.UpdateOptions) => Scripting.Executables.Database.UpdateQuery;
+                    newDeleteQuery: (collectionName: String, query?: JSONObject, options?: HivePlugin.Database.DeleteOptions) => Scripting.Executables.Database.DeleteQuery;
                 }
             }
         }

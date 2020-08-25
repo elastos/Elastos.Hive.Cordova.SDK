@@ -176,8 +176,14 @@ class FilesImpl implements HivePlugin.Files.Files  {
         return execAsPromise<boolean>("files_delete", [this.vault.objectId, path]);
     }
 
-    createFolder(path: string): Promise<boolean> {
-        return execAsPromise<boolean>("files_createFolder", [this.vault.objectId, path]);
+    async createFolder(path: string): Promise<boolean> {
+        try {
+            await execAsPromise<void>("files_createFolder", [this.vault.objectId, path]);
+            return true;
+        }
+        catch (e) {
+            return false;
+        }
     }
 
     move(srcPath: string, dstpath: string): Promise<boolean> {
@@ -211,7 +217,54 @@ class ExecutionSequenceImpl implements HivePlugin.Scripting.Executables.Executio
     constructor(public executables: HivePlugin.Scripting.Executables.Executable[]) {}
 
     toJSON(): HivePlugin.JSONObject[] {
-        throw new Error("Method not implemented.");
+        let jsonObj: HivePlugin.JSONObject[] = [];
+        for (let executable of this.executables) {
+            jsonObj.push(executable.toJSON());
+        }
+        return jsonObj;
+    }
+}
+
+class FindOneQueryImpl implements HivePlugin.Scripting.Executables.Database.FindOneQuery {
+    constructor(private collectionName: String, private query?: HivePlugin.JSONObject, private options?: HivePlugin.Database.FindOptions) {}
+
+    toJSON(): HivePlugin.JSONObject {
+        let jsonObj = new HivePlugin.JSONObject();
+        Object.assign(jsonObj, this);
+        return jsonObj;
+    }
+}
+
+// For now, exactly the same as FindOneQueryImpl
+class FindManyQueryImpl extends FindOneQueryImpl {}
+
+class InsertQueryImpl implements HivePlugin.Scripting.Executables.Database.InsertQuery {
+    constructor(private collectionName: String, private document: HivePlugin.JSONObject, private options: HivePlugin.Database.InsertOptions) {}
+
+    toJSON(): HivePlugin.JSONObject {
+        let jsonObj = new HivePlugin.JSONObject();
+        Object.assign(jsonObj, this);
+        return jsonObj;
+    }
+}
+
+class UpdateQueryImpl implements HivePlugin.Scripting.Executables.Database.UpdateQuery {
+    constructor(private collectionName: String, private document: HivePlugin.JSONObject, private options: HivePlugin.Database.UpdateOptions) {}
+
+    toJSON(): HivePlugin.JSONObject {
+        let jsonObj = new HivePlugin.JSONObject();
+        Object.assign(jsonObj, this);
+        return jsonObj;
+    }
+}
+
+class DeleteQueryImpl implements HivePlugin.Scripting.Executables.Database.DeleteQuery {
+    constructor(private collectionName: String, private document: HivePlugin.JSONObject, private options: HivePlugin.Database.DeleteOptions) {}
+
+    toJSON(): HivePlugin.JSONObject {
+        let jsonObj = new HivePlugin.JSONObject();
+        Object.assign(jsonObj, this);
+        return jsonObj;
     }
 }
 
@@ -281,8 +334,11 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
             newExecutionSequence: (executables: HivePlugin.Scripting.Executables.Executable[]) => HivePlugin.Scripting.Executables.ExecutionSequence;
 
             Database: {
-                newFindOneQuery(collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions);
-                newFindManyQuery(collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions);
+                newFindOneQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions) => HivePlugin.Scripting.Executables.Database.FindOneQuery;
+                newFindManyQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions) => HivePlugin.Scripting.Executables.Database.FindManyQuery;
+                newInsertQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions) => HivePlugin.Scripting.Executables.Database.InsertQuery;
+                newUpdateQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions) => HivePlugin.Scripting.Executables.Database.UpdateQuery;
+                newDeleteQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions) => HivePlugin.Scripting.Executables.Database.DeleteQuery;
             }
         };
     };
@@ -302,11 +358,23 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
 
                 Database: {
                     newFindOneQuery: function(collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions): HivePlugin.Scripting.Executables.Database.FindOneQuery {
-                        return null; // TODO
+                        return new FindOneQueryImpl(collectionName, query, options);
                     },
 
                     newFindManyQuery: function(collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions): HivePlugin.Scripting.Executables.Database.FindOneQuery {
-                        return null; // TODO
+                        return new FindManyQueryImpl(collectionName, query, options);
+                    },
+
+                    newInsertQuery: function(collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions): HivePlugin.Scripting.Executables.Database.InsertQuery {
+                        return new InsertQueryImpl(collectionName, query, options);
+                    },
+
+                    newUpdateQuery: function(collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions): HivePlugin.Scripting.Executables.Database.UpdateQuery {
+                        return new UpdateQueryImpl(collectionName, query, options);
+                    },
+
+                    newDeleteQuery: function(collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions): HivePlugin.Scripting.Executables.Database.DeleteQuery {
+                        return new DeleteQueryImpl(collectionName, query, options);
                     }
                 }
             }
@@ -316,17 +384,6 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
     async connectToVault(vaultProviderAddress: string, vaultOwnerDid: string): Promise<HivePlugin.Vault> {
         let vaultJson = await execAsPromise<HivePlugin.JSONObject>("connectToVault", [vaultProviderAddress, vaultOwnerDid]);
         return VaultImpl.fromJson(vaultJson);
-    }
-}
-
-class ExecutionSequence implements HivePlugin.Scripting.Executables.ExecutionSequence {
-    test() {
-        console.log("test");
-    }
-
-    toJSON(): HivePlugin.JSONObject[] {
-        console.log("TO JSON");
-        return null;
     }
 }
 

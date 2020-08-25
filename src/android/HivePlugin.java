@@ -23,12 +23,11 @@
 package org.elastos.trinity.plugins.hive;
 
 import org.apache.cordova.CallbackContext;
-
 import org.apache.cordova.PluginResult;
 import org.elastos.hive.Client;
-import org.elastos.hive.interfaces.Files;
-import org.elastos.hive.interfaces.IPFS;
-import org.elastos.hive.interfaces.KeyValues;
+import org.elastos.hive.exception.HiveException;
+import org.elastos.trinity.plugins.hive.database.CountOptions;
+import org.elastos.trinity.plugins.hive.database.CreateCollectionOptions;
 import org.elastos.trinity.runtime.TrinityPlugin;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -36,95 +35,96 @@ import org.json.JSONObject;
 
 import java.util.HashMap;
 
-/**
- * This class echoes a string called from JavaScript.
- */
-public class
-
-
-HivePlugin extends TrinityPlugin {
-    private static final int LOGIN = 1;
-    private static final int RESULT = 2;
-
-    private HashMap<Integer, Client> hiveClientMap = new HashMap<>();
-    private HashMap<Integer, IPFS> ipfsMap = new HashMap<>();
-    private HashMap<Integer, Files> filesMap = new HashMap<>();
-    private HashMap<Integer, KeyValues> keyValuesMap = new HashMap<>();
-
-
-    private static final String SUCCESS = "Success!";
-    private static final String INVALID_ID = "Id invalid!";
-
-    private CallbackContext loginCallbackCtxt = null;
-    private CallbackContext resultCallbackCtxt = null;
-
-    private int resultId = 0;
+public class HivePlugin extends TrinityPlugin {
+    private HashMap<String, Client> clientMap = new HashMap<>();
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         try {
             switch (action) {
-                case "getVersion":
-                    this.getVersion(args, callbackContext);
+                case "connectToVault":
+                    this.connectToVault(args, callbackContext);
                     break;
-                case "setListener":
-                    this.setListener(args, callbackContext);
+                case "database_createCollection":
+                    this.database_createCollection(args, callbackContext);
                     break;
-                case "createClient":
-                    this.createClient(args, callbackContext);
-                case "connect":
-                    this.connect(args, callbackContext);
+                case "database_insertOne":
+                    this.database_insertOne(args, callbackContext);
                     break;
-                case "disConnect":
-                    this.disConnect(args, callbackContext);
+                case "database_countDocuments":
+                    this.database_countDocuments(args, callbackContext);
                     break;
-                case "isConnected":
-                    this.isConnected(args, callbackContext);
+                case "database_findOne":
+                    this.database_findOne(args, callbackContext);
                     break;
-                case "getIPFS":
-                    this.getIPFS(args, callbackContext);
+                case "database_findMany":
+                    this.database_findMany(args, callbackContext);
                     break;
-                case "getFiles":
-                    this.getFiles(args, callbackContext);
+                case "database_updateOne":
+                    this.database_updateOne(args, callbackContext);
                     break;
-                case "getKeyValues":
-                    this.getKeyValues(args, callbackContext);
+                case "database_updateMany":
+                    this.database_updateMany(args, callbackContext);
                     break;
-                case "putStringByFiles":
-                    this.putStringByFiles(args, callbackContext);
+                case "database_deleteOne":
+                    this.database_deleteOne(args, callbackContext);
                     break;
-                case "getStringByFiles":
-                    this.getStringByFiles(args, callbackContext);
+                case "database_deleteMany":
+                    this.database_deleteMany(args, callbackContext);
                     break;
-                case "getSizeByFiles":
-                    this.getSizeByFiles(args, callbackContext);
+                case "files_upload":
+                    this.files_upload(args, callbackContext);
                     break;
-                case "deleteFileByFiles":
-                    this.deleteFileByFiles(args, callbackContext);
+                case "files_download":
+                    this.files_download(args, callbackContext);
                     break;
-                case "listFilesByFiles":
-                    this.listFilesByFiles(args, callbackContext);
+                case "files_delete":
+                    this.files_delete(args, callbackContext);
                     break;
-                case "putStringByIPFS":
-                    this.putStringByIPFS(args, callbackContext);
+                case "files_createFolder":
+                    this.files_createFolder(args, callbackContext);
                     break;
-                case "getStringByIPFS":
-                    this.getStringByIPFS(args, callbackContext);
+                case "files_move":
+                    this.files_move(args, callbackContext);
                     break;
-                case "getSizeByIPFS":
-                    this.getSizeByIPFS(args, callbackContext);
+                case "files_copy":
+                    this.files_copy(args, callbackContext);
                     break;
-                case "putValueByKV":
-                    this.putValueByKV(args, callbackContext);
+                case "files_hash":
+                    this.files_hash(args, callbackContext);
                     break;
-                case "setValueByKV":
-                    this.setValueByKV(args, callbackContext);
+                case "files_list":
+                    this.files_list(args, callbackContext);
                     break;
-                case "getValuesByKV":
-                    this.getValuesByKV(args, callbackContext);
+                case "files_stat":
+                    this.files_stat(args, callbackContext);
                     break;
-                case "deleteKeyByKV":
-                    this.deleteKeyByKV(args, callbackContext);
+                case "scripting_registerSubCondition":
+                    this.scripting_registerSubCondition(args, callbackContext);
+                    break;
+                case "scripting_setScript":
+                    this.scripting_setScript(args, callbackContext);
+                    break;
+                case "scripting_call":
+                    this.scripting_call(args, callbackContext);
+                    break;
+                case "writer_write":
+                    this.writer_write(args, callbackContext);
+                    break;
+                case "writer_flush":
+                    this.writer_flush(args, callbackContext);
+                    break;
+                case "writer_close":
+                    this.writer_close(args, callbackContext);
+                    break;
+                case "reader_read":
+                    this.reader_read(args, callbackContext);
+                    break;
+                case "reader_readAll":
+                    this.reader_readAll(args, callbackContext);
+                    break;
+                case "reader_close":
+                    this.reader_close(args, callbackContext);
                     break;
                 default:
                     return false;
@@ -135,237 +135,237 @@ HivePlugin extends TrinityPlugin {
         return true;
     }
 
-    private void getVersion(JSONArray args, CallbackContext callbackContext) {
-        String version = "ElastosHiveSDK-v1.0";
-        callbackContext.success(version);
+    private void connectToVault(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultProviderAddress = args.getString(0);
+        String vaultOwnerDid = args.getString(1);
+
+        try {
+            // TODO: refactor client to vault
+            Client client = Client.createInstance(new Client.Options() {
+                @Override
+                protected Client buildClient() {
+                    return null;
+                }
+            });
+
+            String clientId = ""+System.identityHashCode(client);
+            clientMap.put(clientId, client);
+
+            JSONObject ret = new JSONObject();
+            ret.put("objectId", clientId);
+            ret.put("vaultProviderAddress", vaultProviderAddress);
+            ret.put("vaultOwnerDid", vaultOwnerDid);
+            callbackContext.success(ret);
+        }
+        catch (HiveException e) {
+            callbackContext.error(e.toString());
+        }
     }
 
-    private void setListener(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        Integer type = args.getInt(0);
+    private void database_createCollection(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String collectionName = args.getString(1);
+        JSONObject optionsJson = args.isNull(2) ? null : args.getJSONObject(2);
+        CreateCollectionOptions options = null;
 
-        switch (type) {
-            case LOGIN:
-                loginCallbackCtxt = callbackContext;
-                break;
-
-            case RESULT:
-                resultCallbackCtxt = callbackContext;
-                break;
+        try {
+            if (optionsJson != null)
+                options = CreateCollectionOptions.fromJsonObject(optionsJson);
         }
+        catch (Exception e) {
+            // Invalid options passed? We'll use default options
+        }
+
+        if (options == null) {
+            options = new CreateCollectionOptions(); // default options
+        }
+
+        // Retrieve the vault
+        Client client = clientMap.get(vaultObjectId);
+        client.getDatabase().createCol(collectionName, null).thenAccept(v -> {
+            System.out.println("COLLECTION CREATED");
+
+            JSONObject ret = new JSONObject();
+            callbackContext.success(ret);
+        });
 
         PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
         result.setKeepCallback(true);
         callbackContext.sendPluginResult(result);
     }
 
-    private void createClient(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        String dataDir = cordova.getActivity().getFilesDir() + "/data/hive/" + args.getString(0);
-        String options = args.getString(1);
-        int  handlerId = args.getInt(2);
+    private void database_insertOne(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait for non-eve api style
+    }
 
-        java.io.File dirFile = new java.io.File(dataDir);
-        if (!dirFile.exists())
-            dirFile.mkdirs();
+    private void database_countDocuments(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String collectionName = args.getString(1);
+        JSONObject queryJson = args.isNull(2) ? null : args.getJSONObject(2);
+        JSONObject optionsJson = args.isNull(3) ? null : args.getJSONObject(3);
+
+        CountOptions options = null;
 
         try {
-            Client client = ClientBuilder.createClient(dataPath, options, this, new LoginHandler(handlerId, loginCallbackCtxt));
-            int  clientId = System.identityHashCode(client);
-            hiveClientMap.put(clientId, client);
-
-            JSONObject ret = new JSONObject();
-            ret.put("clientId", clientId);
-
-            callbackContext.success(ret);
-        } catch (Exception e) {
-            callbackContext.error(e.getLocalizedMessage());
+            if (optionsJson != null)
+                options = CountOptions.fromJsonObject(optionsJson);
         }
+        catch (Exception e) {
+            // Invalid options passed? We'll use default options
+        }
+
+        if (options == null) {
+            options = new CountOptions(); // default options
+        }
+
+        // Retrieve the vault
+        Client client = clientMap.get(vaultObjectId);
+        // TODO: wait for java api added
+
+        PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
+        result.setKeepCallback(true);
+        callbackContext.sendPluginResult(result);
     }
 
-    private void isConnected(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int clientId = args.getInt(0);
-        Client client = hiveClientMap.get(clientId);
-        boolean isConnect = client.isConnected();
-        JSONObject ret = new JSONObject();
-        ret.put("isConnect", isConnect);
-        callbackContext.success(ret);
+    private void database_findOne(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait for non-eve api style
     }
 
-    private void connect(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int clientId = args.getInt(0);
-        Client client = hiveClientMap.get(clientId);
-        new Thread(() -> {
-            try {
-                client.connect();
+    private void database_findMany(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait for non-eve api style
+    }
+
+    private void database_updateOne(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait for non-eve api style
+    }
+
+    private void database_updateMany(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait for non-eve api style
+    }
+
+    private void database_deleteOne(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait for non-eve api style
+    }
+
+    private void database_deleteMany(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait for non-eve api style
+    }
+
+    private void files_upload(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait for new java api with writer
+    }
+
+    private void files_download(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait for new java api with reader
+    }
+
+    private void files_delete(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String srcPath = args.getString(1);
+
+        // TODO: handle failure case
+
+        Client client = clientMap.get(vaultObjectId);
+        client.getVaultFiles().deleteFile(srcPath).thenAccept(v -> {
+            callbackContext.success();
+        });
+    }
+
+    private void files_createFolder(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String srcPath = args.getString(1);
+
+        // TODO: handle failure case
+
+        Client client = clientMap.get(vaultObjectId);
+        client.getVaultFiles().createFolder(srcPath).thenAccept(v -> {
+            callbackContext.success();
+        });
+    }
+
+    private void files_move(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String srcPath = args.getString(1);
+        String dstPath = args.getString(2);
+
+        // TODO: handle failure case
+
+        Client client = clientMap.get(vaultObjectId);
+        client.getVaultFiles().move(srcPath, dstPath).thenAccept(v -> {
                 JSONObject ret = new JSONObject();
-                ret.put("status","success");
                 callbackContext.success(ret);
-            } catch (Exception e) {
-                callbackContext.error(e.getLocalizedMessage());
-            }
-        }).start();
+        });
     }
 
-    private void disConnect(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int clientId = args.getInt(0);
-        Client client = hiveClientMap.get(clientId);
-        client.disconnect();
+    private void files_copy(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String srcPath = args.getString(1);
+        String dstPath = args.getString(2);
 
-        JSONObject ret = new JSONObject();
-        ret.put("status","success");
-        callbackContext.success(ret);
+        Client client = clientMap.get(vaultObjectId);
+        client.getVaultFiles().copy(srcPath, dstPath).thenAccept(v -> {
+            JSONObject ret = new JSONObject();
+            callbackContext.success(ret);
+        });
     }
 
-    private void getIPFS(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int clientId = args.getInt(0);
-        Client client = hiveClientMap.get(clientId);
+    private void files_hash(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String srcPath = args.getString(1);
 
-        IPFS ipfs = client.getIPFS();
-        int ipfsId = System.identityHashCode(ipfs);
-        ipfsMap.put(ipfsId,ipfs);
-
-        JSONObject ret = new JSONObject();
-        ret.put("ipfsId", ipfsId);
-        callbackContext.success(ret);
+        Client client = clientMap.get(vaultObjectId);
+        client.getVaultFiles().hash(srcPath).thenAccept(hash -> {
+           // TODO: uncomment when hash() return type is String - callbackContext.success(hash);
+        });
     }
 
-    private void getFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int clientId = args.getInt(0);
-        Client client = hiveClientMap.get(clientId);
-        Files files = client.getFiles();
-        int filesObjId = System.identityHashCode(files);
+    private void files_list(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String srcPath = args.getString(1);
 
-        filesMap.put(filesObjId,files);
-
-        JSONObject ret = new JSONObject();
-        ret.put("filesId", filesObjId);
-        callbackContext.success(ret);
+        Client client = clientMap.get(vaultObjectId);
+        client.getVaultFiles().list(srcPath).thenAccept(fileInfos -> {
+            // TODO: when list returns fileInfo, not paths
+        });
     }
 
-    private void getKeyValues(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int clientId = args.getInt(0);
-        Client client = hiveClientMap.get(clientId);
-        KeyValues keyValues = client.getKeyValues();
-        int keyValuesObjId = System.identityHashCode(keyValues);
-
-        keyValuesMap.put(keyValuesObjId,keyValues);
-
-        JSONObject ret = new JSONObject();
-        ret.put("keyValuesId", keyValuesObjId);
-        callbackContext.success(ret);
+    private void files_stat(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: when stat() is available
     }
 
-
-    private void putStringByFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int filesId = args.getInt(0);
-        String remoteFile = args.getString(1);
-        String data = args.getString(2);
-        int handlerId = args.getInt(3);
-
-        Files api = filesMap.get(filesId);
-        api.put(data, remoteFile, createResultHandler(handlerId, ResultHandler.Type.Void));
+    private void scripting_registerSubCondition(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait to java api added
     }
 
-    private void getStringByFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int filesId = args.getInt(0);
-        String remoteFile = args.getString(1);
-        int handlerId = args.getInt(2);
-
-        Files api = filesMap.get(filesId);
-        api.getAsString(remoteFile, createResultHandler(handlerId, ResultHandler.Type.Content));
+    private void scripting_setScript(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait to java api added
     }
 
-    private void getSizeByFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int filesId = args.getInt(0);
-        String remoteFile = args.getString(1);
-        int handlerId = args.getInt(2);
-
-        Files api = filesMap.get(filesId);
-        api.size(remoteFile, createResultHandler(handlerId, ResultHandler.Type.Length));
+    private void scripting_call(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait to java api added
     }
 
-    private void deleteFileByFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int filesId = args.getInt(0);
-        String remoteFile = args.getString(1);
-        int handlerId = args.getInt(2);
-
-        Files api = filesMap.get(filesId);
-        api.delete(remoteFile, createResultHandler(handlerId, ResultHandler.Type.Void));
+    private void writer_write(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait for new java api
     }
 
-    private void listFilesByFiles(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int filesId = args.getInt(0);
-        int handlerId = args.getInt(1);
-
-        Files api = filesMap.get(filesId);
-        api.list(createResultHandler(handlerId, ResultHandler.Type.FileList));
+    private void writer_flush(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait for new java api
     }
 
-    private void putStringByIPFS(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int ipfsId = args.getInt(0);
-        String data = args.getString(1);
-        int handlerId = args.getInt(2);
-
-        IPFS api = ipfsMap.get(ipfsId);
-        api.put(data, createResultHandler(handlerId, ResultHandler.Type.CID));
+    private void writer_close(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait for new java api
     }
 
-    private void getStringByIPFS(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int ipfsId = args.getInt(0);
-        String cid = args.getString(1);
-        int handlerId = args.getInt(2);
-
-        IPFS api = ipfsMap.get(ipfsId);
-        api.getAsString(cid, createResultHandler(handlerId, ResultHandler.Type.Content));
+    private void reader_read(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait for new java api
     }
 
-    private void getSizeByIPFS(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int ipfsId = args.getInt(0);
-        String cid = args.getString(1);
-        int handlerId = args.getInt(2);
-
-        IPFS api = ipfsMap.get(ipfsId);
-        api.size(cid, createResultHandler(handlerId, ResultHandler.Type.Length));
+    private void reader_readAll(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait for new java api
     }
 
-    private void putValueByKV(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int keyValuesId = args.getInt(0);
-        String key = args.getString(1);
-        String value = args.getString(2);
-        int handlerId = args.getInt(3);
-
-        KeyValues api = keyValuesMap.get(keyValuesId);
-        api.putValue(key, value, createResultHandler(handlerId, ResultHandler.Type.Void));
-    }
-
-    private void setValueByKV(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int keyValuesId = args.getInt(0);
-        String key = args.getString(1);
-        String value = args.getString(2);
-        int handlerId = args.getInt(3);
-
-        KeyValues api = keyValuesMap.get(keyValuesId);
-        api.setValue(key, value, createResultHandler(handlerId, ResultHandler.Type.Void));
-    }
-
-    private void getValuesByKV(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int keyValuesId = args.getInt(0);
-        String key = args.getString(1);
-        int handlerId = args.getInt(2);
-
-        KeyValues api = keyValuesMap.get(keyValuesId);
-        api.getValues(key, createResultHandler(handlerId, ResultHandler.Type.ValueList));
-    }
-
-    private void deleteKeyByKV(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        int keyValuesId = args.getInt(0);
-        String key = args.getString(1);
-        int handlerId = args.getInt(2);
-
-        KeyValues api = keyValuesMap.get(keyValuesId);
-        api.deleteKey(key, createResultHandler(handlerId, ResultHandler.Type.Void));
-    }
-
-    private ResultHandler createResultHandler(int handlerId, ResultHandler.Type type) {
-        return new ResultHandler(handlerId, type, resultCallbackCtxt);
+    private void reader_close(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        // TODO: wait for new java api
     }
 }
