@@ -44,8 +44,10 @@ class InsertResultImpl implements HivePlugin.Database.InsertResult {
 }
 
 class UpdateResultImpl implements HivePlugin.Database.UpdateResult {
-    updatedCount: number;
-    updatedIds: string[];
+    matchedCount: number;
+    modifiedCount: number;
+    upsertedCount: number;
+    upsertedId: string;
 
     static fromJson(json: HivePlugin.JSONObject): UpdateResultImpl {
         let result = new UpdateResultImpl();

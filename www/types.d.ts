@@ -243,7 +243,6 @@ declare namespace HivePlugin {
          * Result after calls to insert operations.
          */
         export type InsertResult = {
-            insertedCount: number;
             insertedIds: string[]
         }
 
@@ -251,7 +250,10 @@ declare namespace HivePlugin {
          * Result after calls to update operations.
          */
         export type UpdateResult = {
-            updatedCount: number;
+            matchedCount: number;
+            modifiedCount: number;
+            upsertedCount: number;
+            upsertedId: string;
         }
 
         /**
