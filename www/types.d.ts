@@ -125,6 +125,9 @@ declare namespace HivePlugin {
             /**
              * Initiates a download sequence by returning a Reader object that can be used to read
              * the downloaded file in chunks.
+             *
+             * In case parts of the file path don't exist yet (folder parts), they are automatically
+             * created.
              */
             download(path: FilePath): Promise<Reader>;
 
@@ -132,11 +135,6 @@ declare namespace HivePlugin {
              * Deletes a file, or a folder. In case the given path is a folder, deletion is recursive.
              */
             delete(path: FilePath | FolderPath): Promise<boolean>;
-
-            /**
-             * Creates a new folder.
-             */
-            createFolder(path: FolderPath): Promise<boolean>;
 
             /**
              * Moves (or renames) a file or a folder.
@@ -170,6 +168,13 @@ declare namespace HivePlugin {
          * Options used during collection creation.
          */
         export type CreateCollectionOptions = {
+            // Nothing supported for now
+        }
+
+        /**
+         * Options used during collection deletion.
+         */
+        export type DeleteCollectionOptions = {
             // Nothing supported for now
         }
 
@@ -219,6 +224,22 @@ declare namespace HivePlugin {
         }
 
         /**
+         * Result after a call to createCollection.
+         */
+        export type CreateCollectionResult = {
+            /** Whether the collection could be created or not. */
+            created: boolean;
+        }
+
+        /**
+         * Result after a call to deleteCollection.
+         */
+        export type DeleteCollectionResult = {
+            /** Whether the collection could be deleted or not. */
+            deleted: boolean;
+        }
+
+        /**
          * Result after calls to insert operations.
          */
         export type InsertResult = {
@@ -244,7 +265,12 @@ declare namespace HivePlugin {
             /**
              * Creates a new collection with the given name.
              */
-            createCollection(collectionName: string, options?: CreateCollectionOptions): Promise<void>;
+            createCollection(collectionName: string, options?: CreateCollectionOptions): Promise<CreateCollectionResult>;
+
+            /**
+             * Deletes a collection.
+             */
+            deleteCollection(collectionName: string, options?: DeleteCollectionOptions): Promise<DeleteCollectionResult>;
 
             /**
              * Returns the number of documents matching the given query and options.
@@ -255,7 +281,7 @@ declare namespace HivePlugin {
              * Queries the database for some specific documents based on the given query and returns at most
              * one document.
              */
-            findOne(collectionName: string, query: JSONObject, options?: FindOptions): Promise<JSONObject>;
+            findOne(collectionName: string, query?: JSONObject, options?: FindOptions): Promise<JSONObject>;
 
             /**
              * Queries the database for some specific documents based on the given query and returns a list of
@@ -263,7 +289,7 @@ declare namespace HivePlugin {
              *
              * @returns List of results matching the query
              */
-            findMany(collectionName: string, query: JSONObject, options?: FindOptions): Promise<JSONObject[]>;
+            findMany(collectionName: string, query?: JSONObject, options?: FindOptions): Promise<JSONObject[]>;
 
             /**
              * Inserts a new document in the given collection, into current user's personal vault.
@@ -457,30 +483,6 @@ declare namespace HivePlugin {
         getScripting(): Scripting.Scripting;
     }
 
-    /**
-     * Represents a vault that is not controlled by the currently signed in user.
-     * Used to communicate with a friend/other user's vault space in order to access his data.
-     */
-    //export interface RemoteVault extends Vault {
-    //}
-
-    /**
-     * Vault for the currently signed in user.
-     */
-    //export interface OwnVault extends Vault {
-    //}
-
-    /**
-     * Represents a hive client that gives access to all storage operations: database,
-     * files, scripting.
-     */
-    //interface Client {
-    //}
-
-    /*type ClientCreationOptions = {
-        authenticator?: Authenticator;
-    }*/
-
     interface HiveManager {
         Scripting: {
             Executables: {
@@ -497,13 +499,17 @@ declare namespace HivePlugin {
         }
 
         /**
-         * Initiates a connection (resolve, authenticate) to a personal vault or another user's vault.
-         * The resulting Vault object is used to access the vault features.
+         * Gets a reference to a personal vault or another user's vault.
+         * The resulting Vault object is used to access vault features such as database, fils, scripting.
+         *
+         * This method resolves the vault and returns a vault object only if the initial handshake could be
+         * completed. At this point, the caller is not authenticated yet. Authentication is part of another
+         * step later on (authentication callback).
          *
          * @param vaultProviderAddress Address of the back-end service that hosts user's vault
          * @param vaultOwnerDid: Target user DID for which we want to get vault access
          */
-        connectToVault(vaultProviderAddress: string, vaultOwnerDid: string): Promise<Vault>;
+        getVault(vaultProviderAddress: string, vaultOwnerDid: string): Promise<Vault>;
 
         /**
          * Gets the singleton hive client instance for this application context, base for all

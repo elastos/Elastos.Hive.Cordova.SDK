@@ -68,8 +68,12 @@ class DeleteResultImpl implements HivePlugin.Database.DeleteResult {
 class DatabaseImpl implements HivePlugin.Database.Database {
     constructor(private vault: VaultImpl) {}
 
-    createCollection(collectionName: string, options?: HivePlugin.Database.CreateCollectionOptions): Promise<void> {
-        return execAsPromise<void>("database_createCollection", [this.vault.objectId, collectionName, options]);
+    createCollection(collectionName: string, options?: HivePlugin.Database.CreateCollectionOptions): Promise<HivePlugin.Database.CreateCollectionResult> {
+        return execAsPromise<HivePlugin.Database.CreateCollectionResult>("database_createCollection", [this.vault.objectId, collectionName, options]);
+    }
+
+    deleteCollection(collectionName: string, options?: HivePlugin.Database.DeleteCollectionOptions): Promise<HivePlugin.Database.DeleteCollectionResult> {
+        return execAsPromise<HivePlugin.Database.DeleteCollectionResult>("database_deleteCollection", [this.vault.objectId, collectionName, options]);
     }
 
     async insertOne(collectionName: string, document: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions): Promise<HivePlugin.Database.InsertResult> {
@@ -381,8 +385,8 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
         };
     }
 
-    async connectToVault(vaultProviderAddress: string, vaultOwnerDid: string): Promise<HivePlugin.Vault> {
-        let vaultJson = await execAsPromise<HivePlugin.JSONObject>("connectToVault", [vaultProviderAddress, vaultOwnerDid]);
+    async getVault(vaultProviderAddress: string, vaultOwnerDid: string): Promise<HivePlugin.Vault> {
+        let vaultJson = await execAsPromise<HivePlugin.JSONObject>("getVault", [vaultProviderAddress, vaultOwnerDid]);
         return VaultImpl.fromJson(vaultJson);
     }
 }
