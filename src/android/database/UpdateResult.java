@@ -6,12 +6,18 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 public class UpdateResult {
-    long updatedCount = -1;
+    long matchedCount;
+    long modifiedCount;
+    long upsertedCount;
+    String upsertedId;
 
     public JSONObject toJsonObject() throws Exception {
         JSONObject obj = new JSONObject();
 
-        obj.put("updatedCount", updatedCount);
+        obj.put("matchedCount", matchedCount);
+        obj.put("modifiedCount", modifiedCount);
+        obj.put("upsertedCount", upsertedCount);
+        obj.put("upsertedId", upsertedId);
 
         return obj;
     }

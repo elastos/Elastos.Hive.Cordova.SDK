@@ -33,7 +33,6 @@ function execAsPromise<T>(method: string, params: any[] = []): Promise<T> {
 }
 
 class InsertResultImpl implements HivePlugin.Database.InsertResult {
-    insertedCount: number;
     insertedIds: string[];
 
     static fromJson(json: HivePlugin.JSONObject): InsertResultImpl {
@@ -117,14 +116,16 @@ class DatabaseImpl implements HivePlugin.Database.Database {
 }
 
 class WriterImpl implements HivePlugin.Files.Writer {
-    write(data: Blob): Promise<number> {
-        return execAsPromise<number>("writer_write", [data]);
+    objectId: string;
+
+    write(data: Blob): Promise<void> {
+        return execAsPromise<void>("writer_write", [this.objectId, data]);
     }
     flush(): Promise<void> {
-        return execAsPromise<void>("writer_flush", []);
+        return execAsPromise<void>("writer_flush", [this.objectId]);
     }
     close(): Promise<void> {
-        return execAsPromise<void>("writer_close", []);
+        return execAsPromise<void>("writer_close", [this.objectId]);
     }
 
     static fromJson(json: HivePlugin.JSONObject): WriterImpl {
@@ -135,14 +136,16 @@ class WriterImpl implements HivePlugin.Files.Writer {
 }
 
 class ReaderImpl implements HivePlugin.Files.Reader {
+    objectId: string;
+
     read(bytesCount: number): Promise<Blob> {
-        return execAsPromise<Blob>("reader_read", [bytesCount]);
+        return execAsPromise<Blob>("reader_read", [this.objectId, bytesCount]);
     }
     readAll(): Promise<Blob> {
-        return execAsPromise<Blob>("reader_readAll", []);
+        return execAsPromise<Blob>("reader_readAll", [this.objectId]);
     }
     close(): Promise<void> {
-        return execAsPromise<void>("reader_close", []);
+        return execAsPromise<void>("reader_close", [this.objectId]);
     }
 
     static fromJson(json: HivePlugin.JSONObject): ReaderImpl {
@@ -178,8 +181,9 @@ class FilesImpl implements HivePlugin.Files.Files  {
         return ReaderImpl.fromJson(resultJson);
     }
 
-    delete(path: string): Promise<boolean> {
-        return execAsPromise<boolean>("files_delete", [this.vault.objectId, path]);
+    async delete(path: string): Promise<boolean> {
+        let result = await execAsPromise<{success:boolean}>("files_delete", [this.vault.objectId, path]);
+        return result.success;
     }
 
     async createFolder(path: string): Promise<boolean> {
@@ -218,6 +222,39 @@ class FilesImpl implements HivePlugin.Files.Files  {
         return FileInfoImpl.fromJson(resultJson);
     }
 }
+
+class SubConditionImpl implements HivePlugin.Scripting.Conditions.SubCondition {
+    constructor(private collectionName: string) {}
+
+    toJSON(): HivePlugin.JSONObject {
+        let jsonObj = new HivePlugin.JSONObject();
+        Object.assign(jsonObj, this);
+        return jsonObj;
+    }
+}
+
+class AndConditionImpl implements HivePlugin.Scripting.Conditions.AndCondition {
+    constructor(private conditions: HivePlugin.Scripting.Conditions.Condition[]) {}
+
+    toJSON(): HivePlugin.JSONObject {
+        let jsonObj = new HivePlugin.JSONObject();
+        Object.assign(jsonObj, this);
+        return jsonObj;
+    }
+}
+
+class QueryHasResultsCondition implements HivePlugin.Scripting.Conditions.AndCondition {
+    constructor(private collectionName: string, private queryParameters: HivePlugin.JSONObject) {}
+
+    toJSON(): HivePlugin.JSONObject {
+        let jsonObj = new HivePlugin.JSONObject();
+        Object.assign(jsonObj, this);
+        return jsonObj;
+    }
+}
+
+// For now, exactly the same as AndConditionImpl
+class OrConditionImpl extends AndConditionImpl {}
 
 class ExecutionSequenceImpl implements HivePlugin.Scripting.Executables.ExecutionSequence {
     constructor(public executables: HivePlugin.Scripting.Executables.Executable[]) {}
@@ -336,6 +373,16 @@ class VaultImpl implements HivePlugin.Vault {
 
 class HiveManagerImpl implements HivePlugin.HiveManager {
     Scripting: {
+        Conditions: {
+            newSubCondition: (conditionName: string) => HivePlugin.Scripting.Conditions.SubCondition;
+            newAndCondition: (conditions: HivePlugin.Scripting.Conditions.Condition[]) => HivePlugin.Scripting.Conditions.AndCondition;
+            newOrCondition: (conditions: HivePlugin.Scripting.Conditions.Condition[]) => HivePlugin.Scripting.Conditions.OrCondition;
+
+            Database: {
+                newQueryHasResultsCondition: (collectionName: string, queryParameters: HivePlugin.JSONObject) => HivePlugin.Scripting.Conditions.Database.QueryHasResultsCondition;
+            }
+        },
+
         Executables: {
             newExecutionSequence: (executables: HivePlugin.Scripting.Executables.Executable[]) => HivePlugin.Scripting.Executables.ExecutionSequence;
 
@@ -357,6 +404,26 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
         Object.freeze(ScriptingImpl.prototype);
 
         this.Scripting = {
+            Conditions: {
+                newSubCondition: function(conditionName: string): HivePlugin.Scripting.Conditions.SubCondition {
+                    return new SubConditionImpl(conditionName);
+                },
+
+                newAndCondition: function(conditions: HivePlugin.Scripting.Conditions.Condition[]): HivePlugin.Scripting.Conditions.AndCondition {
+                    return new AndConditionImpl(conditions);
+                },
+
+                newOrCondition: function(conditions: HivePlugin.Scripting.Conditions.Condition[]): HivePlugin.Scripting.Conditions.OrCondition {
+                    return new OrConditionImpl(conditions);
+                },
+
+                Database: {
+                    newQueryHasResultsCondition: function(collectionName: string, queryParameters: HivePlugin.JSONObject): HivePlugin.Scripting.Conditions.Database.QueryHasResultsCondition {
+                        return new QueryHasResultsCondition(collectionName, queryParameters);
+                    }
+                }
+            },
+
             Executables: {
                 newExecutionSequence: function(executables: HivePlugin.Scripting.Executables.Executable[]): HivePlugin.Scripting.Executables.ExecutionSequence {
                     return new ExecutionSequenceImpl(executables);

@@ -22,31 +22,44 @@
 
 package org.elastos.trinity.plugins.hive;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeCreator;
+
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 import org.elastos.hive.Client;
+import org.elastos.hive.database.CountOptions;
+import org.elastos.hive.database.InsertOptions;
 import org.elastos.hive.exception.HiveException;
-import org.elastos.trinity.plugins.hive.database.CountOptions;
-import org.elastos.trinity.plugins.hive.database.CreateCollectionOptions;
+import org.elastos.hive.file.FileInfo;
 import org.elastos.trinity.runtime.TrinityPlugin;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.IOException;
+import java.io.Reader;
+import java.io.Writer;
 import java.util.HashMap;
 
 public class HivePlugin extends TrinityPlugin {
     private HashMap<String, Client> clientMap = new HashMap<>();
+    private HashMap<String, Reader> readerMap = new HashMap<>();
+    private HashMap<String, Integer> readerOffsetsMap = new HashMap<>(); // Current read offset byte position for each active reader
+    private HashMap<String, Writer> writerMap = new HashMap<>();
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         try {
             switch (action) {
-                case "connectToVault":
-                    this.connectToVault(args, callbackContext);
+                case "getVault":
+                    this.getVault(args, callbackContext);
                     break;
                 case "database_createCollection":
                     this.database_createCollection(args, callbackContext);
+                    break;
+                case "database_deleteCollection":
+                    this.database_deleteCollection(args, callbackContext);
                     break;
                 case "database_insertOne":
                     this.database_insertOne(args, callbackContext);
@@ -80,9 +93,6 @@ public class HivePlugin extends TrinityPlugin {
                     break;
                 case "files_delete":
                     this.files_delete(args, callbackContext);
-                    break;
-                case "files_createFolder":
-                    this.files_createFolder(args, callbackContext);
                     break;
                 case "files_move":
                     this.files_move(args, callbackContext);
@@ -135,7 +145,7 @@ public class HivePlugin extends TrinityPlugin {
         return true;
     }
 
-    private void connectToVault(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void getVault(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String vaultProviderAddress = args.getString(0);
         String vaultOwnerDid = args.getString(1);
 
@@ -166,36 +176,76 @@ public class HivePlugin extends TrinityPlugin {
         String vaultObjectId = args.getString(0);
         String collectionName = args.getString(1);
         JSONObject optionsJson = args.isNull(2) ? null : args.getJSONObject(2);
-        CreateCollectionOptions options = null;
+        org.elastos.hive.database.CreateCollectionOptions options = new org.elastos.hive.database.CreateCollectionOptions();
 
         try {
-            if (optionsJson != null)
-                options = CreateCollectionOptions.fromJsonObject(optionsJson);
+            if (optionsJson != null) {
+                // Nothing to do, no option handle for now.
+            }
         }
         catch (Exception e) {
             // Invalid options passed? We'll use default options
         }
 
-        if (options == null) {
-            options = new CreateCollectionOptions(); // default options
-        }
-
-        // Retrieve the vault
         Client client = clientMap.get(vaultObjectId);
-        client.getDatabase().createCol(collectionName, null).thenAccept(v -> {
-            System.out.println("COLLECTION CREATED");
-
-            JSONObject ret = new JSONObject();
-            callbackContext.success(ret);
+        client.getDatabase().createCollection(collectionName, options).thenAccept(success -> {
+            try {
+                JSONObject ret = new JSONObject();
+                ret.put("created", success);
+                callbackContext.success(ret);
+            }
+            catch (JSONException e) {
+                callbackContext.error(e.getMessage());
+            }
         });
+    }
 
-        PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
-        result.setKeepCallback(true);
-        callbackContext.sendPluginResult(result);
+    private void database_deleteCollection(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String collectionName = args.getString(1);
+
+        Client client = clientMap.get(vaultObjectId);
+        client.getDatabase().deleteCollection(collectionName).thenAccept(success -> {
+            try {
+                JSONObject ret = new JSONObject();
+                ret.put("deleted", success);
+                callbackContext.success(ret);
+            }
+            catch (JSONException e) {
+                callbackContext.error(e.getMessage());
+            }
+        });
     }
 
     private void database_insertOne(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: wait for non-eve api style
+        String vaultObjectId = args.getString(0);
+        String collectionName = args.getString(1);
+        JSONObject documentJson = args.getJSONObject(2);
+        JSONObject optionsJson = args.isNull(3) ? null : args.getJSONObject(3);
+        InsertOptions options = new InsertOptions();
+
+        try {
+            if (optionsJson != null) {
+                // Nothing to do, no option handle for now.
+            }
+        }
+        catch (Exception e) {
+            // Invalid options passed? We'll use default options
+        }
+
+        JsonNode documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentJson);
+
+        Client client = clientMap.get(vaultObjectId);
+        client.getDatabase().insertOne(collectionName, documentJsonNode, options).thenAccept(insertResult -> {
+            try {
+                JSONObject ret = new JSONObject();
+                ret.put("insertedIds", new JSONArray(insertResult.insertedIds()));
+                callbackContext.success(ret);
+            }
+            catch (JSONException e) {
+                callbackContext.error(e.getMessage());
+            }
+        });
     }
 
     private void database_countDocuments(JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -204,27 +254,21 @@ public class HivePlugin extends TrinityPlugin {
         JSONObject queryJson = args.isNull(2) ? null : args.getJSONObject(2);
         JSONObject optionsJson = args.isNull(3) ? null : args.getJSONObject(3);
 
-        CountOptions options = null;
+        CountOptions options = new CountOptions();
 
         try {
-            if (optionsJson != null)
-                options = CountOptions.fromJsonObject(optionsJson);
+            if (optionsJson != null) {
+                // Nothing to do, no option handle for now.
+            }
         }
         catch (Exception e) {
             // Invalid options passed? We'll use default options
-        }
-
-        if (options == null) {
-            options = new CountOptions(); // default options
         }
 
         // Retrieve the vault
         Client client = clientMap.get(vaultObjectId);
         // TODO: wait for java api added
 
-        PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
-        result.setKeepCallback(true);
-        callbackContext.sendPluginResult(result);
     }
 
     private void database_findOne(JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -252,34 +296,60 @@ public class HivePlugin extends TrinityPlugin {
     }
 
     private void files_upload(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: wait for new java api with writer
+        String vaultObjectId = args.getString(0);
+        String srcPath = args.getString(1);
+
+        Client client = clientMap.get(vaultObjectId);
+        client.getVaultFiles().upload(srcPath).thenAccept(writer -> {
+            try {
+                String objectId = "" + System.identityHashCode(writer);
+                writerMap.put(objectId, writer);
+
+                JSONObject ret = new JSONObject();
+                ret.put("objectId", objectId);
+                callbackContext.success(ret);
+            }
+            catch (JSONException e) {
+                callbackContext.error(e.getMessage());
+            }
+        });
     }
 
     private void files_download(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: wait for new java api with reader
+        String vaultObjectId = args.getString(0);
+        String srcPath = args.getString(1);
+
+        Client client = clientMap.get(vaultObjectId);
+        client.getVaultFiles().download(srcPath).thenAccept(reader -> {
+            try {
+                String objectId = "" + System.identityHashCode(reader);
+                readerMap.put(objectId, reader);
+                readerOffsetsMap.put(objectId, 0); // Current read offset is 0
+
+                JSONObject ret = new JSONObject();
+                ret.put("objectId", objectId);
+                callbackContext.success(ret);
+            }
+            catch (JSONException e) {
+                callbackContext.error(e.getMessage());
+            }
+        });
     }
 
     private void files_delete(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String vaultObjectId = args.getString(0);
         String srcPath = args.getString(1);
 
-        // TODO: handle failure case
-
         Client client = clientMap.get(vaultObjectId);
-        client.getVaultFiles().deleteFile(srcPath).thenAccept(v -> {
-            callbackContext.success();
-        });
-    }
-
-    private void files_createFolder(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        String vaultObjectId = args.getString(0);
-        String srcPath = args.getString(1);
-
-        // TODO: handle failure case
-
-        Client client = clientMap.get(vaultObjectId);
-        client.getVaultFiles().createFolder(srcPath).thenAccept(v -> {
-            callbackContext.success();
+        client.getVaultFiles().delete(srcPath).thenAccept(success -> {
+            try {
+                JSONObject ret = new JSONObject();
+                ret.put("success", success);
+                callbackContext.success(ret);
+            }
+            catch (JSONException e) {
+                callbackContext.error(e.getMessage());
+            }
         });
     }
 
@@ -288,12 +358,16 @@ public class HivePlugin extends TrinityPlugin {
         String srcPath = args.getString(1);
         String dstPath = args.getString(2);
 
-        // TODO: handle failure case
-
         Client client = clientMap.get(vaultObjectId);
-        client.getVaultFiles().move(srcPath, dstPath).thenAccept(v -> {
+        client.getVaultFiles().move(srcPath, dstPath).thenAccept(success -> {
+            try {
                 JSONObject ret = new JSONObject();
+                ret.put("success", success);
                 callbackContext.success(ret);
+            }
+            catch (JSONException e) {
+                callbackContext.error(e.getMessage());
+            }
         });
     }
 
@@ -315,7 +389,7 @@ public class HivePlugin extends TrinityPlugin {
 
         Client client = clientMap.get(vaultObjectId);
         client.getVaultFiles().hash(srcPath).thenAccept(hash -> {
-           // TODO: uncomment when hash() return type is String - callbackContext.success(hash);
+            callbackContext.success(hash);
         });
     }
 
@@ -325,12 +399,33 @@ public class HivePlugin extends TrinityPlugin {
 
         Client client = clientMap.get(vaultObjectId);
         client.getVaultFiles().list(srcPath).thenAccept(fileInfos -> {
-            // TODO: when list returns fileInfo, not paths
+            try {
+                JSONArray jsonArray = new JSONArray();
+                for (FileInfo info : fileInfos) {
+                    jsonArray.put(HivePluginHelper.hiveFileInfoToPluginJson(info));
+                }
+                callbackContext.success(jsonArray);
+            }
+            catch (Exception e) {
+                callbackContext.error(e.getMessage());
+            }
         });
     }
 
     private void files_stat(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: when stat() is available
+        String vaultObjectId = args.getString(0);
+        String srcPath = args.getString(1);
+
+        Client client = clientMap.get(vaultObjectId);
+        client.getVaultFiles().stat(srcPath).thenAccept(fileInfo -> {
+            try {
+                JSONObject ret = HivePluginHelper.hiveFileInfoToPluginJson(fileInfo);
+                callbackContext.success(ret);
+            }
+            catch (Exception e) {
+                callbackContext.error(e.getMessage());
+            }
+        });
     }
 
     private void scripting_registerSubCondition(JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -346,26 +441,102 @@ public class HivePlugin extends TrinityPlugin {
     }
 
     private void writer_write(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: wait for new java api
+        String writerObjectId = args.getString(0);
+        String blob = args.getString(1); // TODO: check type coming from JS Blob
+
+        try {
+            Writer writer = writerMap.get(writerObjectId);
+            writer.write(blob);
+            callbackContext.success();
+        }
+        catch (IOException e) {
+            callbackContext.error(e.getMessage());
+        }
     }
 
     private void writer_flush(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: wait for new java api
+        String writerObjectId = args.getString(0);
+
+        try {
+            Writer writer = writerMap.get(writerObjectId);
+            writer.flush();
+            callbackContext.success();
+        }
+        catch (IOException e) {
+            callbackContext.error(e.getMessage());
+        }
     }
 
     private void writer_close(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: wait for new java api
+        String writerObjectId = args.getString(0);
+
+        try {
+            Writer writer = writerMap.get(writerObjectId);
+            writer.close();
+            writerMap.remove(writerObjectId);
+            callbackContext.success();
+        }
+        catch (IOException e) {
+            callbackContext.error(e.getMessage());
+        }
     }
 
     private void reader_read(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: wait for new java api
+        String readerObjectId = args.getString(0);
+        int bytesCount = args.getInt(1);
+
+        try {
+            char[] buffer = new char[bytesCount];
+            Reader reader = readerMap.get(readerObjectId);
+
+            // Resume reading at the previous read offset
+            int currentReadOffset = readerOffsetsMap.get(readerObjectId);
+            int readBytes = reader.read(buffer, currentReadOffset, bytesCount);
+
+            // Move read offset to the next position
+            readerOffsetsMap.put(readerObjectId, currentReadOffset+readBytes);
+
+            callbackContext.success(new String(buffer)); // TODO: Probably probably the wrong type, not String...
+        }
+        catch (IOException e) {
+            callbackContext.error(e.getMessage());
+        }
     }
 
     private void reader_readAll(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: wait for new java api
+        String readerObjectId = args.getString(0);
+
+        try {
+            char[] buffer = new char[1024];
+            Reader reader = readerMap.get(readerObjectId);
+            String output = new String();
+
+            int readBytes;
+            do {
+                readBytes = reader.read(buffer);
+                output += new String(buffer); // TODO: right format/type
+            }
+            while (readBytes != -1);
+
+            callbackContext.success(output);
+        }
+        catch (IOException e) {
+            callbackContext.error(e.getMessage());
+        }
     }
 
     private void reader_close(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: wait for new java api
+        String readerObjectId = args.getString(0);
+
+        try {
+            Reader reader = readerMap.get(readerObjectId);
+            reader.close();
+            readerMap.remove(readerObjectId);
+            readerOffsetsMap.remove(readerObjectId);
+            callbackContext.success();
+        }
+        catch (IOException e) {
+            callbackContext.error(e.getMessage());
+        }
     }
 }

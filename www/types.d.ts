@@ -73,7 +73,7 @@ declare namespace HivePlugin {
             /**
              * Appends the given data to the current file buffer.
              */
-            write(data: Blob): Promise<number>;
+            write(data: Blob): Promise<void>;
 
             /**
              * Flushes buffered data previously written with write() to the remote file.
@@ -96,8 +96,8 @@ declare namespace HivePlugin {
          * Type of a remote file or folder.
          */
         export const enum FileType {
-            FILE,
-            FOLDER
+            FILE = 0,
+            FOLDER = 1
         }
 
         /**
@@ -335,9 +335,7 @@ declare namespace HivePlugin {
                  * This is a way for example to check is a user is in a group, if a message contains comments, if a user
                  * is in a list, etc.
                  */
-                export interface QueryHasResultsCondition extends Condition {
-                    constructor(collectionName: string, queryParameters: JSONObject);
-                }
+                export interface QueryHasResultsCondition extends Condition {}
             }
 
             /**
@@ -351,25 +349,19 @@ declare namespace HivePlugin {
              * Represents a sub-condition execution, previously registered in the ACL manager.
              * This way, several scripts can rely on simply the sub-condition name, without rewriting the condition content itself.
              */
-            export interface SubCondition extends Condition {
-                constructor(subConditionName: string);
-            }
+            export interface SubCondition extends Condition {}
 
             /**
              * Vault script condition that succeeds if at least one of the contained conditions are successful.
              * Contained conditions are tested in the given order, and test stops as soon as one successful condition
              * succeeds.
              */
-            export interface OrCondition extends Condition {
-                constructor(conditions: Condition[]);
-            }
+            export interface OrCondition extends Condition {}
 
             /**
              * Vault script condition that succeeds only if all the contained conditions are successful.
              */
-            export interface AndCondition extends Condition {
-                constructor(conditions: Condition[]);
-            }
+            export interface AndCondition extends Condition {}
         }
 
         export namespace Executables {
@@ -408,21 +400,17 @@ declare namespace HivePlugin {
                 /**
                  * Client side representation of a back-end execution that runs a mongo "insert one" query.
                  */
-                export interface InsertQuery {}
+                export interface InsertQuery extends Executable {}
 
                 /**
                  * Client side representation of a back-end execution that runs a mongo "update many" query.
                  */
-                export class UpdateQuery {
-                    constructor(collectionName: String, filter: JSONObject, updateQuery: JSONObject);
-                }
+                export interface UpdateQuery extends Executable {}
 
                 /**
                  * Client side representation of a back-end execution that runs a mongo "delete many" query.
                  */
-                export class DeleteQuery {
-                    constructor(collectionName: String, deleteQuery: JSONObject);
-                }
+                export interface DeleteQuery extends Executable {}
             }
         }
 
@@ -487,6 +475,16 @@ declare namespace HivePlugin {
 
     interface HiveManager {
         Scripting: {
+            Conditions: {
+                newSubCondition: (conditionName: string) => Scripting.Conditions.SubCondition;
+                newAndCondition: (conditions: Scripting.Conditions.Condition[]) => Scripting.Conditions.AndCondition;
+                newOrCondition: (conditions: Scripting.Conditions.Condition[]) => Scripting.Conditions.OrCondition;
+
+                Database: {
+                    newQueryHasResultsCondition: (collectionName: string, queryParameters: HivePlugin.JSONObject) => Scripting.Conditions.Database.QueryHasResultsCondition;
+                }
+            },
+
             Executables: {
                 newExecutionSequence: (executables: Scripting.Executables.Executable[]) => Scripting.Executables.ExecutionSequence;
 
