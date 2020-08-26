@@ -82,8 +82,9 @@ class DatabaseImpl implements HivePlugin.Database.Database {
         return InsertResultImpl.fromJson(resultJson);
     }
 
-    countDocuments(collectionName: string, query: HivePlugin.JSONObject, options?: HivePlugin.Database.CountOptions): Promise<number> {
-        return execAsPromise<number>("database_countDocuments", [this.vault.objectId, collectionName, query, options]);
+    async countDocuments(collectionName: string, query: HivePlugin.JSONObject, options?: HivePlugin.Database.CountOptions): Promise<number> {
+        let resultJson = await execAsPromise<{count:number}>("database_countDocuments", [this.vault.objectId, collectionName, query, options]);
+        return resultJson.count;
     }
 
     findOne(collectionName: string, query: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions): Promise<HivePlugin.JSONObject> {
