@@ -23,13 +23,15 @@
 package org.elastos.trinity.plugins.hive;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeCreator;
 
 import org.apache.cordova.CallbackContext;
-import org.apache.cordova.PluginResult;
 import org.elastos.hive.Client;
 import org.elastos.hive.database.CountOptions;
+import org.elastos.hive.database.CreateCollectionOptions;
+import org.elastos.hive.database.DeleteOptions;
+import org.elastos.hive.database.FindOptions;
 import org.elastos.hive.database.InsertOptions;
+import org.elastos.hive.database.UpdateOptions;
 import org.elastos.hive.exception.HiveException;
 import org.elastos.hive.file.FileInfo;
 import org.elastos.trinity.runtime.TrinityPlugin;
@@ -176,7 +178,8 @@ public class HivePlugin extends TrinityPlugin {
         String vaultObjectId = args.getString(0);
         String collectionName = args.getString(1);
         JSONObject optionsJson = args.isNull(2) ? null : args.getJSONObject(2);
-        org.elastos.hive.database.CreateCollectionOptions options = new org.elastos.hive.database.CreateCollectionOptions();
+
+        CreateCollectionOptions options = new CreateCollectionOptions();
 
         try {
             if (optionsJson != null) {
@@ -220,8 +223,9 @@ public class HivePlugin extends TrinityPlugin {
     private void database_insertOne(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String vaultObjectId = args.getString(0);
         String collectionName = args.getString(1);
-        JSONObject documentJson = args.getJSONObject(2);
+        JSONObject documentJson = args.isNull(2) ? null : args.getJSONObject(2);
         JSONObject optionsJson = args.isNull(3) ? null : args.getJSONObject(3);
+
         InsertOptions options = new InsertOptions();
 
         try {
@@ -254,6 +258,8 @@ public class HivePlugin extends TrinityPlugin {
         JSONObject queryJson = args.isNull(2) ? null : args.getJSONObject(2);
         JSONObject optionsJson = args.isNull(3) ? null : args.getJSONObject(3);
 
+        JsonNode queryJsonNode = HivePluginHelper.jsonObjectToJsonNode(queryJson);
+
         CountOptions options = new CountOptions();
 
         try {
@@ -267,32 +273,116 @@ public class HivePlugin extends TrinityPlugin {
 
         // Retrieve the vault
         Client client = clientMap.get(vaultObjectId);
-        // TODO: wait for java api added
-
+        client.getDatabase().countDocuments(collectionName, queryJsonNode, options).thenAccept(count -> {
+            try {
+                JSONObject ret = new JSONObject();
+                ret.put("count", count);
+                callbackContext.success(ret);
+            }
+            catch (JSONException e) {
+                callbackContext.error(e.getMessage());
+            }
+        });
     }
 
     private void database_findOne(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: wait for non-eve api style
+        String vaultObjectId = args.getString(0);
+        String collectionName = args.getString(1);
+        JSONObject queryJson = args.isNull(2) ? null : args.getJSONObject(2);
+        JSONObject optionsJson = args.isNull(3) ? null : args.getJSONObject(3);
+
+        FindOptions options = HivePluginHelper.jsonFindOptionsToNative(optionsJson);
+
+        JsonNode queryJsonNode = HivePluginHelper.jsonObjectToJsonNode(queryJson);
+
+        Client client = clientMap.get(vaultObjectId);
+        client.getDatabase().findOne(collectionName, queryJsonNode, options).thenAccept(result -> {
+            if (result == null)
+                callbackContext.success(); // No result
+            else
+                callbackContext.success(HivePluginHelper.jsonNodeToJsonObject(result));
+        });
     }
 
     private void database_findMany(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: wait for non-eve api style
+        String vaultObjectId = args.getString(0);
+        String collectionName = args.getString(1);
+        JSONObject queryJson = args.isNull(2) ? null : args.getJSONObject(2);
+        JSONObject optionsJson = args.isNull(3) ? null : args.getJSONObject(3);
+
+        FindOptions options = HivePluginHelper.jsonFindOptionsToNative(optionsJson);
+
+        JsonNode queryJsonNode = HivePluginHelper.jsonObjectToJsonNode(queryJson);
+
+        Client client = clientMap.get(vaultObjectId);
+        client.getDatabase().findMany(collectionName, queryJsonNode, options).thenAccept(results -> {
+            JSONArray jsonArray = new JSONArray();
+            for (JsonNode resultJson : results) {
+                jsonArray.put(HivePluginHelper.jsonNodeToJsonObject(resultJson));
+            }
+            callbackContext.success(jsonArray);
+        });
     }
 
     private void database_updateOne(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: wait for non-eve api style
+        String vaultObjectId = args.getString(0);
+        String collectionName = args.getString(1);
+        JSONObject filterJson = args.isNull(2) ? null : args.getJSONObject(2);
+        JSONObject updatequeryJson = args.isNull(3) ? null : args.getJSONObject(3);
+        JSONObject optionsJson = args.isNull(4) ? null : args.getJSONObject(4);
+
+        UpdateOptions options = HivePluginHelper.jsonUpdateOptionsToNative(optionsJson);
+
+        JsonNode filterJsonNode = HivePluginHelper.jsonObjectToJsonNode(filterJson);
+        JsonNode updateQueryJsonNode = HivePluginHelper.jsonObjectToJsonNode(updatequeryJson);
+
+        Client client = clientMap.get(vaultObjectId);
+        client.getDatabase().updateOne(collectionName, filterJsonNode, updateQueryJsonNode, options).thenAccept(result -> {
+            try {
+                JSONObject ret = new JSONObject();
+                ret.put("matchedCount", result.matchedCount());
+                ret.put("modifiedCount", result.modifiedCount());
+                ret.put("upsertedCount", result.upsertedCount());
+                ret.put("upsertedId", result.upsertedId());
+                callbackContext.success(ret);
+            }
+            catch (JSONException e) {
+                callbackContext.error(e.getMessage());
+            }
+        });
     }
 
     private void database_updateMany(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: wait for non-eve api style
+        // For now, update one and update many seem to be totally identical on the client side.
+        database_updateOne(args, callbackContext);
     }
 
     private void database_deleteOne(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: wait for non-eve api style
+        String vaultObjectId = args.getString(0);
+        String collectionName = args.getString(1);
+        JSONObject filterJson = args.isNull(2) ? null : args.getJSONObject(2);
+        JSONObject optionsJson = args.isNull(3) ? null : args.getJSONObject(3);
+
+        DeleteOptions options = HivePluginHelper.jsonDeleteOptionsToNative(optionsJson);
+
+        JsonNode filterJsonNode = HivePluginHelper.jsonObjectToJsonNode(filterJson);
+
+        Client client = clientMap.get(vaultObjectId);
+        client.getDatabase().deleteOne(collectionName, filterJsonNode, options).thenAccept(result -> {
+            try {
+                JSONObject ret = new JSONObject();
+                ret.put("deletedCount", result.deletedCount());
+                callbackContext.success(ret);
+            }
+            catch (JSONException e) {
+                callbackContext.error(e.getMessage());
+            }
+        });
     }
 
     private void database_deleteMany(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // TODO: wait for non-eve api style
+        // For now, delete one and delete many seem to be totally identical on the client side.
+        database_deleteOne(args, callbackContext);
     }
 
     private void files_upload(JSONArray args, CallbackContext callbackContext) throws JSONException {
