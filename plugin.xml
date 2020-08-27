@@ -23,12 +23,16 @@
 				<param name="android-package" value="org.elastos.trinity.plugins.hive.HivePlugin" />
 			</feature>
 		</config-file>
-        <resource-file src="ipfsnodes.json" target="res/raw/ipfsnodes.json" />
-        <source-file src="src/android/IpfsNodesGetter.java" target-dir="src/org/elastos/trinity/plugins/hive" />
         <source-file src="src/android/HivePlugin.java" target-dir="src/org/elastos/trinity/plugins/hive" />
-        <source-file src="src/android/ClientBuilder.java" target-dir="src/org/elastos/trinity/plugins/hive" />
-        <source-file src="src/android/LoginHandler.java" target-dir="src/org/elastos/trinity/plugins/hive" />
-        <source-file src="src/android/ResultHandler.java" target-dir="src/org/elastos/trinity/plugins/hive" />
+        <source-file src="src/android/HivePluginHelper.java" target-dir="src/org/elastos/trinity/plugins/hive" />
+        <source-file src="src/android/database/Database.java" target-dir="src/org/elastos/trinity/plugins/hive/database" />
+        <source-file src="src/android/database/DeleteResult.java" target-dir="src/org/elastos/trinity/plugins/hive/database" />
+        <source-file src="src/android/database/FileInfo.java" target-dir="src/org/elastos/trinity/plugins/hive/database" />
+        <source-file src="src/android/database/FileType.java" target-dir="src/org/elastos/trinity/plugins/hive/database" />
+        <source-file src="src/android/database/InsertResult.java" target-dir="src/org/elastos/trinity/plugins/hive/database" />
+        <source-file src="src/android/database/UpdateResult.java" target-dir="src/org/elastos/trinity/plugins/hive/database" />
+
+        <resource-file src="src/android/libs/ElastosHiveSDK-0.1.0.jar" target="libs/ElastosHiveSDK-0.1.0.jar"/>
         <framework src="src/android/hive.gradle" custom="true" type="gradleReference"/>
 	</platform>
     <platform name="ios">

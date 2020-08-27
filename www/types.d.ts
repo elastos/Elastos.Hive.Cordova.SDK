@@ -419,7 +419,7 @@ declare namespace HivePlugin {
              * Registers a sub-condition on the backend. Sub conditions can be referenced from the client side, by the vault owner,
              * while registering scripts using Scripting.setScript().
              */
-            registerSubCondition(conditionName: string, condition: Conditions.Condition): Promise<void>;
+            registerSubCondition(conditionName: string, condition: Conditions.Condition): Promise<boolean>;
 
             /**
              * Lets the vault owner register a script on his vault for a given app. The script is built on the client side, then

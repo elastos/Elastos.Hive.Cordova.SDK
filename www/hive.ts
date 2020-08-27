@@ -315,8 +315,9 @@ class DeleteQueryImpl implements HivePlugin.Scripting.Executables.Database.Delet
 class ScriptingImpl implements HivePlugin.Scripting.Scripting {
     constructor(private vault: VaultImpl) {}
 
-    registerSubCondition(conditionName: string, condition: HivePlugin.Scripting.Conditions.Condition): Promise<void> {
-        return execAsPromise<void>("scripting_registerSubCondition", [this.vault.objectId, conditionName, condition]);
+    async registerSubCondition(conditionName: string, condition: HivePlugin.Scripting.Conditions.Condition): Promise<boolean> {
+        let result = await execAsPromise<{success: boolean}>("scripting_registerSubCondition", [this.vault.objectId, conditionName, condition]);
+        return result.success;
     }
     setScript(functionName: string, executionSequence: HivePlugin.Scripting.Executables.ExecutionSequence, accessCondition?: HivePlugin.Scripting.Conditions.Condition): Promise<void> {
         return execAsPromise<void>("scripting_setScript", [this.vault.objectId, functionName, executionSequence, accessCondition]);
