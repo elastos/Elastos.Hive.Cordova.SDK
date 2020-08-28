@@ -1,4 +1,4 @@
-package org.elastos.trinity.plugins.hive.database;
+package org.elastos.trinity.plugins.hive.files;
 
 import org.json.JSONObject;
 

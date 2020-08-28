@@ -32,6 +32,10 @@ function execAsPromise<T>(method: string, params: any[] = []): Promise<T> {
     });
 }
 
+class JSONObjectImpl implements HivePlugin.JSONObject {
+    [k: string]: string | number | boolean | HivePlugin.JSONObject | HivePlugin.JSONObject[];
+}
+
 class InsertResultImpl implements HivePlugin.Database.InsertResult {
     insertedIds: string[];
 
@@ -312,6 +316,13 @@ class DeleteQueryImpl implements HivePlugin.Scripting.Executables.Database.Delet
     }
 }
 
+class ObjectIdImpl extends JSONObjectImpl implements HivePlugin.Database.ObjectId {
+    // Matches the extended mongo JSON format {"$oid": "the_string_id"}
+    constructor(public $oid: string) {
+        super();
+    }
+}
+
 class ScriptingImpl implements HivePlugin.Scripting.Scripting {
     constructor(private vault: VaultImpl) {}
 
@@ -373,7 +384,26 @@ class VaultImpl implements HivePlugin.Vault {
     }
 }
 
+class ClientImpl implements HivePlugin.Client {
+    objectId: string;
+
+    async getVault(vaultProviderAddress: string, vaultOwnerDid: string): Promise<HivePlugin.Vault> {
+        let vaultJson = await execAsPromise<HivePlugin.JSONObject>("client_getVault", [this.objectId, vaultProviderAddress, vaultOwnerDid]);
+        return VaultImpl.fromJson(vaultJson);
+    }
+
+    static fromJson(json: HivePlugin.JSONObject): ClientImpl {
+        let client = new ClientImpl();
+        Object.assign(client, json);
+        return client;
+    }
+}
+
 class HiveManagerImpl implements HivePlugin.HiveManager {
+    Database: {
+        newObjectId: (_id: string) => HivePlugin.Database.ObjectId;
+    };
+
     Scripting: {
         Conditions: {
             newSubCondition: (conditionName: string) => HivePlugin.Scripting.Conditions.SubCondition;
@@ -404,6 +434,12 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
         Object.freeze(DatabaseImpl.prototype);
         Object.freeze(FilesImpl.prototype);
         Object.freeze(ScriptingImpl.prototype);
+
+        this.Database = {
+            newObjectId: function(_id: string): HivePlugin.Database.ObjectId {
+                return new ObjectIdImpl(_id);
+            }
+        };
 
         this.Scripting = {
             Conditions: {
@@ -456,9 +492,24 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
         };
     }
 
-    async getVault(vaultProviderAddress: string, vaultOwnerDid: string): Promise<HivePlugin.Vault> {
-        let vaultJson = await execAsPromise<HivePlugin.JSONObject>("getVault", [vaultProviderAddress, vaultOwnerDid]);
-        return VaultImpl.fromJson(vaultJson);
+    async getClient(options: HivePlugin.ClientCreationOptions): Promise<HivePlugin.Client> {
+        // Get the client instance
+        let clientJson = await execAsPromise<HivePlugin.JSONObject>("getClient", [options]);
+        let client = ClientImpl.fromJson(clientJson);
+
+        // Setup the authentication challenge callback mechanism
+        exec(async (jwtToken: string)=>{
+            // When a challenge request is received, pass this to the app and wait for the async result.
+            // This result is passed back to the hive SDK.
+            let challengeResponseJwt = await options.authenticationHandler.authenticationChallenge(jwtToken);
+
+            // Return the challenge response to the Hive SDK.
+            exec(()=>{}, (err)=>{}, 'HivePlugin', "client_sendAuthHandlerChallengeResponse", [client.objectId, challengeResponseJwt]);
+        }, (err: any)=>{
+            console.error(err);
+        }, 'HivePlugin', "client_setAuthHandlerChallengeCallback", [client.objectId]);
+
+        return client;
     }
 }
 

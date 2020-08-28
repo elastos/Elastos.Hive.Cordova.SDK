@@ -1,8 +1,4 @@
-package org.elastos.trinity.plugins.hive.database;
-
-import org.json.JSONObject;
-
-import java.util.Date;
+package org.elastos.trinity.plugins.hive.files;
 
 public enum FileType {
     FILE(0),

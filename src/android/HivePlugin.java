@@ -25,17 +25,21 @@ package org.elastos.trinity.plugins.hive;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import org.apache.cordova.CallbackContext;
+import org.apache.cordova.PluginResult;
+import org.elastos.hive.AuthenticationHandler;
 import org.elastos.hive.Client;
+import org.elastos.hive.Vault;
 import org.elastos.hive.database.CountOptions;
 import org.elastos.hive.database.CreateCollectionOptions;
 import org.elastos.hive.database.DeleteOptions;
 import org.elastos.hive.database.FindOptions;
 import org.elastos.hive.database.InsertOptions;
 import org.elastos.hive.database.UpdateOptions;
-import org.elastos.hive.exception.HiveException;
 import org.elastos.hive.file.FileInfo;
 import org.elastos.hive.scripting.Condition;
 import org.elastos.hive.scripting.Executable;
+import org.elastos.hive.scripting.Executable;
+import org.elastos.hive.vendor.vault.VaultOptions;
 import org.elastos.trinity.runtime.TrinityPlugin;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -45,9 +49,15 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.util.HashMap;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class HivePlugin extends TrinityPlugin {
     private HashMap<String, Client> clientMap = new HashMap<>();
+    private HashMap<String, AuthenticationHandler> clientAuthHandlersMap = new HashMap<>();
+    private HashMap<String, CallbackContext> clientAuthHandlerCallbackMap = new HashMap<>();
+    private HashMap<String, AuthenticationHandler.OnAuthenticationCompleted> clientAuthHandlerCompletionMap = new HashMap<>();
+    private HashMap<String, Vault> vaultMap = new HashMap<>();
     private HashMap<String, Reader> readerMap = new HashMap<>();
     private HashMap<String, Integer> readerOffsetsMap = new HashMap<>(); // Current read offset byte position for each active reader
     private HashMap<String, Writer> writerMap = new HashMap<>();
@@ -56,8 +66,17 @@ public class HivePlugin extends TrinityPlugin {
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
         try {
             switch (action) {
-                case "getVault":
-                    this.getVault(args, callbackContext);
+                case "getClient":
+                    this.getClient(args, callbackContext);
+                    break;
+                case "client_setAuthHandlerChallengeCallback":
+                    this.client_setAuthHandlerChallengeCallback(args, callbackContext);
+                    break;
+                case "client_sendAuthHandlerChallengeResponse":
+                    this.client_sendAuthHandlerChallengeResponse(args, callbackContext);
+                    break;
+                case "client_getVault":
+                    this.client_getVault(args, callbackContext);
                     break;
                 case "database_createCollection":
                     this.database_createCollection(args, callbackContext);
@@ -149,29 +168,111 @@ public class HivePlugin extends TrinityPlugin {
         return true;
     }
 
-    private void getVault(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private String geDataDir() {
+        return getDataPath();
+    }
+
+    private void getClient(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        JSONObject optionsJson = args.isNull(0) ? null : args.getJSONObject(0);
+        if (optionsJson == null) {
+            callbackContext.error("Client creation options must be provided");
+            return;
+        }
+
+        try {
+            // final atomic reference as a way to pass our non final client Id to the auth handler.
+            final AtomicReference<String> clientIdReference = new AtomicReference<>();
+
+            Client.Options options = new Client.Options();
+            options.setLocalDataPath(geDataDir());
+
+            AuthenticationHandler authHandler = (challengeJwtToken, onAuthenticationCompleted) -> {
+                // Retrieve the JS side callback context to call it.
+                // JS will call client_setAuthHandlerChallengeCallback() to send the response JWT
+                CallbackContext authCallbackContext = clientAuthHandlerCallbackMap.get(clientIdReference.get());
+
+                // Save the response callback ref to call it from client_sendAuthHandlerChallengeResponse
+                clientAuthHandlerCompletionMap.put(clientIdReference.get(), onAuthenticationCompleted);
+
+                // Call JS callback, so the dapp can start the auth flow.
+                // Keep the callback active for future use.
+                PluginResult result = new PluginResult(PluginResult.Status.OK, challengeJwtToken);
+                result.setKeepCallback(true);
+                authCallbackContext.sendPluginResult(result);
+
+                return null;
+            };
+            options.setAuthenticationHandler(authHandler);
+
+            //.setNodeUrl("http://192.168.1.190:5000")
+            //.setNodeUrl("http://192.168.31.107:5000") // TODO
+            //.setStorePath(System.getProperty("user.dir")) // TODO
+            //.build();
+
+            Client client = Client.createInstance(options);
+            String clientId = ""+System.identityHashCode(client);
+            clientIdReference.set(clientId);
+            clientMap.put(clientId, client);
+
+            // Save the handler for later use
+            clientAuthHandlersMap.put(clientId, authHandler);
+
+            JSONObject ret = new JSONObject();
+            ret.put("objectId", clientId);
+            callbackContext.success(ret);
+        }
+        catch (Exception e) {
+            callbackContext.error(e.toString());
+        }
+    }
+
+    private void client_setAuthHandlerChallengeCallback(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String clientObjectId = args.getString(0);
+
+        // Save current callback content to be able to call it back when an authentication is requests by the hive SDK
+        clientAuthHandlerCallbackMap.put(clientObjectId, callbackContext);
+
+        // No immediate answer. Just keep the callback context reference for later use.
+        PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
+        result.setKeepCallback(true);
+        callbackContext.sendPluginResult(result);
+    }
+
+    private void client_sendAuthHandlerChallengeResponse(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String clientObjectId = args.getString(0);
+        String challengeResponseJwt = args.getString(1);
+
+        // Retrieve the auth response callback and send the authentication JWT back to the hive SDK
+        AuthenticationHandler.OnAuthenticationCompleted authResponseCallback = clientAuthHandlerCompletionMap.get(clientObjectId);
+        authResponseCallback.onAuthenticationCompleted(challengeResponseJwt);
+
+        callbackContext.success();
+    }
+
+    private void client_getVault(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String clientObjectId = args.getString(0);
         String vaultProviderAddress = args.getString(0);
         String vaultOwnerDid = args.getString(1);
 
         try {
-            // TODO: refactor client to vault
-            Client client = Client.createInstance(new Client.Options() {
-                @Override
-                protected Client buildClient() {
-                    return null;
+            Client client = clientMap.get(clientObjectId);
+            client.getVault(vaultProviderAddress, vaultOwnerDid).thenAccept(vault -> {
+                String vaultId = ""+System.identityHashCode(vault);
+                vaultMap.put(vaultId, vault);
+
+                try {
+                    JSONObject ret = new JSONObject();
+                    ret.put("objectId", vaultId);
+                    ret.put("vaultProviderAddress", vaultProviderAddress);
+                    ret.put("vaultOwnerDid", vaultOwnerDid);
+                    callbackContext.success(ret);
+                }
+                catch (JSONException e) {
+                    callbackContext.error(e.toString());
                 }
             });
-
-            String clientId = ""+System.identityHashCode(client);
-            clientMap.put(clientId, client);
-
-            JSONObject ret = new JSONObject();
-            ret.put("objectId", clientId);
-            ret.put("vaultProviderAddress", vaultProviderAddress);
-            ret.put("vaultOwnerDid", vaultOwnerDid);
-            callbackContext.success(ret);
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.toString());
         }
     }
@@ -193,8 +294,8 @@ public class HivePlugin extends TrinityPlugin {
         }
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getDatabase().createCollection(collectionName, options).thenAccept(success -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getDatabase().createCollection(collectionName, options).thenAccept(success -> {
                 try {
                     JSONObject ret = new JSONObject();
                     ret.put("created", success);
@@ -205,7 +306,7 @@ public class HivePlugin extends TrinityPlugin {
                 }
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -215,8 +316,8 @@ public class HivePlugin extends TrinityPlugin {
         String collectionName = args.getString(1);
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getDatabase().deleteCollection(collectionName).thenAccept(success -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getDatabase().deleteCollection(collectionName).thenAccept(success -> {
                 try {
                     JSONObject ret = new JSONObject();
                     ret.put("deleted", success);
@@ -227,7 +328,7 @@ public class HivePlugin extends TrinityPlugin {
                 }
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -252,8 +353,8 @@ public class HivePlugin extends TrinityPlugin {
         JsonNode documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentJson);
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getDatabase().insertOne(collectionName, documentJsonNode, options).thenAccept(insertResult -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getDatabase().insertOne(collectionName, documentJsonNode, options).thenAccept(insertResult -> {
                 try {
                     JSONObject ret = new JSONObject();
                     ret.put("insertedIds", new JSONArray(insertResult.insertedIds()));
@@ -264,7 +365,7 @@ public class HivePlugin extends TrinityPlugin {
                 }
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -289,8 +390,8 @@ public class HivePlugin extends TrinityPlugin {
         }
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getDatabase().countDocuments(collectionName, queryJsonNode, options).thenAccept(count -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getDatabase().countDocuments(collectionName, queryJsonNode, options).thenAccept(count -> {
                 try {
                     JSONObject ret = new JSONObject();
                     ret.put("count", count);
@@ -301,7 +402,7 @@ public class HivePlugin extends TrinityPlugin {
                 }
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -317,15 +418,15 @@ public class HivePlugin extends TrinityPlugin {
         JsonNode queryJsonNode = HivePluginHelper.jsonObjectToJsonNode(queryJson);
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getDatabase().findOne(collectionName, queryJsonNode, options).thenAccept(result -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getDatabase().findOne(collectionName, queryJsonNode, options).thenAccept(result -> {
                 if (result == null)
                     callbackContext.success(); // No result
                 else
                     callbackContext.success(HivePluginHelper.jsonNodeToJsonObject(result));
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -341,8 +442,8 @@ public class HivePlugin extends TrinityPlugin {
         JsonNode queryJsonNode = HivePluginHelper.jsonObjectToJsonNode(queryJson);
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getDatabase().findMany(collectionName, queryJsonNode, options).thenAccept(results -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getDatabase().findMany(collectionName, queryJsonNode, options).thenAccept(results -> {
                 JSONArray jsonArray = new JSONArray();
                 for (JsonNode resultJson : results) {
                     jsonArray.put(HivePluginHelper.jsonNodeToJsonObject(resultJson));
@@ -350,7 +451,7 @@ public class HivePlugin extends TrinityPlugin {
                 callbackContext.success(jsonArray);
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -368,8 +469,8 @@ public class HivePlugin extends TrinityPlugin {
         JsonNode updateQueryJsonNode = HivePluginHelper.jsonObjectToJsonNode(updatequeryJson);
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getDatabase().updateOne(collectionName, filterJsonNode, updateQueryJsonNode, options).thenAccept(result -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getDatabase().updateOne(collectionName, filterJsonNode, updateQueryJsonNode, options).thenAccept(result -> {
                 try {
                     JSONObject ret = new JSONObject();
                     ret.put("matchedCount", result.matchedCount());
@@ -383,7 +484,7 @@ public class HivePlugin extends TrinityPlugin {
                 }
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -404,8 +505,8 @@ public class HivePlugin extends TrinityPlugin {
         JsonNode filterJsonNode = HivePluginHelper.jsonObjectToJsonNode(filterJson);
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getDatabase().deleteOne(collectionName, filterJsonNode, options).thenAccept(result -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getDatabase().deleteOne(collectionName, filterJsonNode, options).thenAccept(result -> {
                 try {
                     JSONObject ret = new JSONObject();
                     ret.put("deletedCount", result.deletedCount());
@@ -416,7 +517,7 @@ public class HivePlugin extends TrinityPlugin {
                 }
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -430,25 +531,26 @@ public class HivePlugin extends TrinityPlugin {
         String vaultObjectId = args.getString(0);
         String srcPath = args.getString(1);
 
-        try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getFiles().upload(srcPath).thenAccept(writer -> {
-                try {
-                    String objectId = "" + System.identityHashCode(writer);
-                    writerMap.put(objectId, writer);
-
-                    JSONObject ret = new JSONObject();
-                    ret.put("objectId", objectId);
-                    callbackContext.success(ret);
-                }
-                catch (JSONException e) {
-                    callbackContext.error(e.getMessage());
-                }
-            });
-        }
-        catch (HiveException e) {
-            callbackContext.error(e.getMessage());
-        }
+        //new Thread(()->{
+            try {
+                Vault vault = vaultMap.get(vaultObjectId);
+                vault.getFiles().upload(srcPath).thenAccept(writer -> {
+                    try {
+                        String objectId = "" + System.identityHashCode(writer);
+                        writerMap.put(objectId, writer);
+                        JSONObject ret = new JSONObject();
+                        ret.put("objectId", objectId);
+                        callbackContext.success(ret);
+                    }
+                    catch (JSONException e) {
+                        callbackContext.error(e.getMessage());
+                    }
+                });
+            }
+            catch (Exception e) {
+                callbackContext.error(e.getMessage());
+            }
+        //}).start();
     }
 
     private void files_download(JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -456,8 +558,8 @@ public class HivePlugin extends TrinityPlugin {
         String srcPath = args.getString(1);
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getFiles().download(srcPath).thenAccept(reader -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getFiles().download(srcPath).thenAccept(reader -> {
                 try {
                     String objectId = "" + System.identityHashCode(reader);
                     readerMap.put(objectId, reader);
@@ -472,7 +574,7 @@ public class HivePlugin extends TrinityPlugin {
                 }
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -482,8 +584,8 @@ public class HivePlugin extends TrinityPlugin {
         String srcPath = args.getString(1);
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getFiles().delete(srcPath).thenAccept(success -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getFiles().delete(srcPath).thenAccept(success -> {
                 try {
                     JSONObject ret = new JSONObject();
                     ret.put("success", success);
@@ -494,7 +596,7 @@ public class HivePlugin extends TrinityPlugin {
                 }
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -505,8 +607,8 @@ public class HivePlugin extends TrinityPlugin {
         String dstPath = args.getString(2);
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getFiles().move(srcPath, dstPath).thenAccept(success -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getFiles().move(srcPath, dstPath).thenAccept(success -> {
                 try {
                     JSONObject ret = new JSONObject();
                     ret.put("success", success);
@@ -517,7 +619,7 @@ public class HivePlugin extends TrinityPlugin {
                 }
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -528,13 +630,13 @@ public class HivePlugin extends TrinityPlugin {
         String dstPath = args.getString(2);
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getFiles().copy(srcPath, dstPath).thenAccept(v -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getFiles().copy(srcPath, dstPath).thenAccept(v -> {
                 JSONObject ret = new JSONObject();
                 callbackContext.success(ret);
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -544,12 +646,12 @@ public class HivePlugin extends TrinityPlugin {
         String srcPath = args.getString(1);
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getFiles().hash(srcPath).thenAccept(hash -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getFiles().hash(srcPath).thenAccept(hash -> {
                 callbackContext.success(hash);
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -559,8 +661,8 @@ public class HivePlugin extends TrinityPlugin {
         String srcPath = args.getString(1);
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getFiles().list(srcPath).thenAccept(fileInfos -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getFiles().list(srcPath).thenAccept(fileInfos -> {
                 try {
                     JSONArray jsonArray = new JSONArray();
                     for (FileInfo info : fileInfos) {
@@ -573,7 +675,7 @@ public class HivePlugin extends TrinityPlugin {
                 }
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -583,8 +685,8 @@ public class HivePlugin extends TrinityPlugin {
         String srcPath = args.getString(1);
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getFiles().stat(srcPath).thenAccept(fileInfo -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getFiles().stat(srcPath).thenAccept(fileInfo -> {
                 try {
                     JSONObject ret = HivePluginHelper.hiveFileInfoToPluginJson(fileInfo);
                     callbackContext.success(ret);
@@ -593,7 +695,7 @@ public class HivePlugin extends TrinityPlugin {
                 }
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -612,8 +714,8 @@ public class HivePlugin extends TrinityPlugin {
         };
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getScripting().registerCondition(conditionName, condition).thenAccept(success -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getScripting().registerCondition(conditionName, condition).thenAccept(success -> {
                 try {
                     JSONObject ret = new JSONObject();
                     ret.put("success", success);
@@ -623,7 +725,7 @@ public class HivePlugin extends TrinityPlugin {
                 }
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -650,8 +752,8 @@ public class HivePlugin extends TrinityPlugin {
         };
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getScripting().registerScript(functionName, condition, fakeExecutable).thenAccept(success -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getScripting().registerScript(functionName, condition, fakeExecutable).thenAccept(success -> {
                 try {
                     JSONObject ret = new JSONObject();
                     ret.put("success", success);
@@ -661,7 +763,7 @@ public class HivePlugin extends TrinityPlugin {
                 }
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
@@ -672,8 +774,8 @@ public class HivePlugin extends TrinityPlugin {
         JSONObject params = args.isNull(2) ? null : args.getJSONObject(2);
 
         try {
-            Client client = clientMap.get(vaultObjectId);
-            client.getScripting().call(functionName, HivePluginHelper.jsonObjectToJsonNode(params)).thenAccept(success -> {
+            Vault vault = vaultMap.get(vaultObjectId);
+            vault.getScripting().call(functionName, HivePluginHelper.jsonObjectToJsonNode(params), JsonNode.class).thenAccept(success -> {
                 try {
                     // TODO: why do we get a Reader here, not a JSONObject?
                     JSONObject ret = new JSONObject();
@@ -684,7 +786,7 @@ public class HivePlugin extends TrinityPlugin {
                 }
             });
         }
-        catch (HiveException e) {
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
