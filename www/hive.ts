@@ -387,8 +387,8 @@ class VaultImpl implements HivePlugin.Vault {
 class ClientImpl implements HivePlugin.Client {
     objectId: string;
 
-    async getVault(vaultProviderAddress: string, vaultOwnerDid: string): Promise<HivePlugin.Vault> {
-        let vaultJson = await execAsPromise<HivePlugin.JSONObject>("client_getVault", [this.objectId, vaultProviderAddress, vaultOwnerDid]);
+    async getVault(vaultOwnerDid: string): Promise<HivePlugin.Vault> {
+        let vaultJson = await execAsPromise<HivePlugin.JSONObject>("client_getVault", [this.objectId, vaultOwnerDid]);
         return VaultImpl.fromJson(vaultJson);
     }
 
@@ -510,6 +510,14 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
         }, 'HivePlugin', "client_setAuthHandlerChallengeCallback", [client.objectId]);
 
         return client;
+    }
+
+    getVaultAddress(ownerDid: string): Promise<string> {
+        return execAsPromise<string>("client_getVaultAddress", [ownerDid]);
+    }
+
+    setVaultAddress(ownerDid: string, vaultAddress: string): Promise<void> {
+        return execAsPromise<void>("client_setVaultAddress", [ownerDid, vaultAddress]);
     }
 }
 

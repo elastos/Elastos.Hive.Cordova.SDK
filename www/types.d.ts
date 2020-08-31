@@ -495,7 +495,6 @@ declare namespace HivePlugin {
     }
 
     interface ClientCreationOptions {
-        localDataPath: string;
         authenticationHandler: AuthenticationHandler;
     }
 
@@ -508,10 +507,13 @@ declare namespace HivePlugin {
          * completed. At this point, the caller is not authenticated yet. Authentication is part of another
          * step later on (authentication callback).
          *
-         * @param vaultProviderAddress Address of the back-end service that hosts user's vault
+         * To resolve the vault, the hive SDK first tried to resolve the address in the given user's did document
+         * from ID chain. If nothing can be found, it checks if there is a locally mapped match, that was
+         * set before using setVaultProvider() (for example in case a user doesn't want to publish his vault address).
+         *
          * @param vaultOwnerDid: Target user DID for which we want to get vault access
          */
-        getVault(vaultProviderAddress: string, vaultOwnerDid: string): Promise<Vault>;
+        getVault(vaultOwnerDid: string): Promise<Vault>;
     }
 
     interface HiveManager {
@@ -548,5 +550,22 @@ declare namespace HivePlugin {
          * further operations.
          */
         getClient(options: ClientCreationOptions): Promise<Client>;
+
+        /**
+         * Tries to find a vault address in the public DID document of the given user's DID.
+         *
+         * This API always tries to fetch this information from ID chain first (vault address published
+         * publicly for this user) and falls back to the local DID/Vault mapping if it fails to resolve
+         * from chain.
+         *
+         * After being able to resolve from chain, any previously set local mapping is deleted.
+         */
+        getVaultAddress(ownerDid: string): Promise<string>;
+
+        /**
+         * Locally maps the given owner DID with the given vault address. This is useful for example in case
+         * a user doesn't publish his vault address on the ID chain, and shared it privately.
+         */
+        setVaultAddress(ownerDid: string, vaultAddress: string): Promise<void>;
     }
 }
