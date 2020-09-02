@@ -421,12 +421,6 @@ declare namespace HivePlugin {
 
         export interface Scripting {
             /**
-             * Registers a sub-condition on the backend. Sub conditions can be referenced from the client side, by the vault owner,
-             * while registering scripts using Scripting.setScript().
-             */
-            registerSubCondition(conditionName: string, condition: Conditions.Condition): Promise<boolean>;
-
-            /**
              * Lets the vault owner register a script on his vault for a given app. The script is built on the client side, then
              * serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can
              * use Scripting.call() to execute one of those scripts and get results/data.

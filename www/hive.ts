@@ -326,13 +326,10 @@ class ObjectIdImpl extends JSONObjectImpl implements HivePlugin.Database.ObjectI
 class ScriptingImpl implements HivePlugin.Scripting.Scripting {
     constructor(private vault: VaultImpl) {}
 
-    async registerSubCondition(conditionName: string, condition: HivePlugin.Scripting.Conditions.Condition): Promise<boolean> {
-        let result = await execAsPromise<{success: boolean}>("scripting_registerSubCondition", [this.vault.objectId, conditionName, condition]);
-        return result.success;
-    }
     setScript(functionName: string, executionSequence: HivePlugin.Scripting.Executables.ExecutionSequence, accessCondition?: HivePlugin.Scripting.Conditions.Condition): Promise<void> {
         return execAsPromise<void>("scripting_setScript", [this.vault.objectId, functionName, executionSequence, accessCondition]);
     }
+
     call(functionName: string, params?: HivePlugin.JSONObject): Promise<HivePlugin.JSONObject> {
         return execAsPromise<HivePlugin.JSONObject>("scripting_call", [this.vault.objectId, functionName, params]);
     }
@@ -358,6 +355,9 @@ class VaultImpl implements HivePlugin.Vault {
     }
 
     static fromJson(json: HivePlugin.JSONObject): VaultImpl {
+        if (!json)
+            return null;
+
         let vault = new VaultImpl(null, null);
         Object.assign(vault, json);
         return vault;
