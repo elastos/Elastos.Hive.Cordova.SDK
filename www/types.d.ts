@@ -44,6 +44,8 @@ declare namespace HivePlugin {
         [k:string]: JSONObject | JSONObject[] | string | number | boolean
     }
 
+    //export type JSONObjectOrArray = JSONObject | JSONObject[];
+
     export namespace Files {
         /**
          * File reader to retrieve remote file data.
@@ -346,15 +348,7 @@ declare namespace HivePlugin {
             /**
              * Base interface for all vault script conditions.
              */
-            export interface Condition {
-                toJSON(): JSONObject;
-            }
-
-            /**
-             * Represents a sub-condition execution, previously registered in the ACL manager.
-             * This way, several scripts can rely on simply the sub-condition name, without rewriting the condition content itself.
-             */
-            export interface SubCondition extends Condition {}
+            export interface Condition {}
 
             /**
              * Vault script condition that succeeds if at least one of the contained conditions are successful.
@@ -375,16 +369,12 @@ declare namespace HivePlugin {
              * Executables are predefined, and are executed by the hive back-end when running vault scripts.
              * For example, a Database.FindQuery executable type will execute a mongo query and return a list of results.
              */
-            export interface Executable {
-                toJSON(): JSONObject;
-            }
+            export interface Executable {}
 
             /**
              * Convenient interface to store and serialize a sequence of executables.
              */
-            export interface ExecutionSequence {
-                toJSON(): JSONObject[];
-            }
+            export interface AggregatedExecutable extends Executable {}
 
             export namespace Database {
                 /**
@@ -425,7 +415,7 @@ declare namespace HivePlugin {
              * serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can
              * use Scripting.call() to execute one of those scripts and get results/data.
              */
-            setScript(functionName: string, executionSequence: Executables.ExecutionSequence, accessCondition?: Conditions.Condition): Promise<void>;
+            setScript(functionName: string, executable: Executables.Executable, accessCondition?: Conditions.Condition): Promise<void>;
 
             /**
              * Executes a previously registered server side script using Scripting.setScript(). Vault owner or external users are
@@ -490,6 +480,7 @@ declare namespace HivePlugin {
 
     interface ClientCreationOptions {
         authenticationHandler: AuthenticationHandler;
+        authenticationDIDDocument: string; // JSON String representing a DIDDocument object
     }
 
     interface Client {
@@ -517,7 +508,6 @@ declare namespace HivePlugin {
 
         Scripting: {
             Conditions: {
-                newSubCondition: (conditionName: string) => Scripting.Conditions.SubCondition;
                 newAndCondition: (conditions: Scripting.Conditions.Condition[]) => Scripting.Conditions.AndCondition;
                 newOrCondition: (conditions: Scripting.Conditions.Condition[]) => Scripting.Conditions.OrCondition;
 
@@ -527,7 +517,7 @@ declare namespace HivePlugin {
             },
 
             Executables: {
-                newExecutionSequence: (executables: Scripting.Executables.Executable[]) => Scripting.Executables.ExecutionSequence;
+                newAggregatedExecutable: (executables: Scripting.Executables.Executable[]) => Scripting.Executables.Executable;
 
                 Database: {
                     newFindOneQuery: (collectionName: String, query?: JSONObject, options?: HivePlugin.Database.FindOptions) => Scripting.Executables.Database.FindOneQuery;

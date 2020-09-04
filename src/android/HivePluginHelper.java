@@ -22,7 +22,7 @@ public class HivePluginHelper {
 
         ret.put("name", fileInfo.getName());
         ret.put("size", fileInfo.getSize());
-        ret.put("lastModified", fileInfo.getLastModified());
+        ret.put("lastModified", fileInfo.getLastModify());
 
         switch (fileInfo.getType()) {
             case FOLDER:

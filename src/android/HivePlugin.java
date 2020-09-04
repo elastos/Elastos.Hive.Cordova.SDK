@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
+import org.elastos.did.DIDDocument;
 import org.elastos.hive.AuthenticationHandler;
 import org.elastos.hive.Client;
 import org.elastos.hive.Vault;
@@ -38,6 +39,9 @@ import org.elastos.hive.database.UpdateOptions;
 import org.elastos.hive.file.FileInfo;
 import org.elastos.hive.scripting.Condition;
 import org.elastos.hive.scripting.Executable;
+import org.elastos.hive.scripting.RawCondition;
+import org.elastos.hive.scripting.RawExecutable;
+import org.elastos.trinity.runtime.PreferenceManager;
 import org.elastos.trinity.runtime.TrinityPlugin;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -173,6 +177,10 @@ public class HivePlugin extends TrinityPlugin {
         return getDataPath();
     }
 
+    private static String getDIDResolverUrl() {
+        return PreferenceManager.getShareInstance().getDIDResolver();
+    }
+
     private void getClient(JSONArray args, CallbackContext callbackContext) throws JSONException {
         JSONObject optionsJson = args.isNull(0) ? null : args.getJSONObject(0);
         if (optionsJson == null) {
@@ -186,7 +194,14 @@ public class HivePlugin extends TrinityPlugin {
 
             Client.Options options = new Client.Options();
             options.setLocalDataPath(geDataDir());
+            options.setDIDResolverUrl(getDIDResolverUrl());
 
+            // Set the authentication DID document
+            String authDIDDocumentJson = optionsJson.getString("authenticationDIDDocument");
+            DIDDocument authenticationDIDDocument = DIDDocument.fromJson(authDIDDocumentJson);
+            options.setAuthenticationDIDDocument(authenticationDIDDocument);
+
+            // Create a authentication handler
             AuthenticationHandler authHandler = (challengeJwtToken) -> {
                 CompletableFuture<String> future = new CompletableFuture<>();
 
@@ -206,11 +221,6 @@ public class HivePlugin extends TrinityPlugin {
                 return future;
             };
             options.setAuthenticationHandler(authHandler);
-
-            //.setNodeUrl("http://192.168.1.190:5000")
-            //.setNodeUrl("http://192.168.31.107:5000") // TODO
-            //.setStorePath(System.getProperty("user.dir")) // TODO
-            //.build();
 
             Client client = Client.createInstance(options);
             String clientId = ""+System.identityHashCode(client);
@@ -233,7 +243,7 @@ public class HivePlugin extends TrinityPlugin {
         String ownerDid = args.getString(0);
         String vaultAddress = args.getString(1);
 
-        // TODO Client.setVaultAddress(ownerDid, vaultAddress);
+        Client.setVaultProvider(ownerDid, vaultAddress);
 
         callbackContext.success();
     }
@@ -241,11 +251,10 @@ public class HivePlugin extends TrinityPlugin {
     private void client_getVaultAddress(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String ownerDid = args.getString(0);
 
-        /* TODO Client.getVaultAddress(ownerDid).thenAccept(address -> {
+        Client.getVaultProvider(ownerDid).thenAccept(address -> {
             callbackContext.success();
-        });*/
+        });
 
-        //callbackContext.success("https://192.168.31.111:500"); // TODO TMP
         callbackContext.success((String)null);
     }
 
@@ -263,7 +272,12 @@ public class HivePlugin extends TrinityPlugin {
 
     private void client_sendAuthHandlerChallengeResponse(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String clientObjectId = args.getString(0);
-        String challengeResponseJwt = args.getString(1);
+        String challengeResponseJwt = args.isNull(1) ? null : args.getString(1);
+
+        if (challengeResponseJwt == null) {
+            callbackContext.error("Empty challenge response given!");
+            return;
+        }
 
         // Retrieve the auth response callback and send the authentication JWT back to the hive SDK
         CompletableFuture<String> authResponseFuture = clientAuthHandlerCompletionMap.get(clientObjectId);
@@ -804,25 +818,13 @@ public class HivePlugin extends TrinityPlugin {
         JSONObject executionSequenceJson = args.isNull(2) ? null : args.getJSONObject(2);
         JSONObject accessConditionJson = args.isNull(3) ? null : args.getJSONObject(3);
 
-        // TODO: build real condition from TS json when api is ready, or use string condition
-        Condition condition = new Condition("TestCondition", "fakeName") {
-            @Override
-            public Object getBody() {
-                return null;
-            }
-        };
-
-        Executable fakeExecutable = new Executable("aaa","bbb") {
-            @Override
-            public Object getBody() {
-                return null;
-            }
-        };
+        RawCondition condition = accessConditionJson != null ? new RawCondition(accessConditionJson.toString()) : null;
+        RawExecutable executable = new RawExecutable(executionSequenceJson.toString());
 
         try {
             Vault vault = vaultMap.get(vaultObjectId);
             if (ensureValidVault(vault, callbackContext)) {
-                vault.getScripting().registerScript(functionName, condition, fakeExecutable).thenAccept(success -> {
+                vault.getScripting().registerScript(functionName, condition, executable).thenAccept(success -> {
                     try {
                         JSONObject ret = new JSONObject();
                         ret.put("success", success);
