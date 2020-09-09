@@ -22,6 +22,8 @@
 
 package org.elastos.trinity.plugins.hive;
 
+import android.util.Base64;
+
 import com.fasterxml.jackson.databind.JsonNode;
 
 import org.apache.cordova.CallbackContext;
@@ -47,9 +49,17 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -60,9 +70,9 @@ public class HivePlugin extends TrinityPlugin {
     private HashMap<String, CallbackContext> clientAuthHandlerCallbackMap = new HashMap<>();
     private HashMap<String, CompletableFuture<String>> clientAuthHandlerCompletionMap = new HashMap<>();
     private HashMap<String, Vault> vaultMap = new HashMap<>();
-    private HashMap<String, Reader> readerMap = new HashMap<>();
+    private HashMap<String, InputStream> readerMap = new HashMap<>();
     private HashMap<String, Integer> readerOffsetsMap = new HashMap<>(); // Current read offset byte position for each active reader
-    private HashMap<String, Writer> writerMap = new HashMap<>();
+    private HashMap<String, OutputStream> writerMap = new HashMap<>();
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -608,30 +618,28 @@ public class HivePlugin extends TrinityPlugin {
         String vaultObjectId = args.getString(0);
         String srcPath = args.getString(1);
 
-        //new Thread(()->{
-            try {
-                Vault vault = vaultMap.get(vaultObjectId);
-                if (ensureValidVault(vault, callbackContext)) {
-                    vault.getFiles().upload(srcPath).thenAccept(writer -> {
-                        try {
-                            String objectId = "" + System.identityHashCode(writer);
-                            writerMap.put(objectId, writer);
-                            JSONObject ret = new JSONObject();
-                            ret.put("objectId", objectId);
-                            callbackContext.success(ret);
-                        } catch (JSONException e) {
-                            callbackContext.error(e.getMessage());
-                        }
-                    }).exceptionally(e -> {
+        try {
+            Vault vault = vaultMap.get(vaultObjectId);
+            if (ensureValidVault(vault, callbackContext)) {
+                vault.getFiles().upload(srcPath, OutputStream.class).thenAccept(writer -> {
+                    try {
+                        String objectId = "" + System.identityHashCode(writer);
+                        writerMap.put(objectId, writer);
+                        JSONObject ret = new JSONObject();
+                        ret.put("objectId", objectId);
+                        callbackContext.success(ret);
+                    } catch (JSONException e) {
                         callbackContext.error(e.getMessage());
-                        return null;
-                    });
-                }
+                    }
+                }).exceptionally(e -> {
+                    callbackContext.error(e.getMessage());
+                    return null;
+                });
             }
-            catch (Exception e) {
-                callbackContext.error(e.getMessage());
-            }
-        //}).start();
+        }
+        catch (Exception e) {
+            callbackContext.error(e.getMessage());
+        }
     }
 
     private void files_download(JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -641,7 +649,7 @@ public class HivePlugin extends TrinityPlugin {
         try {
             Vault vault = vaultMap.get(vaultObjectId);
             if (ensureValidVault(vault, callbackContext)) {
-                vault.getFiles().download(srcPath).thenAccept(reader -> {
+                vault.getFiles().download(srcPath, InputStream.class).thenAccept(reader -> {
                     try {
                         String objectId = "" + System.identityHashCode(reader);
                         readerMap.put(objectId, reader);
@@ -680,7 +688,20 @@ public class HivePlugin extends TrinityPlugin {
                         callbackContext.error(e.getMessage());
                     }
                 }).exceptionally(e -> {
-                    callbackContext.error(e.getMessage());
+                    if (e != null && e.getLocalizedMessage().contains("Item not found")) {
+                        try {
+                            JSONObject ret = new JSONObject();
+                            ret.put("success", false);
+                            callbackContext.success(ret);
+                        }
+                        catch (JSONException ex) {
+                            callbackContext.error(e.getMessage());
+                        }
+                    }
+                    else {
+                        callbackContext.error(e.getMessage());
+                    }
+
                     return null;
                 });
             }
@@ -874,9 +895,14 @@ public class HivePlugin extends TrinityPlugin {
         String writerObjectId = args.getString(0);
         String blob = args.getString(1); // TODO: check type coming from JS Blob
 
+        // TODO: get threading / looper from carrier file transfer
+
         try {
-            Writer writer = writerMap.get(writerObjectId);
-            writer.write(blob);
+            OutputStream writer = writerMap.get(writerObjectId);
+
+            // Cordova encodes UInt8Array in TS to base64 encoded in java.
+            byte[] data = Base64.decode(blob, Base64.DEFAULT);
+            writer.write(data);
             callbackContext.success();
         }
         catch (IOException e) {
@@ -888,7 +914,7 @@ public class HivePlugin extends TrinityPlugin {
         String writerObjectId = args.getString(0);
 
         try {
-            Writer writer = writerMap.get(writerObjectId);
+            OutputStream writer = writerMap.get(writerObjectId);
             writer.flush();
             callbackContext.success();
         }
@@ -901,7 +927,7 @@ public class HivePlugin extends TrinityPlugin {
         String writerObjectId = args.getString(0);
 
         try {
-            Writer writer = writerMap.get(writerObjectId);
+            OutputStream writer = writerMap.get(writerObjectId);
             writer.close();
             writerMap.remove(writerObjectId);
             callbackContext.success();
@@ -916,17 +942,21 @@ public class HivePlugin extends TrinityPlugin {
         int bytesCount = args.getInt(1);
 
         try {
-            char[] buffer = new char[bytesCount];
-            Reader reader = readerMap.get(readerObjectId);
+            byte[] buffer = new byte[bytesCount];
+            InputStream reader = readerMap.get(readerObjectId);
 
             // Resume reading at the previous read offset
-            int currentReadOffset = readerOffsetsMap.get(readerObjectId);
-            int readBytes = reader.read(buffer, currentReadOffset, bytesCount);
+            //int currentReadOffset = readerOffsetsMap.get(readerObjectId);
+            int readBytes = reader.read(buffer, 0, bytesCount);
 
-            // Move read offset to the next position
-            readerOffsetsMap.put(readerObjectId, currentReadOffset+readBytes);
-
-            callbackContext.success(new String(buffer)); // TODO: Probably probably the wrong type, not String...
+            if (readBytes != -1) {
+                // Move read offset to the next position
+                //readerOffsetsMap.put(readerObjectId, currentReadOffset + readBytes);
+                callbackContext.success(Base64.encodeToString(buffer, 0, readBytes, 0));
+            }
+            else {
+                callbackContext.success((String)null);
+            }
         }
         catch (IOException e) {
             callbackContext.error(e.getMessage());
@@ -937,18 +967,18 @@ public class HivePlugin extends TrinityPlugin {
         String readerObjectId = args.getString(0);
 
         try {
-            char[] buffer = new char[1024];
-            Reader reader = readerMap.get(readerObjectId);
-            String output = new String();
+            byte[] buffer = new byte[1024];
+            InputStream reader = readerMap.get(readerObjectId);
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
             int readBytes;
             do {
                 readBytes = reader.read(buffer);
-                output += new String(buffer); // TODO: right format/type
+                outputStream.write(buffer, 0, readBytes);
             }
             while (readBytes != -1);
 
-            callbackContext.success(output);
+            callbackContext.success(outputStream.toByteArray());
         }
         catch (IOException e) {
             callbackContext.error(e.getMessage());
@@ -959,7 +989,7 @@ public class HivePlugin extends TrinityPlugin {
         String readerObjectId = args.getString(0);
 
         try {
-            Reader reader = readerMap.get(readerObjectId);
+            InputStream reader = readerMap.get(readerObjectId);
             reader.close();
             readerMap.remove(readerObjectId);
             readerOffsetsMap.remove(readerObjectId);

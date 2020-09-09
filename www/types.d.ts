@@ -40,7 +40,7 @@ declare namespace HivePlugin {
     type Opaque<T, K> = T & { __opaque__: K };
     type Int = Opaque<number, 'Int'>;
 
-    export class JSONObject {
+    export interface JSONObject {
         [k:string]: JSONObject | JSONObject[] | string | number | boolean
     }
 
@@ -54,7 +54,7 @@ declare namespace HivePlugin {
             /**
              * Reads at most bytesCount bytes from the file.
              */
-            read(bytesCount: number): Promise<Blob>;
+            read(bytesCount: number): Promise<Uint8Array>;
 
             /**
              * Convenient way to read a whole file at once. This method may be used only
@@ -75,7 +75,7 @@ declare namespace HivePlugin {
             /**
              * Appends the given data to the current file buffer.
              */
-            write(data: Blob): Promise<void>;
+            write(data: Uint8Array): Promise<void>;
 
             /**
              * Flushes buffered data previously written with write() to the remote file.
@@ -415,7 +415,7 @@ declare namespace HivePlugin {
              * serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can
              * use Scripting.call() to execute one of those scripts and get results/data.
              */
-            setScript(functionName: string, executable: Executables.Executable, accessCondition?: Conditions.Condition): Promise<void>;
+            setScript(functionName: string, executable: Executables.Executable, accessCondition?: Conditions.Condition): Promise<boolean>;
 
             /**
              * Executes a previously registered server side script using Scripting.setScript(). Vault owner or external users are
@@ -520,11 +520,11 @@ declare namespace HivePlugin {
                 newAggregatedExecutable: (executables: Scripting.Executables.Executable[]) => Scripting.Executables.Executable;
 
                 Database: {
-                    newFindOneQuery: (collectionName: String, query?: JSONObject, options?: HivePlugin.Database.FindOptions) => Scripting.Executables.Database.FindOneQuery;
-                    newFindManyQuery: (collectionName: String, query?: JSONObject, options?: HivePlugin.Database.FindOptions) => Scripting.Executables.Database.FindManyQuery;
-                    newInsertQuery: (collectionName: String, query?: JSONObject, options?: HivePlugin.Database.InsertOptions) => Scripting.Executables.Database.InsertQuery;
-                    newUpdateQuery: (collectionName: String, query?: JSONObject, options?: HivePlugin.Database.UpdateOptions) => Scripting.Executables.Database.UpdateQuery;
-                    newDeleteQuery: (collectionName: String, query?: JSONObject, options?: HivePlugin.Database.DeleteOptions) => Scripting.Executables.Database.DeleteQuery;
+                    newFindOneQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.FindOptions) => Scripting.Executables.Database.FindOneQuery;
+                    newFindManyQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.FindOptions) => Scripting.Executables.Database.FindManyQuery;
+                    newInsertQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.InsertOptions) => Scripting.Executables.Database.InsertQuery;
+                    newUpdateQuery: (collectionName: string, filter: JSONObject, updateQuery: JSONObject, options?: HivePlugin.Database.UpdateOptions) => Scripting.Executables.Database.UpdateQuery;
+                    newDeleteQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.DeleteOptions) => Scripting.Executables.Database.DeleteQuery;
                 }
             }
         }
