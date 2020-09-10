@@ -134,6 +134,9 @@ class WriterImpl implements HivePlugin.Files.Writer {
     }
 
     static fromJson(json: HivePlugin.JSONObject): WriterImpl {
+        if (!json)
+            return null;
+
         let result = new WriterImpl();
         Object.assign(result, json);
         return result;
@@ -223,6 +226,9 @@ class ReaderImpl implements HivePlugin.Files.Reader {
     }
 
     static fromJson(json: HivePlugin.JSONObject): ReaderImpl {
+        if (!json)
+            return null;
+
         let result = new ReaderImpl();
         Object.assign(result, json);
         return result;
@@ -236,6 +242,9 @@ class FileInfoImpl implements HivePlugin.Files.FileInfo {
     type: HivePlugin.Files.FileType;
 
     static fromJson(json: HivePlugin.JSONObject): FileInfoImpl {
+        if (!json)
+            return null;
+
         let result = new FileInfoImpl();
         Object.assign(result, json);
         return result;

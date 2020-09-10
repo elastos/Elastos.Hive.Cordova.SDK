@@ -30,6 +30,7 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 import org.elastos.did.DIDDocument;
 import org.elastos.hive.AuthenticationHandler;
+import org.elastos.hive.Callback;
 import org.elastos.hive.Client;
 import org.elastos.hive.Vault;
 import org.elastos.hive.database.CountOptions;
@@ -38,6 +39,7 @@ import org.elastos.hive.database.DeleteOptions;
 import org.elastos.hive.database.FindOptions;
 import org.elastos.hive.database.InsertOptions;
 import org.elastos.hive.database.UpdateOptions;
+import org.elastos.hive.exception.HiveException;
 import org.elastos.hive.file.FileInfo;
 import org.elastos.hive.scripting.Condition;
 import org.elastos.hive.scripting.Executable;
@@ -50,6 +52,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -62,6 +65,7 @@ import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class HivePlugin extends TrinityPlugin {
@@ -621,10 +625,10 @@ public class HivePlugin extends TrinityPlugin {
         try {
             Vault vault = vaultMap.get(vaultObjectId);
             if (ensureValidVault(vault, callbackContext)) {
-                vault.getFiles().upload(srcPath, OutputStream.class).thenAccept(writer -> {
+                vault.getFiles().upload(srcPath, OutputStream.class).thenAccept(stream -> {
                     try {
-                        String objectId = "" + System.identityHashCode(writer);
-                        writerMap.put(objectId, writer);
+                        String objectId = "" + System.identityHashCode(stream);
+                        writerMap.put(objectId, stream);
                         JSONObject ret = new JSONObject();
                         ret.put("objectId", objectId);
                         callbackContext.success(ret);
@@ -817,8 +821,13 @@ public class HivePlugin extends TrinityPlugin {
             if (ensureValidVault(vault, callbackContext)) {
                 vault.getFiles().stat(srcPath).thenAccept(fileInfo -> {
                     try {
-                        JSONObject ret = HivePluginHelper.hiveFileInfoToPluginJson(fileInfo);
-                        callbackContext.success(ret);
+                        if (fileInfo != null) {
+                            JSONObject ret = HivePluginHelper.hiveFileInfoToPluginJson(fileInfo);
+                            callbackContext.success(ret);
+                        }
+                        else {
+                            callbackContext.success((String)null);
+                        }
                     } catch (Exception e) {
                         callbackContext.error(e.getMessage());
                     }
@@ -893,7 +902,7 @@ public class HivePlugin extends TrinityPlugin {
 
     private void writer_write(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String writerObjectId = args.getString(0);
-        String blob = args.getString(1); // TODO: check type coming from JS Blob
+        String base64encodedFromUint8Array = args.getString(1);
 
         // TODO: get threading / looper from carrier file transfer
 
@@ -901,8 +910,9 @@ public class HivePlugin extends TrinityPlugin {
             OutputStream writer = writerMap.get(writerObjectId);
 
             // Cordova encodes UInt8Array in TS to base64 encoded in java.
-            byte[] data = Base64.decode(blob, Base64.DEFAULT);
+            byte[] data = Base64.decode(base64encodedFromUint8Array, Base64.DEFAULT);
             writer.write(data);
+
             callbackContext.success();
         }
         catch (IOException e) {
