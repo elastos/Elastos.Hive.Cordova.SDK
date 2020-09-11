@@ -32,8 +32,9 @@
 * <br>
 * declare let hiveManager: HivePlugin.HiveManager;
 * ...
-* let userVault = await hiveManager.connectToVault(...);
-* userVault.getDatabase().insertOne(...);
+* let client = await hiveManager.getClient(...);
+* let myVault = client.getVault(myDid);
+* myVault.getDatabase().insertOne(...);
 */
 
 declare namespace HivePlugin {

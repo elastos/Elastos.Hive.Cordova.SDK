@@ -29,5 +29,6 @@ repositories {
 }
 
 dependencies {
-    implementation(name: 'ElastosHiveSDK-0.1.0', ext: 'jar')
+    //implementation(name: 'ElastosHiveSDK-0.1.0', ext: 'jar')
+    implementation 'org.cary:hive:1.0.0' // Temporary test release
 }
