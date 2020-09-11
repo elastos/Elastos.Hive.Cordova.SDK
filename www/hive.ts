@@ -506,6 +506,7 @@ class VaultImpl implements HivePlugin.Vault {
         this.scripting = new ScriptingImpl(this);
     }
 
+
     static fromJson(json: HivePlugin.JSONObject): VaultImpl {
         if (!json)
             return null;
