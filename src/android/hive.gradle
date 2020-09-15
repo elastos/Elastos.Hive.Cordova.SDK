@@ -25,10 +25,10 @@ repositories {
     flatDir{
         dirs 'src/main/libs'
     }
-    maven{ url 'https://dl.bintray.com/elastostest/Elastos.NET.Hive.Java.SDK'}
+    maven{ url 'https://dl.bintray.com/xidaokun/hive/'}
 }
 
 dependencies {
     //implementation(name: 'ElastosHiveSDK-0.1.0', ext: 'jar')
-    implementation 'org.cary:hive:1.0.0' // Temporary test release
+    implementation 'org.cary:hive:1.3.0' // Temporary test release
 }
