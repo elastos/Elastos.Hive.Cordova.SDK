@@ -30,15 +30,18 @@
 * <br><br>
 * Declaration:
 * <br>
+* ```typescript
 * declare let hiveManager: HivePlugin.HiveManager;
-* ...
 * let client = await hiveManager.getClient(...);
 * let myVault = client.getVault(myDid);
 * myVault.getDatabase().insertOne(...);
+* ```
 */
 
 declare namespace HivePlugin {
+    /** @hidden */
     type Opaque<T, K> = T & { __opaque__: K };
+    /** @hidden */
     type Int = Opaque<number, 'Int'>;
 
     export interface JSONObject {

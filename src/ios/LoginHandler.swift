@@ -23,6 +23,7 @@
 import Foundation
 import ElastosHiveSDK
 
+#if false
 class LoginHandler: Authenticator {
     private let handlerId: Int
     private let callbackId: String
@@ -41,7 +42,7 @@ class LoginHandler: Authenticator {
         result?.setKeepCallbackAs(true);
         self.commandDelegate.send(result, callbackId: self.callbackId);
     }
-    
+
     func requestAuthentication(_ requestURL: String) -> Bool {
         var ret = Dictionary<String, Any>()
         ret["url"] = requestURL
@@ -49,3 +50,4 @@ class LoginHandler: Authenticator {
         return true
     }
 }
+#endif

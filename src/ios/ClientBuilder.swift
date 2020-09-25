@@ -24,6 +24,7 @@ import Foundation
 import ElastosHiveSDK
 
 class ClientBuilder {
+#if false
     private static let NATIVE = 1
     private static let ONEDRIVE = 2
     private static let IPFS = 3
@@ -95,4 +96,5 @@ class ClientBuilder {
         }
         return client
     }
+#endif
 }

@@ -23,6 +23,7 @@
 import Foundation
 import ElastosHiveSDK
 
+#if false
 class ResultHandler<T>: HiveCallback<T> {
     private var handlerId: Int
     private var callbackId: String
@@ -144,3 +145,4 @@ class ResultHandler<T>: HiveCallback<T> {
         case ValueList
     }
 }
+#endif

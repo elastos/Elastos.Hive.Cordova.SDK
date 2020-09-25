@@ -25,6 +25,7 @@ import ElastosHiveSDK
 
 @objc(HivePlugin)
 class HivePlugin : TrinityPlugin {
+#if false
     private static let LOGIN : Int = 1
     private static let RESULT: Int = 2
 
@@ -289,4 +290,5 @@ class HivePlugin : TrinityPlugin {
         _ = keyValuesMap[kvId]!.deleteValues(forKey: key,
                 handler: ResultHandler<Void>(handlerId, .Void, self.resultCallbackId, self.commandDelegate))
     }
+#endif
 }
