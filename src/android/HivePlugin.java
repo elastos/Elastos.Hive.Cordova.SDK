@@ -494,7 +494,7 @@ public class HivePlugin extends TrinityPlugin {
             Vault vault = vaultMap.get(vaultObjectId);
             if (ensureValidVault(vault, callbackContext)) {
                 vault.getDatabase().findOne(collectionName, queryJsonNode, options).thenAccept(result -> {
-                    if (result == null)
+                    if (result == null || result.isNull())
                         callbackContext.success(); // No result
                     else
                         callbackContext.success(HivePluginHelper.jsonNodeToJsonObject(result));
