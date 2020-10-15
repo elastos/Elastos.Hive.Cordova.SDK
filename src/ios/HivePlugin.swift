@@ -23,24 +23,28 @@
 import Foundation
 import ElastosHiveSDK
 
+var clientAuthHandlerCompletionMap = Dictionary<String, Resolver<String>>()
+class VaultAuthenticator: TrinityPlugin, Authenticator {
+
+    var callbackId : String? = nil
+
+    func requestAuthentication(_ jwtToken: String) -> HivePromise<String> {
+        return HivePromise<String> { resolver in
+            clientAuthHandlerCompletionMap[callbackId!] = resolver
+            let result: CDVPluginResult = CDVPluginResult(status: CDVCommandStatus.ok, messageAs: jwtToken)
+            result.setKeepCallbackAs(true)
+            self.commandDelegate!.send(result, callbackId: self.callbackId)
+        }
+    }
+}
+
 @objc(HivePlugin)
 class HivePlugin : TrinityPlugin {
-#if false
-    private static let LOGIN : Int = 1
-    private static let RESULT: Int = 2
-
-    private var clientMap = Dictionary<Int, HiveClientHandle>()
-    private var ipfsMap   = Dictionary<Int, IPFSProtocol>()
-    private var filesMap  = Dictionary<Int, FilesProtocol>()
-    private var keyValuesMap = Dictionary<Int, KeyValuesProtocol>()
-
-    private var clientIndex: Int = 1
-    private var ipfsIndex: Int = 1
-    private var filesIndex: Int = 1
-    private var keyValuesIndex: Int = 1
-
-    internal var loginCallbackId:  String = ""
-    internal var resultCallbackId: String = ""
+    private var clientMap = Dictionary<String, HiveClientHandle>()
+    private var clientAuthHandlersMap   = Dictionary<String, Authenticator>()
+    private var clientAuthHandlerCallbackMap = Dictionary<String, String>()
+    private var vaultMap  = Dictionary<String, Vault>()
+    private var readerMap  = Dictionary<String, OutputStream>()
 
     @objc func success(_ command: CDVInvokedUrlCommand, retAsString: String) {
         let result = CDVPluginResult(status: CDVCommandStatus_OK,
@@ -56,6 +60,17 @@ class HivePlugin : TrinityPlugin {
         self.commandDelegate.send(result, callbackId: command.callbackId)
     }
 
+    @objc func success(_ command: CDVInvokedUrlCommand, retAsPluginResult: CDVPluginResult) {
+
+        self.commandDelegate.send(retAsPluginResult, callbackId: command.callbackId)
+    }
+
+    @objc func success(_ command: CDVInvokedUrlCommand, retAsArray: NSArray) {
+        let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: (retAsArray as! [Any]))
+
+        self.commandDelegate.send(result, callbackId: command.callbackId)
+    }
+
     @objc func error(_ command: CDVInvokedUrlCommand, retAsString: String) {
         let result = CDVPluginResult(status: CDVCommandStatus_ERROR,
                                      messageAs: retAsString);
@@ -63,232 +78,429 @@ class HivePlugin : TrinityPlugin {
         self.commandDelegate.send(result, callbackId: command.callbackId)
     }
 
-    @objc func getVersion(_ command: CDVInvokedUrlCommand) {
-        self.success(command, retAsString: "ElastosHiveSDK-v1.0");
+    @objc func geDataDir(_ command: CDVInvokedUrlCommand) -> String {
+        self.success(command, retAsString: getDataPath())
+        return getDataPath()
     }
 
-    @objc func setListener(_ command: CDVInvokedUrlCommand) {
-        let type = command.arguments[0] as? Int ?? 0
+    @objc func getDIDResolverUrl(_ command: CDVInvokedUrlCommand) -> String {
+        self.success(command, retAsString: PreferenceManager.getShareInstance().getDIDResolver())
+        return PreferenceManager.getShareInstance().getDIDResolver()
+    }
 
-        switch (type) {
-        case HivePlugin.LOGIN:
-            loginCallbackId = command.callbackId
+    @objc func getClient(_ command: CDVInvokedUrlCommand) {
+        let optionsJson = command.arguments[0] as? String ?? ""
+        guard optionsJson != "" else {
+            self.error(command, retAsString: "Client creation options must be provided")
+            return
+        }
+        do {
+            // final atomic reference as a way to pass our non final client Id to the auth handler.
+            var clientIdReference: [String] = [String]()
+            let options = HiveClientOptions()
+            _ = options.setLocalDataPath(geDataDir(command))
+            options.setDidResolverUrl(getDIDResolverUrl(command))
 
-        case HivePlugin.RESULT:
-            resultCallbackId = command.callbackId
+            // Set the authentication DID document
+            let data = optionsJson.data(using: String.Encoding.utf8)
+            let dict = try JSONSerialization.jsonObject(with: data!,
+                                                         options: .mutableContainers) as? [String : Any]
+            let authDIDDocumentJson = dict!["authenticationDIDDocument"]
+            let authenticationDIDDocument = try DIDDocument.convertToDIDDocument(fromJson: authDIDDocumentJson as! String)
+            _ = options.setAuthenticationDIDDocument(authenticationDIDDocument)
 
-        default:
-            self.error(command, retAsString: "Expected one non-empty let argument.")
+            let client = try HiveClientHandle.createInstance(withOptions: options)
+            let clientId = "\(client.hashValue)"
+            clientIdReference.append(clientId)
+            clientMap[clientId] = client
+            // Create a authentication handler
+            // TODO: check
+            let authHandler = VaultAuthenticator()
+            authHandler.callbackId = clientId
+            _ = options.setAuthenticator(authHandler)
+
+            // Save the handler for later use
+            // TODO: check
+            clientAuthHandlersMap[clientId] = authHandler
+            let ret = ["objectId": clientId]
+            self.success(command, retAsDict: ret as NSDictionary)
+        } catch {
+            self.error(command, retAsString: error.localizedDescription)
         }
 
-        // Don't return any result now
-        let result = CDVPluginResult(status: CDVCommandStatus_NO_RESULT);
-        result?.setKeepCallbackAs(true);
-        self.commandDelegate.send(result, callbackId: command.callbackId)
     }
 
-    @objc func createClient(_ command: CDVInvokedUrlCommand) {
-        let dataDir = command.arguments[0] as? String ?? ""
-        let options = command.arguments[1] as? String ?? ""
-        let handlerId = command.arguments[2] as! Int
+    @objc func client_setVaultAddress(_ command: CDVInvokedUrlCommand) {
+        let ownerDid = command.arguments[0] as? String ?? ""
+        let vaultAddress = command.arguments[1] as? String ?? ""
+        HiveClientHandle.setVaultProvider(ownerDid, vaultAddress)
+        self.success(command, retAsString: "success")
+    }
 
-        let client: HiveClientHandle? = ClientBuilder.createClient(dataDir, options, handlerId, loginCallbackId, self)
-        guard client != nil else {
-            self.error(command, retAsString: "Create client error")
+    @objc func client_getVaultAddress(_ command: CDVInvokedUrlCommand) {
+        let ownerDid = command.arguments[0] as? String ?? ""
+        HiveClientHandle.getVaultProvider(ownerDid).done { address in
+            self.success(command, retAsString: "success")
+        }.catch { error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
+    }
+
+    @objc func client_setAuthHandlerChallengeCallback(_ command: CDVInvokedUrlCommand) {
+        let clientObjectId = command.arguments[0] as? String ?? ""
+        // Save current callback content to be able to call it back when an authentication is requests by the hive SDK
+        clientAuthHandlerCallbackMap[clientObjectId] = command.callbackId
+        let result: CDVPluginResult = CDVPluginResult(status: CDVCommandStatus_NO_RESULT)
+        result.setKeepCallbackAs(true)
+        self.success(command, retAsPluginResult: result)
+    }
+
+    @objc func client_sendAuthHandlerChallengeResponse(_ command: CDVInvokedUrlCommand) {
+        let clientObjectId = command.arguments[0] as? String ?? ""
+        let challengeResponseJwt = command.arguments[1] as? String ?? ""
+        guard challengeResponseJwt != "" else {
+            self.error(command, retAsString: "Empty challenge response given!")
             return
         }
 
-        let clientId = clientIndex
-        clientIndex += 1
-        clientMap[clientId] = client
-
-        let ret: NSDictionary = [ "clientId": clientId ]
-        self.success(command, retAsDict: ret);
+        // Retrieve the auth response callback and send the authentication JWT back to the hive SDK
+        let authResponseFuture: Resolver<String> = clientAuthHandlerCompletionMap[clientObjectId]!
+        authResponseFuture.fulfill(challengeResponseJwt)
     }
 
-    @objc func isConnected(_ command: CDVInvokedUrlCommand) {
-        let clientId = command.arguments[0] as? Int ?? 0
-        let client = clientMap[clientId]!
-
-        let ret = ["isConnect": client.isConnected()]
-        self.success(command, retAsDict: ret as NSDictionary)
+    @objc func client_getVault(_ command: CDVInvokedUrlCommand) {
+        let clientObjectId = command.arguments[0] as? String ?? ""
+        let vaultOwnerDid = command.arguments[1] as? String ?? ""
+        let client = clientMap[clientObjectId]
+        _ = client?.getVault(vaultOwnerDid).done{ [self] vault in
+            let vaultId = "\(vault.hashValue)"
+            vaultMap[vaultId] = vault
+            let ret = ["objectId": vaultId,
+                       "vaultProviderAddress": vault.providerAddress,
+                       "vaultOwnerDid": vaultOwnerDid]
+            self.success(command, retAsDict: ret as NSDictionary)
+        }
     }
 
-    @objc func connect(_ command: CDVInvokedUrlCommand) {
-        let clientId = command.arguments[0] as? Int ?? 0
-        let client = clientMap[clientId]!
+    @objc func database_createCollection(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let collectionName = command.arguments[1] as? String ?? ""
+        let optionsJson = command.arguments[2] as? NSDictionary ?? nil
+        let options = CreateCollectionOptions()
 
-        DispatchQueue(label: "org.elastos.hive.queue", qos: .background, target: nil).async {
-            do {
-                try client.connect()
+        guard optionsJson != nil else {
+            //TODO: // Nothing to do, no option handle for now.
+            return
+        }
 
-                let ret = ["status": "success"]
-                self.success(command, retAsDict: ret as NSDictionary)
-            } catch let error {
-                self.error(command, retAsString: error.localizedDescription)
+        let vault = vaultMap[vaultObjectId]
+        guard vault != nil else {
+            return
+        }
+
+        vault?.database.createCollection(collectionName, options: options).done{ success in
+            let ret = ["created": success]
+            self.success(command, retAsDict: ret as NSDictionary)
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
+    }
+
+    @objc func database_deleteCollection(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let collectionName = command.arguments[1] as? String ?? ""
+        let vault = vaultMap[vaultObjectId]
+        guard vault != nil else {
+            return
+        }
+
+        vault?.database.deleteCollection(collectionName).done{ success in
+            let ret = ["deleted": success]
+            self.success(command, retAsDict: ret as NSDictionary)
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
+    }
+
+    @objc func database_insertOne(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let collectionName = command.arguments[1] as? String ?? ""
+        let emptyDict: Dictionary<String, Any> = [: ]
+        let documentJson = command.arguments[2] as? Dictionary<String, Any> ?? emptyDict
+        let optionsJson = command.arguments[3] as? Dictionary<String, Any> ?? emptyDict
+        let options = InsertOptions()
+        let vault = vaultMap[vaultObjectId]
+//        guard optionsJson != emptyDict else {
+//            //TODO: // Nothing to do, no option handle for now.
+//            return
+//        }
+//        let documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentJson)
+        vault?.database.insertOne(collectionName, documentJson, options: options).done{ result in
+            let ret = ["insertedIds": result.insertedIds()]
+            self.success(command, retAsDict: ret as NSDictionary)
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
+    }
+
+    @objc func database_countDocuments(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let collectionName = command.arguments[1] as? String ?? ""
+        let emptyDict: Dictionary<String, Any> = [: ]
+        let queryJson = command.arguments[2] as? Dictionary<String, Any> ?? emptyDict
+        let optionsJson = command.arguments[3] as? Dictionary<String, Any> ?? emptyDict
+        let options = CountOptions()
+        let vault = vaultMap[vaultObjectId]
+//        guard optionsJson != emptyDict else {
+//            //TODO: // Nothing to do, no option handle for now.
+//            return
+//        }
+//        let documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentJson)
+        vault?.database.countDocuments(collectionName, queryJson, options: options).done{ count in
+            let ret = ["count": count]
+            self.success(command, retAsDict: ret as NSDictionary)
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
+    }
+
+    @objc func database_findOne(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let collectionName = command.arguments[1] as? String ?? ""
+        let emptyDict: Dictionary<String, Any> = [: ]
+        let queryJson = command.arguments[2] as? Dictionary<String, Any> ?? emptyDict
+        let optionsJson = command.arguments[3] as? Dictionary<String, Any> ?? emptyDict
+        let options = HivePluginHelper.jsonFindOptionsToNative(optionsJson)
+        let vault = vaultMap[vaultObjectId]
+//        guard optionsJson != emptyDict else {
+//            //TODO: // Nothing to do, no option handle for now.
+//            return
+//        }
+//        let documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentJson)
+        vault?.database.findOne(collectionName, queryJson, options: options).done{ result in
+            self.success(command, retAsDict: result as NSDictionary)
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
+    }
+
+    @objc func database_findMany(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let collectionName = command.arguments[1] as? String ?? ""
+        let emptyDict: Dictionary<String, Any> = [: ]
+        let queryJson = command.arguments[2] as? Dictionary<String, Any> ?? emptyDict
+        let optionsJson = command.arguments[3] as? Dictionary<String, Any> ?? emptyDict
+        let options = HivePluginHelper.jsonFindOptionsToNative(optionsJson)
+        let vault = vaultMap[vaultObjectId]
+//        guard optionsJson != emptyDict else {
+//            //TODO: // Nothing to do, no option handle for now.
+//            return
+//        }
+//        let documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentJson)
+        vault?.database.findMany(collectionName, queryJson, options: options).done{ result in
+            self.success(command, retAsArray: result as NSArray)
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
+    }
+
+    @objc func database_updateOne(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let collectionName = command.arguments[1] as? String ?? ""
+        let emptyDict: Dictionary<String, Any> = [: ]
+        let filterJson = command.arguments[2] as? Dictionary<String, Any> ?? emptyDict
+        let updatequeryJson = command.arguments[3] as? Dictionary<String, Any> ?? emptyDict
+        let optionsJson = command.arguments[4] as? Dictionary<String, Any> ?? emptyDict
+
+        let options = HivePluginHelper.jsonUpdateOptionsToNative(optionsJson)
+        let vault = vaultMap[vaultObjectId]
+//        guard optionsJson != emptyDict else {
+//            //TODO: // Nothing to do, no option handle for now.
+//            return
+//        }
+//        let documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentJson)
+        vault?.database.updateOne(collectionName, filterJson, updatequeryJson, options: options).done{ result in
+            let ret = ["matchedCount": result.matchedCount(),
+                       "modifiedCount": result.modifiedCount(),
+                       "upsertedCount": result.upsertedCount(),
+                       "upsertedId": result.upsertedId()]
+            self.success(command, retAsDict: ret as NSDictionary)
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
+    }
+
+    @objc func database_updateMany(_ command: CDVInvokedUrlCommand) {
+        // For now, update one and update many seem to be totally identical on the client side.
+        database_updateOne(command)
+    }
+
+    @objc func database_deleteOne(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let collectionName = command.arguments[1] as? String ?? ""
+        let emptyDict: Dictionary<String, Any> = [: ]
+        let filterJson = command.arguments[2] as? Dictionary<String, Any> ?? emptyDict
+        let optionsJson = command.arguments[3] as? Dictionary<String, Any> ?? emptyDict
+
+        let options = HivePluginHelper.jsonDeleteOptionsToNative(optionsJson)
+        let vault = vaultMap[vaultObjectId]
+//        guard optionsJson != emptyDict else {
+//            //TODO: // Nothing to do, no option handle for now.
+//            return
+//        }
+//        let documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentJson)
+        vault?.database.deleteOne(collectionName, filterJson, options: options).done{ result in
+            let ret = ["deletedCount": result.deletedCount()]
+            self.success(command, retAsDict: ret as NSDictionary)
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
+    }
+
+    @objc func database_deleteMany(_ command: CDVInvokedUrlCommand) {
+        // For now, delete one and delete many seem to be totally identical on the client side.
+        database_deleteOne(command)
+    }
+
+    @objc func files_upload(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let srcPath = command.arguments[1] as? String ?? ""
+        let dstPath = command.arguments[2] as? String ?? ""
+        let vault = vaultMap[vaultObjectId]
+        // TODO: CHECK
+        vault?.files.upload(dstPath, asRemoteFile: srcPath).done{ result in
+            self.success(command, retAsDict: ["success": result])
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
+    }
+
+    @objc func files_download(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let srcPath = command.arguments[1] as? String ?? ""
+        let vault = vaultMap[vaultObjectId]
+        // TODO: CHECK
+        vault?.files.download(srcPath).done{ [self] outstr in
+            let objectId = "\(outstr.hashValue)"
+            readerMap[objectId] = outstr
+            self.success(command, retAsDict: ["objectId": objectId])
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
+    }
+
+    @objc func files_delete(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let srcPath = command.arguments[1] as? String ?? ""
+        let vault = vaultMap[vaultObjectId]
+        vault?.files.delete(srcPath).done{ [self] success in
+            self.success(command, retAsDict: ["success": success])
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
+    }
+
+    @objc func files_move(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let srcPath = command.arguments[1] as? String ?? ""
+        let dstPath = command.arguments[2] as? String ?? ""
+
+        let vault = vaultMap[vaultObjectId]
+        vault?.files.move(srcPath, dstPath).done{ [self] success in
+            self.success(command, retAsDict: ["success": success])
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
+    }
+
+    @objc func files_copy(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let srcPath = command.arguments[1] as? String ?? ""
+        let dstPath = command.arguments[2] as? String ?? ""
+
+        let vault = vaultMap[vaultObjectId]
+        vault?.files.copy(srcPath, dstPath).done{ [self] success in
+            self.success(command, retAsDict: ["success": success])
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
+    }
+
+    @objc func files_hash(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let srcPath = command.arguments[1] as? String ?? ""
+
+        let vault = vaultMap[vaultObjectId]
+        vault?.files.hash(srcPath).done{ [self] hash in
+            self.success(command, retAsString: hash)
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
+    }
+
+    @objc func files_list(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let srcPath = command.arguments[1] as? String ?? ""
+
+        let vault = vaultMap[vaultObjectId]
+        vault?.files.list(srcPath).done{ [self] fileInfos in
+            var jsonArray: Array<Dictionary<String, Any>> = []
+            for info in fileInfos {
+                jsonArray.append(HivePluginHelper.hiveFileInfoToPluginJson(info))
             }
+            self.success(command, retAsArray: jsonArray as NSArray)
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
         }
     }
 
-    @objc func disConnect(_ command: CDVInvokedUrlCommand) {
-        let clientId = command.arguments[0] as? Int ?? 0
-        let client = clientMap[clientId]!
+    @objc func files_stat(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let srcPath = command.arguments[1] as? String ?? ""
 
-        DispatchQueue(label: "org.elastos.hive.queue", qos: .background, target: nil).async {
-            client.disconnect()
-
-            let ret = ["status": "success"]
-            self.success(command, retAsDict: ret as NSDictionary);
+        let vault = vaultMap[vaultObjectId]
+        vault?.files.stat(srcPath).done{ [self] fileInfo in
+            var jsonArray: Array<Dictionary<String, Any>> = []
+            jsonArray.append(HivePluginHelper.hiveFileInfoToPluginJson(fileInfo))
+            self.success(command, retAsArray: jsonArray as NSArray)
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
         }
     }
 
-    @objc func getIPFS(_ command: CDVInvokedUrlCommand) {
-        let clientId = command.arguments[0] as? Int ?? 0
-        let client = clientMap[clientId]!
-        let ipfs = client.asIPFS()
+    @objc func scripting_setScript(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let functionName = command.arguments[1] as? String ?? ""
+        let emptyDict: Dictionary<String, Any> = [: ]
 
-        let ipfsId = ipfsIndex
-        ipfsIndex += 1
-        ipfsMap[ipfsId] = ipfs
+        let executionSequenceJson = command.arguments[2] as? Dictionary<String, Any> ?? emptyDict
+        let accessConditionJson = command.arguments[3] as? Dictionary<String, Any> ?? emptyDict
+        var data = try? JSONSerialization.data(withJSONObject: accessConditionJson, options: [])
+        let accessConditionJsonstr = String(data: data!, encoding: String.Encoding.utf8)
+        let condition = RawCondition(accessConditionJsonstr!)
+        data = try? JSONSerialization.data(withJSONObject: executionSequenceJson, options: [])
+        let executionSequenceJsonstr = String(data: data!, encoding: String.Encoding.utf8)
+        let executable = RawExecutable(executionSequenceJsonstr!)
 
-        let ret: Dictionary<String, Any> = ["ipfsId": ipfsId]
-        self.success(command, retAsDict: ret as NSDictionary)
+        let vault = vaultMap[vaultObjectId]
+        vault?.scripting.registerScript(functionName, condition, executable).done{ [self] success in
+            self.success(command, retAsDict: ["success": success])
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
     }
 
-    @objc func getFiles(_ command: CDVInvokedUrlCommand) {
-        let clientId = command.arguments[0] as? Int ?? 0
-        let client = clientMap[clientId]!
-        let files = client.asFiles()
+    @objc func scripting_call(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let functionName = command.arguments[1] as? String ?? ""
+        let emptyDict: Dictionary<String, Any> = [: ]
+        let params = command.arguments[2] as? Dictionary<String, Any> ?? emptyDict
 
-        let filesId = filesIndex
-        filesIndex += 1
-        filesMap[filesId] = files
-
-        let ret: Dictionary<String, Any> = ["filesId": filesId]
-        self.success(command, retAsDict: ret as NSDictionary)
+        let vault = vaultMap[vaultObjectId]
+        vault?.scripting.call(functionName, params).done{ [self] success in
+            self.success(command, retAsDict: ["success": success])
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
+        }
     }
-
-    @objc func getKeyValues(_ command: CDVInvokedUrlCommand) {
-        let clientId = command.arguments[0] as? Int ?? 0
-        let client = clientMap[clientId]!
-        let keyValues = client.asKeyValues()
-
-        let keyValuesId = keyValuesIndex
-        keyValuesIndex += 1
-        keyValuesMap[keyValuesId] = keyValues
-
-        let ret: Dictionary<String, Any> = ["keyValuesId": keyValuesId]
-        self.success(command, retAsDict: ret as NSDictionary)
-    }
-
-    @objc func putStringByFiles(_ command: CDVInvokedUrlCommand) {
-        let filesId = command.arguments[0] as? Int ?? 0
-        let remoteFile = command.arguments[1] as? String ?? ""
-        let data = command.arguments[2] as? String ?? ""
-        let handlerId = command.arguments[3] as? Int ?? 0
-
-        _ = filesMap[filesId]!.putString(data, asRemoteFile: remoteFile,
-                handler: ResultHandler<Void>(handlerId, .Void, self.resultCallbackId, self.commandDelegate))
-    }
-
-    @objc func getStringByFiles(_ command: CDVInvokedUrlCommand) {
-        let filesId = command.arguments[0] as? Int ?? 0
-        let remoteFile = command.arguments[1] as? String ?? ""
-        let handlerId = command.arguments[2] as? Int ?? 0
-
-        _ = filesMap[filesId]!.getString(fromRemoteFile: remoteFile,
-                handler: ResultHandler<String>(handlerId, .Content, self.resultCallbackId, self.commandDelegate))
-    }
-
-    @objc func getSizeByFiles(_ command: CDVInvokedUrlCommand) {
-        let filesId = command.arguments[0] as? Int ?? 0
-        let remoteFile = command.arguments[1] as? String ?? ""
-        let handlerId = command.arguments[2] as? Int ?? 0
-
-        _ = filesMap[filesId]!.sizeofRemoteFile(remoteFile,
-                handler: ResultHandler<UInt64>(handlerId, .Length, self.resultCallbackId, self.commandDelegate))
-    }
-
-    @objc func deleteFileByFiles(_ command: CDVInvokedUrlCommand) {
-        let filesId = command.arguments[0] as? Int ?? 0
-        let remoteFile = command.arguments[1] as? String ?? ""
-        let handlerId = command.arguments[2] as? Int ?? 0
-
-        _ = filesMap[filesId]!.deleteRemoteFile(remoteFile,
-                handler: ResultHandler<Void>(handlerId, .Void, self.resultCallbackId, self.commandDelegate))
-    }
-
-    @objc func listFilesByFiles(_ command: CDVInvokedUrlCommand) {
-        let filesId = command.arguments[0] as? Int ?? 0
-        let handlerId = command.arguments[1] as? Int ?? 0
-
-        _ = filesMap[filesId]!.listRemoteFiles(
-                handler: ResultHandler<Array<String>>(handlerId, .FileList, self.resultCallbackId, self.commandDelegate))
-    }
-
-    @objc func putStringByIPFS(_ command: CDVInvokedUrlCommand) {
-        let ipfsId = command.arguments[0] as? Int ?? 0
-        let data = command.arguments[1] as? String ?? ""
-        let handlerId = command.arguments[2] as? Int ?? 0
-
-        _ = ipfsMap[ipfsId]!.putString(data,
-                handler: ResultHandler<Hash>(handlerId, .CID, self.resultCallbackId, self.commandDelegate))
-    }
-
-    @objc func getStringByIPFS(_ command: CDVInvokedUrlCommand) {
-        let ipfsId = command.arguments[0] as? Int ?? 0
-        let cid = command.arguments[1] as? Hash ?? ""
-        let handlerId = command.arguments[2] as? Int ?? 0
-
-        _ = ipfsMap[ipfsId]!.getData(fromRemoteFile: cid,
-                handler: ResultHandler<Data>(handlerId, .Data, self.resultCallbackId, self.commandDelegate))
-    }
-
-    @objc func getSizeByIPFS(_ command: CDVInvokedUrlCommand) {
-        let ipfsId = command.arguments[0] as? Int ?? 0
-        let cid = command.arguments[1] as? Hash ?? ""
-        let handlerId = command.arguments[2] as? Int ?? 0
-
-        _ = ipfsMap[ipfsId]!.sizeofRemoteFile(cid,
-                handler: ResultHandler<UInt64>(handlerId, .Length, self.resultCallbackId, self.commandDelegate))
-    }
-
-    @objc func putValueByKV(_ command: CDVInvokedUrlCommand) {
-        let kvId = command.arguments[0] as? Int ?? 0
-        let key  = command.arguments[1] as? String ?? ""
-        let val  = command.arguments[2] as? String ?? ""
-        let handlerId = command.arguments[3] as? Int ?? 0
-
-        _ = keyValuesMap[kvId]!.putValue(val, forKey: key,
-                handler: ResultHandler<Void>(handlerId, .Void, self.resultCallbackId, self.commandDelegate))
-    }
-
-    @objc func setValueByKV(_ command: CDVInvokedUrlCommand) {
-        let kvId = command.arguments[0] as? Int ?? 0
-        let key  = command.arguments[1] as? String ?? ""
-        let val  = command.arguments[2] as? String ?? ""
-        let handlerId = command.arguments[3] as? Int ?? 0
-
-        _ = keyValuesMap[kvId]!.setValue(val, forKey: key,
-                handler: ResultHandler<Void>(handlerId, .Void, self.resultCallbackId, self.commandDelegate))
-    }
-
-    @objc func getValuesByKV(_ command: CDVInvokedUrlCommand) {
-        let kvId = command.arguments[0] as? Int ?? 0
-        let key  = command.arguments[1] as? String ?? ""
-        let handlerId = command.arguments[2] as? Int ?? 0
-
-        _ = keyValuesMap[kvId]!.values(ofKey: key,
-                handler: ResultHandler<Array<Data>>(handlerId, .ValueList, self.resultCallbackId, self.commandDelegate))
-    }
-
-    @objc func deleteKeyByKV(_ command: CDVInvokedUrlCommand) {
-        let kvId = command.arguments[0] as? Int ?? 0
-        let key  = command.arguments[1] as? String ?? ""
-        let handlerId = command.arguments[2] as? Int ?? 0
-
-        _ = keyValuesMap[kvId]!.deleteValues(forKey: key,
-                handler: ResultHandler<Void>(handlerId, .Void, self.resultCallbackId, self.commandDelegate))
-    }
-#endif
 }
