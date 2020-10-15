@@ -495,7 +495,7 @@ public class HivePlugin extends TrinityPlugin {
             if (ensureValidVault(vault, callbackContext)) {
                 vault.getDatabase().findOne(collectionName, queryJsonNode, options).thenAccept(result -> {
                     if (result == null || result.isNull())
-                        callbackContext.success(); // No result
+                        callbackContext.success((String)null); // No result
                     else
                         callbackContext.success(HivePluginHelper.jsonNodeToJsonObject(result));
                 }).exceptionally(e -> {
