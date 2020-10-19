@@ -535,11 +535,11 @@ declare namespace HivePlugin {
                 newAggregatedExecutable: (executables: Scripting.Executables.Executable[]) => Scripting.Executables.Executable;
 
                 Database: {
-                    newFindOneQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.FindOptions) => Scripting.Executables.Database.FindOneQuery;
-                    newFindManyQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.FindOptions) => Scripting.Executables.Database.FindManyQuery;
-                    newInsertQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.InsertOptions) => Scripting.Executables.Database.InsertQuery;
-                    newUpdateQuery: (collectionName: string, filter: JSONObject, updateQuery: JSONObject, options?: HivePlugin.Database.UpdateOptions) => Scripting.Executables.Database.UpdateQuery;
-                    newDeleteQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.DeleteOptions) => Scripting.Executables.Database.DeleteQuery;
+                    newFindOneQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean) => Scripting.Executables.Database.FindOneQuery;
+                    newFindManyQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean) => Scripting.Executables.Database.FindManyQuery;
+                    newInsertQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.InsertOptions, output?: boolean) => Scripting.Executables.Database.InsertQuery;
+                    newUpdateQuery: (collectionName: string, filter: JSONObject, updateQuery: JSONObject, options?: HivePlugin.Database.UpdateOptions, output?: boolean) => Scripting.Executables.Database.UpdateQuery;
+                    newDeleteQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.DeleteOptions, output?: boolean) => Scripting.Executables.Database.DeleteQuery;
                 }
             }
         }

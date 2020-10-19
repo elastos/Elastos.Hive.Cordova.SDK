@@ -390,7 +390,7 @@ class AggregatedExecutableImpl extends ExecutableImpl implements HivePlugin.Scri
 }
 
 class FindOneQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Executables.Database.FindOneQuery {
-    constructor(private collectionName: string, private query?: HivePlugin.JSONObject, private options?: HivePlugin.Database.FindOptions) {
+    constructor(private collectionName: string, private query?: HivePlugin.JSONObject, private options?: HivePlugin.Database.FindOptions, private output: boolean = false) {
         super("find");
     }
 
@@ -398,6 +398,7 @@ class FindOneQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Ex
         return {
             type: this.type,
             name: this.type,
+            output: this.output,
             body: {
                 collection: this.collectionName,
                 filter: this.query,
@@ -411,7 +412,7 @@ class FindOneQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Ex
 class FindManyQueryImpl extends FindOneQueryImpl {}
 
 class InsertQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Executables.Database.InsertQuery {
-    constructor(private collectionName: string, private document: HivePlugin.JSONObject, private options: HivePlugin.Database.InsertOptions) {
+    constructor(private collectionName: string, private document: HivePlugin.JSONObject, private options: HivePlugin.Database.InsertOptions, private output: boolean = false) {
         super("insert");
     }
 
@@ -419,6 +420,7 @@ class InsertQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Exe
         return {
             type: this.type,
             name: this.type,
+            output: this.output,
             body: {
                 collection: this.collectionName,
                 document: this.document,
@@ -429,7 +431,7 @@ class InsertQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Exe
 }
 
 class UpdateQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Executables.Database.UpdateQuery {
-    constructor(private collectionName: string, private filter: HivePlugin.JSONObject, private updateQuery: HivePlugin.JSONObject, private options: HivePlugin.Database.UpdateOptions) {
+    constructor(private collectionName: string, private filter: HivePlugin.JSONObject, private updateQuery: HivePlugin.JSONObject, private options: HivePlugin.Database.UpdateOptions, private output: boolean = false) {
         super("update");
     }
 
@@ -437,6 +439,7 @@ class UpdateQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Exe
         return {
             type: this.type,
             name: this.type,
+            output: this.output,
             body: {
                 collection: this.collectionName,
                 filter: this.filter,
@@ -448,7 +451,7 @@ class UpdateQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Exe
 }
 
 class DeleteQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Executables.Database.DeleteQuery {
-    constructor(private collectionName: string, private query: HivePlugin.JSONObject, private options: HivePlugin.Database.DeleteOptions) {
+    constructor(private collectionName: string, private query: HivePlugin.JSONObject, private options: HivePlugin.Database.DeleteOptions, private output: boolean = false) {
         super("delete");
     }
 
@@ -456,6 +459,7 @@ class DeleteQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Exe
         return {
             type: this.type,
             name: this.type,
+            output: this.output,
             body: {
                 collection: this.collectionName,
                 filter: this.query,
@@ -571,11 +575,11 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
             newAggregatedExecutable: (executables: HivePlugin.Scripting.Executables.Executable[]) => HivePlugin.Scripting.Executables.AggregatedExecutable;
 
             Database: {
-                newFindOneQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions) => HivePlugin.Scripting.Executables.Database.FindOneQuery;
-                newFindManyQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions) => HivePlugin.Scripting.Executables.Database.FindManyQuery;
-                newInsertQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions) => HivePlugin.Scripting.Executables.Database.InsertQuery;
-                newUpdateQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions) => HivePlugin.Scripting.Executables.Database.UpdateQuery;
-                newDeleteQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions) => HivePlugin.Scripting.Executables.Database.DeleteQuery;
+                newFindOneQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean) => HivePlugin.Scripting.Executables.Database.FindOneQuery;
+                newFindManyQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean) => HivePlugin.Scripting.Executables.Database.FindManyQuery;
+                newInsertQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions, output?: boolean) => HivePlugin.Scripting.Executables.Database.InsertQuery;
+                newUpdateQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions, output?: boolean) => HivePlugin.Scripting.Executables.Database.UpdateQuery;
+                newDeleteQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions, output?: boolean) => HivePlugin.Scripting.Executables.Database.DeleteQuery;
             }
         };
     };
@@ -616,24 +620,24 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
                 },
 
                 Database: {
-                    newFindOneQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions): HivePlugin.Scripting.Executables.Database.FindOneQuery {
-                        return new FindOneQueryImpl(collectionName, query, options);
+                    newFindOneQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean): HivePlugin.Scripting.Executables.Database.FindOneQuery {
+                        return new FindOneQueryImpl(collectionName, query, options, output);
                     },
 
-                    newFindManyQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions): HivePlugin.Scripting.Executables.Database.FindOneQuery {
-                        return new FindManyQueryImpl(collectionName, query, options);
+                    newFindManyQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean): HivePlugin.Scripting.Executables.Database.FindOneQuery {
+                        return new FindManyQueryImpl(collectionName, query, options, output);
                     },
 
-                    newInsertQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions): HivePlugin.Scripting.Executables.Database.InsertQuery {
-                        return new InsertQueryImpl(collectionName, query, options);
+                    newInsertQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions, output?: boolean): HivePlugin.Scripting.Executables.Database.InsertQuery {
+                        return new InsertQueryImpl(collectionName, query, options, output);
                     },
 
-                    newUpdateQuery: function(collectionName: string, filter: HivePlugin.JSONObject, updateQuery: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions): HivePlugin.Scripting.Executables.Database.UpdateQuery {
-                        return new UpdateQueryImpl(collectionName, filter, updateQuery, options);
+                    newUpdateQuery: function(collectionName: string, filter: HivePlugin.JSONObject, updateQuery: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions, output?: boolean): HivePlugin.Scripting.Executables.Database.UpdateQuery {
+                        return new UpdateQueryImpl(collectionName, filter, updateQuery, options, output);
                     },
 
-                    newDeleteQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions): HivePlugin.Scripting.Executables.Database.DeleteQuery {
-                        return new DeleteQueryImpl(collectionName, query, options);
+                    newDeleteQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions, output?: boolean): HivePlugin.Scripting.Executables.Database.DeleteQuery {
+                        return new DeleteQueryImpl(collectionName, query, options, output);
                     }
                 }
             }
