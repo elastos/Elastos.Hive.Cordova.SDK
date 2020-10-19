@@ -562,6 +562,7 @@ public class HivePlugin extends TrinityPlugin {
                     completableResult = vault.getDatabase().updateOne(collectionName, filterJsonNode, updateQueryJsonNode, options);
                 }
                 else {
+                    // UPDATE MANY
                     completableResult = vault.getDatabase().updateMany(collectionName, filterJsonNode, updateQueryJsonNode, options);
                 }
 
