@@ -36,9 +36,11 @@ import org.elastos.hive.Vault;
 import org.elastos.hive.database.CountOptions;
 import org.elastos.hive.database.CreateCollectionOptions;
 import org.elastos.hive.database.DeleteOptions;
+import org.elastos.hive.database.DeleteResult;
 import org.elastos.hive.database.FindOptions;
 import org.elastos.hive.database.InsertOptions;
 import org.elastos.hive.database.UpdateOptions;
+import org.elastos.hive.database.UpdateResult;
 import org.elastos.hive.exception.HiveException;
 import org.elastos.hive.file.FileInfo;
 import org.elastos.hive.scripting.Condition;
@@ -539,7 +541,7 @@ public class HivePlugin extends TrinityPlugin {
         }
     }
 
-    private void database_updateOne(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void database_update(JSONArray args, CallbackContext callbackContext, boolean onlyUpdateOne) throws JSONException {
         String vaultObjectId = args.getString(0);
         String collectionName = args.getString(1);
         JSONObject filterJson = args.isNull(2) ? null : args.getJSONObject(2);
@@ -554,7 +556,16 @@ public class HivePlugin extends TrinityPlugin {
         try {
             Vault vault = vaultMap.get(vaultObjectId);
             if (ensureValidVault(vault, callbackContext)) {
-                vault.getDatabase().updateOne(collectionName, filterJsonNode, updateQueryJsonNode, options).thenAccept(result -> {
+                CompletableFuture<UpdateResult> completableResult = null;
+                if (onlyUpdateOne) {
+                    // UPDATE ONE
+                    completableResult = vault.getDatabase().updateOne(collectionName, filterJsonNode, updateQueryJsonNode, options);
+                }
+                else {
+                    completableResult = vault.getDatabase().updateMany(collectionName, filterJsonNode, updateQueryJsonNode, options);
+                }
+
+                completableResult.thenAccept(result -> {
                     try {
                         JSONObject ret = new JSONObject();
                         ret.put("matchedCount", result.matchedCount());
@@ -576,12 +587,15 @@ public class HivePlugin extends TrinityPlugin {
         }
     }
 
-    private void database_updateMany(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // For now, update one and update many seem to be totally identical on the client side.
-        database_updateOne(args, callbackContext);
+    private void database_updateOne(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        database_update(args, callbackContext, true);
     }
 
-    private void database_deleteOne(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void database_updateMany(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        database_update(args, callbackContext, false);
+    }
+
+    private void database_delete(JSONArray args, CallbackContext callbackContext, boolean onlyDeleteOne) throws JSONException {
         String vaultObjectId = args.getString(0);
         String collectionName = args.getString(1);
         JSONObject filterJson = args.isNull(2) ? null : args.getJSONObject(2);
@@ -594,7 +608,17 @@ public class HivePlugin extends TrinityPlugin {
         try {
             Vault vault = vaultMap.get(vaultObjectId);
             if (ensureValidVault(vault, callbackContext)) {
-                vault.getDatabase().deleteOne(collectionName, filterJsonNode, options).thenAccept(result -> {
+                CompletableFuture<DeleteResult> completableResult = null;
+                if (onlyDeleteOne) {
+                    // DELETE ONE
+                    completableResult = vault.getDatabase().deleteOne(collectionName, filterJsonNode, options);
+                }
+                else {
+                    // DELETE MANY
+                    completableResult = vault.getDatabase().deleteMany(collectionName, filterJsonNode, options);
+                }
+
+                completableResult.thenAccept(result -> {
                     try {
                         JSONObject ret = new JSONObject();
                         ret.put("deletedCount", result.deletedCount());
@@ -613,9 +637,12 @@ public class HivePlugin extends TrinityPlugin {
         }
     }
 
+    private void database_deleteOne(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        database_delete(args, callbackContext, true);
+    }
+
     private void database_deleteMany(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        // For now, delete one and delete many seem to be totally identical on the client side.
-        database_deleteOne(args, callbackContext);
+        database_delete(args, callbackContext, false);
     }
 
     private void files_upload(JSONArray args, CallbackContext callbackContext) throws JSONException {
