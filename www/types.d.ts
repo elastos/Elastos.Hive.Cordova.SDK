@@ -246,10 +246,17 @@ declare namespace HivePlugin {
         }
 
         /**
-         * Result after calls to insert operations.
+         * Result after calls to insertOne() operations.
          */
-        export type InsertResult = {
-            insertedIds: string[]
+        export type InsertOneResult = {
+            insertedId: string;
+        }
+
+        /**
+         * Result after calls to insertMany() operations.
+         */
+        export type InsertManyResult = {
+            insertedIds: string[];
         }
 
         /**
@@ -307,7 +314,7 @@ declare namespace HivePlugin {
             /**
              * Inserts a new document in the given collection, into current user's personal vault.
              */
-            insertOne(collectionName: string, document: JSONObject, options?: InsertOptions): Promise<InsertResult>;
+            insertOne(collectionName: string, document: JSONObject, options?: InsertOptions): Promise<InsertOneResult>;
 
             /**
              * Updates at most one existing document based on the given query filter and using the given
@@ -428,8 +435,12 @@ declare namespace HivePlugin {
              * Call parameters (params field) are meant to be used by scripts on the server side, for example as injected parameters
              * to mongo queries. Ex: if "params" contains a field "name":"someone", then the called script is able to reference this parameter
              * using "$params.name".
+             *
+             * The appDID parameter is used to override the default app did target that is (optionally) embedded in the authentication
+             * challenge response. This allows calling scripts from other application contexts in case they chose to made their
+             * script accessible anonimously.
              */
-            call(functionName: string, params?: JSONObject): Promise<JSONObject>;
+            call(functionName: string, params?: JSONObject, appDID?: string): Promise<JSONObject>;
         }
     }
 

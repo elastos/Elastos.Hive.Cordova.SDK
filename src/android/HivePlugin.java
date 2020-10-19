@@ -425,7 +425,7 @@ public class HivePlugin extends TrinityPlugin {
                 vault.getDatabase().insertOne(collectionName, documentJsonNode, options).thenAccept(insertResult -> {
                     try {
                         JSONObject ret = new JSONObject();
-                        ret.put("insertedIds", new JSONArray(insertResult.insertedIds()));
+                        ret.put("insertedId", insertResult.insertedId());
                         callbackContext.success(ret);
                     } catch (JSONException e) {
                         callbackContext.error(e.getMessage());
@@ -904,7 +904,15 @@ public class HivePlugin extends TrinityPlugin {
     private void scripting_call(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String vaultObjectId = args.getString(0);
         String functionName = args.getString(1);
-        JSONObject params = args.isNull(2) ? null : args.getJSONObject(2);
+
+        JSONObject params = null;
+        String appDID = null;
+        if (!args.isNull(2)) {
+            params = args.getJSONObject(2);
+            if (!args.isNull(3)) {
+                appDID = args.getString(3);
+            }
+        }
 
         try {
             Vault vault = vaultMap.get(vaultObjectId);

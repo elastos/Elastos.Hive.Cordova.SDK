@@ -36,11 +36,11 @@ class JSONObjectImpl implements HivePlugin.JSONObject {
     [k: string]: string | number | boolean | HivePlugin.JSONObject | HivePlugin.JSONObject[];
 }
 
-class InsertResultImpl implements HivePlugin.Database.InsertResult {
-    insertedIds: string[];
+class InsertOneResultImpl implements HivePlugin.Database.InsertOneResult {
+    insertedId: string;
 
-    static fromJson(json: HivePlugin.JSONObject): InsertResultImpl {
-        let result = new InsertResultImpl();
+    static fromJson(json: HivePlugin.JSONObject): InsertOneResultImpl {
+        let result = new InsertOneResultImpl();
         Object.assign(result, json);
         return result;
     }
@@ -81,9 +81,9 @@ class DatabaseImpl implements HivePlugin.Database.Database {
         return execAsPromise<HivePlugin.Database.DeleteCollectionResult>("database_deleteCollection", [this.vault.objectId, collectionName, options]);
     }
 
-    async insertOne(collectionName: string, document: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions): Promise<HivePlugin.Database.InsertResult> {
+    async insertOne(collectionName: string, document: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions): Promise<HivePlugin.Database.InsertOneResult> {
         let resultJson = await execAsPromise<HivePlugin.JSONObject>("database_insertOne", [this.vault.objectId, collectionName, document, options]);
-        return InsertResultImpl.fromJson(resultJson);
+        return InsertOneResultImpl.fromJson(resultJson);
     }
 
     async countDocuments(collectionName: string, query: HivePlugin.JSONObject, options?: HivePlugin.Database.CountOptions): Promise<number> {
@@ -482,8 +482,8 @@ class ScriptingImpl implements HivePlugin.Scripting.Scripting {
         return result.success;
     }
 
-    call(functionName: string, params?: HivePlugin.JSONObject): Promise<HivePlugin.JSONObject> {
-        return execAsPromise<HivePlugin.JSONObject>("scripting_call", [this.vault.objectId, functionName, params]);
+    call(functionName: string, params?: HivePlugin.JSONObject, appDID?: string): Promise<HivePlugin.JSONObject> {
+        return execAsPromise<HivePlugin.JSONObject>("scripting_call", [this.vault.objectId, functionName, params, appDID]);
     }
 }
 
