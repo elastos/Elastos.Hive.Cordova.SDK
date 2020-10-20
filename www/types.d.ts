@@ -312,9 +312,14 @@ declare namespace HivePlugin {
             findMany(collectionName: string, query?: JSONObject, options?: FindOptions): Promise<JSONObject[]>;
 
             /**
-             * Inserts a new document in the given collection, into current user's personal vault.
+             * Inserts a new document to the given collection, into current user's personal vault.
              */
             insertOne(collectionName: string, document: JSONObject, options?: InsertOptions): Promise<InsertOneResult>;
+
+            /**
+             * Inserts several new documents to the given collection, into current user's personal vault.
+             */
+            insertMany(collectionName: string, documents: JSONObject[], options?: InsertOptions): Promise<InsertManyResult>;
 
             /**
              * Updates at most one existing document based on the given query filter and using the given

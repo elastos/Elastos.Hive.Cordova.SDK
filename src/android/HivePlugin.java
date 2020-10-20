@@ -65,6 +65,7 @@ import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -110,6 +111,9 @@ public class HivePlugin extends TrinityPlugin {
                     break;
                 case "database_insertOne":
                     this.database_insertOne(args, callbackContext);
+                    break;
+                case "database_insertMany":
+                    this.database_insertMany(args, callbackContext);
                     break;
                 case "database_countDocuments":
                     this.database_countDocuments(args, callbackContext);
@@ -426,6 +430,54 @@ public class HivePlugin extends TrinityPlugin {
                     try {
                         JSONObject ret = new JSONObject();
                         ret.put("insertedId", insertResult.insertedId());
+                        callbackContext.success(ret);
+                    } catch (JSONException e) {
+                        callbackContext.error(e.getMessage());
+                    }
+                }).exceptionally(e -> {
+                    callbackContext.error(e.getMessage());
+                    return null;
+                });
+            }
+        }
+        catch (Exception e) {
+            callbackContext.error(e.getMessage());
+        }
+    }
+
+    private void database_insertMany(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String collectionName = args.getString(1);
+        JSONArray documentsJson = args.isNull(2) ? null : args.getJSONArray(2);
+        JSONObject optionsJson = args.isNull(3) ? null : args.getJSONObject(3);
+
+        InsertOptions options = new InsertOptions();
+
+        try {
+            if (optionsJson != null) {
+                // Nothing to do, no option handle for now.
+            }
+        }
+        catch (Exception e) {
+            // Invalid options passed? We'll use default options
+        }
+
+
+
+        try {
+            Vault vault = vaultMap.get(vaultObjectId);
+            if (ensureValidVault(vault, callbackContext)) {
+                // Create the list of documents
+                ArrayList<JsonNode> documentsJsonNodes = new ArrayList<>();
+                for (int i=0; i<documentsJson.length(); i++) {
+                    JsonNode documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentsJson.getJSONObject(i));
+                    documentsJsonNodes.add(documentJsonNode);
+                }
+
+                vault.getDatabase().insertMany(collectionName, documentsJsonNodes, options).thenAccept(insertResult -> {
+                    try {
+                        JSONObject ret = new JSONObject();
+                        ret.put("insertedIds", HivePluginHelper.listToJSONArray(insertResult.insertedIds()));
                         callbackContext.success(ret);
                     } catch (JSONException e) {
                         callbackContext.error(e.getMessage());

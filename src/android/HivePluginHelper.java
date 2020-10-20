@@ -8,10 +8,12 @@ import org.elastos.hive.database.FindOptions;
 import org.elastos.hive.database.Index;
 import org.elastos.hive.database.UpdateOptions;
 import org.elastos.hive.file.FileInfo;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.Iterator;
+import java.util.List;
 
 public class HivePluginHelper {
     /**
@@ -149,5 +151,14 @@ public class HivePluginHelper {
         catch (Exception e) {
             return null;
         }
+    }
+
+    public static JSONArray listToJSONArray(List list) {
+        JSONArray array = new JSONArray();
+        Iterator it = list.iterator();
+        while (it.hasNext()) {
+            array.put(it.next());
+        }
+        return array;
     }
 }

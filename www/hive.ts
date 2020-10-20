@@ -46,6 +46,16 @@ class InsertOneResultImpl implements HivePlugin.Database.InsertOneResult {
     }
 }
 
+class InsertManyResultImpl implements HivePlugin.Database.InsertManyResult {
+    insertedIds: string[];
+
+    static fromJson(json: HivePlugin.JSONObject): InsertManyResultImpl {
+        let result = new InsertManyResultImpl();
+        Object.assign(result, json);
+        return result;
+    }
+}
+
 class UpdateResultImpl implements HivePlugin.Database.UpdateResult {
     matchedCount: number;
     modifiedCount: number;
@@ -84,6 +94,11 @@ class DatabaseImpl implements HivePlugin.Database.Database {
     async insertOne(collectionName: string, document: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions): Promise<HivePlugin.Database.InsertOneResult> {
         let resultJson = await execAsPromise<HivePlugin.JSONObject>("database_insertOne", [this.vault.objectId, collectionName, document, options]);
         return InsertOneResultImpl.fromJson(resultJson);
+    }
+
+    async insertMany(collectionName: string, documents: HivePlugin.JSONObject[], options?: HivePlugin.Database.InsertOptions): Promise<HivePlugin.Database.InsertManyResult> {
+        let resultJson = await execAsPromise<HivePlugin.JSONObject>("database_insertMany", [this.vault.objectId, collectionName, documents, options]);
+        return InsertManyResultImpl.fromJson(resultJson);
     }
 
     async countDocuments(collectionName: string, query: HivePlugin.JSONObject, options?: HivePlugin.Database.CountOptions): Promise<number> {
@@ -590,6 +605,10 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
         Object.freeze(DatabaseImpl.prototype);
         Object.freeze(FilesImpl.prototype);
         Object.freeze(ScriptingImpl.prototype);
+        Object.freeze(InsertOneResultImpl.prototype);
+        Object.freeze(InsertManyResultImpl.prototype);
+        Object.freeze(UpdateResultImpl.prototype);
+        Object.freeze(DeleteResultImpl.prototype);
 
         this.Database = {
             newObjectId: function(_id: string): HivePlugin.Database.ObjectId {
