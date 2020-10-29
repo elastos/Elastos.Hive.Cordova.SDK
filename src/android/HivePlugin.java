@@ -1050,7 +1050,7 @@ public class HivePlugin extends TrinityPlugin {
             if (readBytes != -1) {
                 // Move read offset to the next position
                 //readerOffsetsMap.put(readerObjectId, currentReadOffset + readBytes);
-                callbackContext.success(Base64.encodeToString(buffer, 0, readBytes, 0));
+                callbackContext.success(Base64.encodeToString(buffer, 0, readBytes, Base64.NO_WRAP));
             }
             else {
                 callbackContext.success((String)null);

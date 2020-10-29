@@ -159,7 +159,7 @@ class WriterImpl implements HivePlugin.Files.Writer {
 }
 
 /**
- * Helper for abase64 conversions.
+ * Helper for base64 conversions.
  * Converted to TS from the original JS code at https://github.com/niklasvh/base64-arraybuffer/blob/master/lib/base64-arraybuffer.js
  */
 class Base64Binary {
