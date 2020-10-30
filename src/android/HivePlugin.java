@@ -30,7 +30,6 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 import org.elastos.did.DIDDocument;
 import org.elastos.hive.AuthenticationHandler;
-import org.elastos.hive.Callback;
 import org.elastos.hive.Client;
 import org.elastos.hive.Vault;
 import org.elastos.hive.database.CountOptions;
@@ -80,6 +79,8 @@ public class HivePlugin extends TrinityPlugin {
     private HashMap<String, InputStream> readerMap = new HashMap<>();
     private HashMap<String, Integer> readerOffsetsMap = new HashMap<>(); // Current read offset byte position for each active reader
     private HashMap<String, OutputStream> writerMap = new HashMap<>();
+
+    private static boolean didResolverInitialized = false;
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -193,12 +194,24 @@ public class HivePlugin extends TrinityPlugin {
         return true;
     }
 
-    private String getDataDir() {
+    private String geDataDir() {
         return getDataPath();
     }
 
     private static String getDIDResolverUrl() {
         return PreferenceManager.getShareInstance().getDIDResolver();
+    }
+
+    private void setupDIDResolver() throws HiveException {
+        if (didResolverInitialized)
+            return;
+
+        // NOTE: Static way to set the DID resolver. This means we'd better hope that every app in trinity uses
+        // the same network/resolver, otherwise one overwrites the other. The Hive SDK only provides such static method
+        // for now...
+        Client.setupResolver(getDIDResolverUrl(),  appManager.activity.getCacheDir()+"/didCache");
+
+        didResolverInitialized = true;
     }
 
     private void getClient(JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -209,16 +222,12 @@ public class HivePlugin extends TrinityPlugin {
         }
 
         try {
-            // NOTE: Static way to set the DID resolver. This means we'd better hope that every app in trinity uses
-            // the same network/resolver, otherwise one overwrites the other. The Hive SDK only provides such static method
-            // for now...
-            Client.setupResolver(getDIDResolverUrl(), null);
+            setupDIDResolver();
 
             // final atomic reference as a way to pass our non final client Id to the auth handler.
             final AtomicReference<String> clientIdReference = new AtomicReference<>();
-
             Client.Options options = new Client.Options();
-            options.setLocalDataPath(getDataDir());
+            options.setLocalDataPath(geDataDir());
 
             // Set the authentication DID document
             String authDIDDocumentJson = optionsJson.getString("authenticationDIDDocument");
