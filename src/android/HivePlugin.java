@@ -88,12 +88,12 @@ public class HivePlugin extends TrinityPlugin {
                 case "getClient":
                     this.getClient(args, callbackContext);
                     break;
-                case "client_getVaultAddress":
+                /*case "client_getVaultAddress":
                     this.client_getVaultAddress(args, callbackContext);
                     break;
                 case "client_setVaultAddress":
                     this.client_setVaultAddress(args, callbackContext);
-                    break;
+                    break;*/
                 case "client_setAuthHandlerChallengeCallback":
                     this.client_setAuthHandlerChallengeCallback(args, callbackContext);
                     break;
@@ -193,7 +193,7 @@ public class HivePlugin extends TrinityPlugin {
         return true;
     }
 
-    private String geDataDir() {
+    private String getDataDir() {
         return getDataPath();
     }
 
@@ -209,12 +209,16 @@ public class HivePlugin extends TrinityPlugin {
         }
 
         try {
+            // NOTE: Static way to set the DID resolver. This means we'd better hope that every app in trinity uses
+            // the same network/resolver, otherwise one overwrites the other. The Hive SDK only provides such static method
+            // for now...
+            Client.setupResolver(getDIDResolverUrl(), null);
+
             // final atomic reference as a way to pass our non final client Id to the auth handler.
             final AtomicReference<String> clientIdReference = new AtomicReference<>();
 
             Client.Options options = new Client.Options();
-            options.setLocalDataPath(geDataDir());
-            options.setDIDResolverUrl(getDIDResolverUrl());
+            options.setLocalDataPath(getDataDir());
 
             // Set the authentication DID document
             String authDIDDocumentJson = optionsJson.getString("authenticationDIDDocument");
@@ -259,7 +263,7 @@ public class HivePlugin extends TrinityPlugin {
         }
     }
 
-    private void client_setVaultAddress(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    /*private void client_setVaultAddress(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String ownerDid = args.getString(0);
         String vaultAddress = args.getString(1);
 
@@ -276,7 +280,7 @@ public class HivePlugin extends TrinityPlugin {
         });
 
         callbackContext.success((String)null);
-    }
+    }*/
 
     private void client_setAuthHandlerChallengeCallback(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String clientObjectId = args.getString(0);

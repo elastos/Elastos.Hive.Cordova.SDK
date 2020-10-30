@@ -564,12 +564,12 @@ declare namespace HivePlugin {
          *
          * After being able to resolve from chain, any previously set local mapping is deleted.
          */
-        getVaultAddress(ownerDid: string): Promise<string>;
+        //getVaultAddress(ownerDid: string): Promise<string>;
 
         /**
          * Locally maps the given owner DID with the given vault address. This is useful for example in case
          * a user doesn't publish his vault address on the ID chain, and shared it privately.
          */
-        setVaultAddress(ownerDid: string, vaultAddress: string): Promise<void>;
+        //setVaultAddress(ownerDid: string, vaultAddress: string): Promise<void>;
     }
 }
