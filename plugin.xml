@@ -44,9 +44,13 @@
         <!-- <dependency id="cordova-plugin-add-swift-support" version="1.7.2"/> -->
         <resource-file src="ipfsnodes.json" />
         <source-file src="src/ios/HivePlugin.swift" />
-        <source-file src="src/ios/ClientBuilder.swift" />
-        <source-file src="src/ios/LoginHandler.swift" />
-        <source-file src="src/ios/ResultHandler.swift" />
+        <source-file src="src/ios/HivePluginHelper.swift" />
+        <source-file src="src/ios/database/Database.swift" />
+        <source-file src="src/ios/database/DeleteResult.swift" />
+        <source-file src="src/ios/database/InsertResult.swift" />
+        <source-file src="src/ios/database/UpdateResult.swift" />
+        <source-file src="src/ios/files/FileInfo.swift" />
+        <source-file src="src/ios/files/FileType.swift" />
         <framework src="src/ios/libs/ElastosHiveSDK.framework" custom="true" embed="true" />
         <framework src="src/ios/libs/Alamofire.framework" custom="true" embed="true" />
         <framework src="src/ios/libs/PromiseKit.framework" custom="true" embed="true" />
