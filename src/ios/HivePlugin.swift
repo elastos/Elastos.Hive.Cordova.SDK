@@ -27,13 +27,14 @@ var clientAuthHandlerCompletionMap = Dictionary<String, Resolver<String>>()
 class VaultAuthenticator: TrinityPlugin, Authenticator {
 
     var callbackId : String? = nil
+    var delegate: Any? = nil
 
     func requestAuthentication(_ jwtToken: String) -> HivePromise<String> {
         return HivePromise<String> { resolver in
             clientAuthHandlerCompletionMap[callbackId!] = resolver
             let result: CDVPluginResult = CDVPluginResult(status: CDVCommandStatus.ok, messageAs: jwtToken)
             result.setKeepCallbackAs(true)
-            self.commandDelegate!.send(result, callbackId: self.callbackId)
+            (self.delegate! as AnyObject).send(result, callbackId: self.callbackId)
         }
     }
 }
@@ -113,6 +114,7 @@ class HivePlugin : TrinityPlugin {
             // Create a authentication handler
             // TODO: check
             let authHandler = VaultAuthenticator()
+            authHandler.delegate = self.commandDelegate
             authHandler.callbackId = clientId
             _ = options.setAuthenticator(authHandler)
 
