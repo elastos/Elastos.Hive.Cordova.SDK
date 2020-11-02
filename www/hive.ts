@@ -322,14 +322,14 @@ class FilesImpl implements HivePlugin.Files.Files  {
 }
 
 abstract class ConditionImpl implements HivePlugin.Scripting.Conditions.Condition {
-    constructor(public type: string) {}
+    constructor(public conditionName: string, public type: string) {}
 
     abstract toJSON(): JSONObjectImpl;
 }
 
 class AndConditionImpl extends ConditionImpl implements HivePlugin.Scripting.Conditions.AndCondition {
-    constructor(private conditions: ConditionImpl[]) {
-        super("and");
+    constructor(conditionName: string, private conditions: ConditionImpl[]) {
+        super(conditionName, "and");
     }
 
     toJSON(): JSONObjectImpl {
@@ -339,15 +339,15 @@ class AndConditionImpl extends ConditionImpl implements HivePlugin.Scripting.Con
         }
         return {
             type: this.type,
-            name: this.type,
+            name: this.conditionName,
             body: body
         }
     }
 }
 
 class OrConditionImpl extends ConditionImpl {
-    constructor(private conditions: ConditionImpl[]) {
-        super("or");
+    constructor(conditionName: string, private conditions: ConditionImpl[]) {
+        super(conditionName, "or");
     }
 
     toJSON(): JSONObjectImpl {
@@ -357,21 +357,21 @@ class OrConditionImpl extends ConditionImpl {
         }
         return {
             type: this.type,
-            name: this.type,
+            name: this.conditionName,
             body: body
         }
     }
 }
 
 class QueryHasResultsCondition extends ConditionImpl implements HivePlugin.Scripting.Conditions.AndCondition {
-    constructor(private collectionName: string, private queryParameters: HivePlugin.JSONObject) {
-        super("queryHasResults");
+    constructor(conditionName: string, private collectionName: string, private queryParameters: HivePlugin.JSONObject) {
+        super(conditionName, "queryHasResults");
     }
 
     toJSON(): JSONObjectImpl {
         return {
             type: this.type,
-            name: this.type,
+            name: this.conditionName,
             body: {
                 collection: this.collectionName,
                 filter: this.queryParameters,
@@ -381,14 +381,14 @@ class QueryHasResultsCondition extends ConditionImpl implements HivePlugin.Scrip
 }
 
 abstract class ExecutableImpl implements HivePlugin.Scripting.Executables.Executable {
-    constructor(public type: string) {}
+    constructor(public executableName: string, public type: string) {}
 
     abstract toJSON(): JSONObjectImpl;
 }
 
 class AggregatedExecutableImpl extends ExecutableImpl implements HivePlugin.Scripting.Executables.AggregatedExecutable {
-    constructor(public executables: ExecutableImpl[]) {
-        super("aggregated");
+    constructor(executableName: string, public executables: ExecutableImpl[]) {
+        super(executableName, "aggregated");
     }
 
     toJSON(): JSONObjectImpl {
@@ -398,21 +398,21 @@ class AggregatedExecutableImpl extends ExecutableImpl implements HivePlugin.Scri
         }
         return {
             type: this.type,
-            name: this.type,
+            name: this.executableName,
             body: body
         }
     }
 }
 
 class FindOneQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Executables.Database.FindOneQuery {
-    constructor(private collectionName: string, private query?: HivePlugin.JSONObject, private options?: HivePlugin.Database.FindOptions, private output: boolean = false) {
-        super("find");
+    constructor(executableName: string, private collectionName: string, private query?: HivePlugin.JSONObject, private options?: HivePlugin.Database.FindOptions, private output: boolean = false) {
+        super(executableName, "find");
     }
 
     toJSON(): JSONObjectImpl {
         return {
             type: this.type,
-            name: this.type,
+            name: this.executableName,
             output: this.output,
             body: {
                 collection: this.collectionName,
@@ -427,14 +427,14 @@ class FindOneQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Ex
 class FindManyQueryImpl extends FindOneQueryImpl {}
 
 class InsertQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Executables.Database.InsertQuery {
-    constructor(private collectionName: string, private document: HivePlugin.JSONObject, private options: HivePlugin.Database.InsertOptions, private output: boolean = false) {
-        super("insert");
+    constructor(executableName: string, private collectionName: string, private document: HivePlugin.JSONObject, private options: HivePlugin.Database.InsertOptions, private output: boolean = false) {
+        super(executableName, "insert");
     }
 
     toJSON(): JSONObjectImpl {
         return {
             type: this.type,
-            name: this.type,
+            name: this.executableName,
             output: this.output,
             body: {
                 collection: this.collectionName,
@@ -446,14 +446,14 @@ class InsertQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Exe
 }
 
 class UpdateQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Executables.Database.UpdateQuery {
-    constructor(private collectionName: string, private filter: HivePlugin.JSONObject, private updateQuery: HivePlugin.JSONObject, private options: HivePlugin.Database.UpdateOptions, private output: boolean = false) {
-        super("update");
+    constructor(executableName: string, private collectionName: string, private filter: HivePlugin.JSONObject, private updateQuery: HivePlugin.JSONObject, private options: HivePlugin.Database.UpdateOptions, private output: boolean = false) {
+        super(executableName, "update");
     }
 
     toJSON(): JSONObjectImpl {
         return {
             type: this.type,
-            name: this.type,
+            name: this.executableName,
             output: this.output,
             body: {
                 collection: this.collectionName,
@@ -466,14 +466,14 @@ class UpdateQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Exe
 }
 
 class DeleteQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Executables.Database.DeleteQuery {
-    constructor(private collectionName: string, private query: HivePlugin.JSONObject, private options: HivePlugin.Database.DeleteOptions, private output: boolean = false) {
-        super("delete");
+    constructor(executableName: string, private collectionName: string, private query: HivePlugin.JSONObject, private options: HivePlugin.Database.DeleteOptions, private output: boolean = false) {
+        super(executableName, "delete");
     }
 
     toJSON(): JSONObjectImpl {
         return {
             type: this.type,
-            name: this.type,
+            name: this.executableName,
             output: this.output,
             body: {
                 collection: this.collectionName,
@@ -578,23 +578,23 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
 
     Scripting: {
         Conditions: {
-            newAndCondition: (conditions: HivePlugin.Scripting.Conditions.Condition[]) => HivePlugin.Scripting.Conditions.AndCondition;
-            newOrCondition: (conditions: HivePlugin.Scripting.Conditions.Condition[]) => HivePlugin.Scripting.Conditions.OrCondition;
+            newAndCondition: (conditions: HivePlugin.Scripting.Conditions.Condition[], conditionName?: string) => HivePlugin.Scripting.Conditions.AndCondition;
+            newOrCondition: (conditions: HivePlugin.Scripting.Conditions.Condition[], conditionName?: string) => HivePlugin.Scripting.Conditions.OrCondition;
 
             Database: {
-                newQueryHasResultsCondition: (collectionName: string, queryParameters: HivePlugin.JSONObject) => HivePlugin.Scripting.Conditions.Database.QueryHasResultsCondition;
+                newQueryHasResultsCondition: (collectionName: string, queryParameters: HivePlugin.JSONObject, conditionName?: string) => HivePlugin.Scripting.Conditions.Database.QueryHasResultsCondition;
             }
         },
 
         Executables: {
-            newAggregatedExecutable: (executables: HivePlugin.Scripting.Executables.Executable[]) => HivePlugin.Scripting.Executables.AggregatedExecutable;
+            newAggregatedExecutable: (executables: HivePlugin.Scripting.Executables.Executable[], executableName?: string) => HivePlugin.Scripting.Executables.AggregatedExecutable;
 
             Database: {
-                newFindOneQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean) => HivePlugin.Scripting.Executables.Database.FindOneQuery;
-                newFindManyQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean) => HivePlugin.Scripting.Executables.Database.FindManyQuery;
-                newInsertQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions, output?: boolean) => HivePlugin.Scripting.Executables.Database.InsertQuery;
-                newUpdateQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions, output?: boolean) => HivePlugin.Scripting.Executables.Database.UpdateQuery;
-                newDeleteQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions, output?: boolean) => HivePlugin.Scripting.Executables.Database.DeleteQuery;
+                newFindOneQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean, executableName?: string) => HivePlugin.Scripting.Executables.Database.FindOneQuery;
+                newFindManyQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean, executableName?: string) => HivePlugin.Scripting.Executables.Database.FindManyQuery;
+                newInsertQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions, output?: boolean, executableName?: string) => HivePlugin.Scripting.Executables.Database.InsertQuery;
+                newUpdateQuery: (collectionName: string, filter: HivePlugin.JSONObject, updateQuery: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions, output?: boolean, executableName?: string) => HivePlugin.Scripting.Executables.Database.UpdateQuery;
+                newDeleteQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions, output?: boolean, executableName?: string) => HivePlugin.Scripting.Executables.Database.DeleteQuery;
             }
         };
     };
@@ -618,45 +618,45 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
 
         this.Scripting = {
             Conditions: {
-                newAndCondition: function(conditions: ConditionImpl[]): HivePlugin.Scripting.Conditions.AndCondition {
-                    return new AndConditionImpl(conditions);
+                newAndCondition: function(conditions: ConditionImpl[], conditionName?: string): HivePlugin.Scripting.Conditions.AndCondition {
+                    return new AndConditionImpl(conditionName, conditions);
                 },
 
-                newOrCondition: function(conditions: ConditionImpl[]): HivePlugin.Scripting.Conditions.OrCondition {
-                    return new OrConditionImpl(conditions);
+                newOrCondition: function(conditions: ConditionImpl[], conditionName?: string): HivePlugin.Scripting.Conditions.OrCondition {
+                    return new OrConditionImpl(conditionName, conditions);
                 },
 
                 Database: {
-                    newQueryHasResultsCondition: function(collectionName: string, queryParameters: HivePlugin.JSONObject): HivePlugin.Scripting.Conditions.Database.QueryHasResultsCondition {
-                        return new QueryHasResultsCondition(collectionName, queryParameters);
+                    newQueryHasResultsCondition: function(collectionName: string, queryParameters: HivePlugin.JSONObject, conditionName?: string): HivePlugin.Scripting.Conditions.Database.QueryHasResultsCondition {
+                        return new QueryHasResultsCondition(conditionName, collectionName, queryParameters);
                     }
                 }
             },
 
             Executables: {
-                newAggregatedExecutable: function(executables: ExecutableImpl[]): HivePlugin.Scripting.Executables.AggregatedExecutable {
-                    return new AggregatedExecutableImpl(executables);
+                newAggregatedExecutable: function(executables: ExecutableImpl[], executableName?: string): HivePlugin.Scripting.Executables.AggregatedExecutable {
+                    return new AggregatedExecutableImpl(executableName, executables);
                 },
 
                 Database: {
-                    newFindOneQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean): HivePlugin.Scripting.Executables.Database.FindOneQuery {
-                        return new FindOneQueryImpl(collectionName, query, options, output);
+                    newFindOneQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean, executableName?: string): HivePlugin.Scripting.Executables.Database.FindOneQuery {
+                        return new FindOneQueryImpl(executableName, collectionName, query, options, output);
                     },
 
-                    newFindManyQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean): HivePlugin.Scripting.Executables.Database.FindOneQuery {
-                        return new FindManyQueryImpl(collectionName, query, options, output);
+                    newFindManyQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean, executableName?: string): HivePlugin.Scripting.Executables.Database.FindOneQuery {
+                        return new FindManyQueryImpl(executableName, collectionName, query, options, output);
                     },
 
-                    newInsertQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions, output?: boolean): HivePlugin.Scripting.Executables.Database.InsertQuery {
-                        return new InsertQueryImpl(collectionName, query, options, output);
+                    newInsertQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.InsertOptions, output?: boolean, executableName?: string): HivePlugin.Scripting.Executables.Database.InsertQuery {
+                        return new InsertQueryImpl(executableName, collectionName, query, options, output);
                     },
 
-                    newUpdateQuery: function(collectionName: string, filter: HivePlugin.JSONObject, updateQuery: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions, output?: boolean): HivePlugin.Scripting.Executables.Database.UpdateQuery {
-                        return new UpdateQueryImpl(collectionName, filter, updateQuery, options, output);
+                    newUpdateQuery: function(collectionName: string, filter: HivePlugin.JSONObject, updateQuery: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions, output?: boolean, executableName?: string): HivePlugin.Scripting.Executables.Database.UpdateQuery {
+                        return new UpdateQueryImpl(executableName, collectionName, filter, updateQuery, options, output);
                     },
 
-                    newDeleteQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions, output?: boolean): HivePlugin.Scripting.Executables.Database.DeleteQuery {
-                        return new DeleteQueryImpl(collectionName, query, options, output);
+                    newDeleteQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions, output?: boolean, executableName?: string): HivePlugin.Scripting.Executables.Database.DeleteQuery {
+                        return new DeleteQueryImpl(executableName, collectionName, query, options, output);
                     }
                 }
             }

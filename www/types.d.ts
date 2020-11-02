@@ -528,23 +528,23 @@ declare namespace HivePlugin {
 
         Scripting: {
             Conditions: {
-                newAndCondition: (conditions: Scripting.Conditions.Condition[]) => Scripting.Conditions.AndCondition;
-                newOrCondition: (conditions: Scripting.Conditions.Condition[]) => Scripting.Conditions.OrCondition;
+                newAndCondition: (conditions: Scripting.Conditions.Condition[], conditionName?: string) => Scripting.Conditions.AndCondition;
+                newOrCondition: (conditions: Scripting.Conditions.Condition[], conditionName?: string) => Scripting.Conditions.OrCondition;
 
                 Database: {
-                    newQueryHasResultsCondition: (collectionName: string, queryParameters: HivePlugin.JSONObject) => Scripting.Conditions.Database.QueryHasResultsCondition;
+                    newQueryHasResultsCondition: (collectionName: string, queryParameters: HivePlugin.JSONObject, conditionName?: string) => Scripting.Conditions.Database.QueryHasResultsCondition;
                 }
             },
 
             Executables: {
-                newAggregatedExecutable: (executables: Scripting.Executables.Executable[]) => Scripting.Executables.Executable;
+                newAggregatedExecutable: (executables: Scripting.Executables.Executable[], executableName?: string) => Scripting.Executables.Executable;
 
                 Database: {
-                    newFindOneQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean) => Scripting.Executables.Database.FindOneQuery;
-                    newFindManyQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean) => Scripting.Executables.Database.FindManyQuery;
-                    newInsertQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.InsertOptions, output?: boolean) => Scripting.Executables.Database.InsertQuery;
-                    newUpdateQuery: (collectionName: string, filter: JSONObject, updateQuery: JSONObject, options?: HivePlugin.Database.UpdateOptions, output?: boolean) => Scripting.Executables.Database.UpdateQuery;
-                    newDeleteQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.DeleteOptions, output?: boolean) => Scripting.Executables.Database.DeleteQuery;
+                    newFindOneQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean, executableName?: string) => Scripting.Executables.Database.FindOneQuery;
+                    newFindManyQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.FindOptions, output?: boolean, executableName?: string) => Scripting.Executables.Database.FindManyQuery;
+                    newInsertQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.InsertOptions, output?: boolean, executableName?: string) => Scripting.Executables.Database.InsertQuery;
+                    newUpdateQuery: (collectionName: string, filter: JSONObject, updateQuery: JSONObject, options?: HivePlugin.Database.UpdateOptions, output?: boolean, executableName?: string) => Scripting.Executables.Database.UpdateQuery;
+                    newDeleteQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.DeleteOptions, output?: boolean, executableName?: string) => Scripting.Executables.Database.DeleteQuery;
                 }
             }
         }
