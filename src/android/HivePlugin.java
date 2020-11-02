@@ -195,7 +195,7 @@ public class HivePlugin extends TrinityPlugin {
         return true;
     }
 
-    private String geDataDir() {
+    private String getDataDir() {
         return getDataPath();
     }
 
@@ -228,7 +228,7 @@ public class HivePlugin extends TrinityPlugin {
             // final atomic reference as a way to pass our non final client Id to the auth handler.
             final AtomicReference<String> clientIdReference = new AtomicReference<>();
             Client.Options options = new Client.Options();
-            options.setLocalDataPath(geDataDir());
+            options.setLocalDataPath(getDataDir());
 
             // Set the authentication DID document
             String authDIDDocumentJson = optionsJson.getString("authenticationDIDDocument");

@@ -78,34 +78,31 @@ class HivePlugin : TrinityPlugin {
         self.commandDelegate.send(result, callbackId: command.callbackId)
     }
 
-    @objc func geDataDir(_ command: CDVInvokedUrlCommand) -> String {
-        self.success(command, retAsString: getDataPath())
+    private func getDataDir() -> String {
         return getDataPath()
     }
 
-    @objc func getDIDResolverUrl(_ command: CDVInvokedUrlCommand) -> String {
-        self.success(command, retAsString: PreferenceManager.getShareInstance().getDIDResolver())
+    private func getDIDResolverUrl() -> String {
         return PreferenceManager.getShareInstance().getDIDResolver()
     }
 
     @objc func getClient(_ command: CDVInvokedUrlCommand) {
-        let optionsJson = command.arguments[0] as? String ?? ""
-        guard optionsJson != "" else {
+        let optionsJson = command.arguments[0] as? Dictionary<String, Any> ?? nil
+
+        guard optionsJson != nil else {
             self.error(command, retAsString: "Client creation options must be provided")
             return
         }
+
         do {
             // final atomic reference as a way to pass our non final client Id to the auth handler.
             var clientIdReference: [String] = [String]()
             let options = HiveClientOptions()
-            _ = options.setLocalDataPath(geDataDir(command))
-            options.setDidResolverUrl(getDIDResolverUrl(command))
+            _ = options.setLocalDataPath(getDataDir())
+            options.setDidResolverUrl(getDIDResolverUrl())
 
             // Set the authentication DID document
-            let data = optionsJson.data(using: String.Encoding.utf8)
-            let dict = try JSONSerialization.jsonObject(with: data!,
-                                                         options: .mutableContainers) as? [String : Any]
-            let authDIDDocumentJson = dict!["authenticationDIDDocument"]
+            let authDIDDocumentJson = optionsJson!["authenticationDIDDocument"]
             let authenticationDIDDocument = try DIDDocument.convertToDIDDocument(fromJson: authDIDDocumentJson as! String)
             _ = options.setAuthenticationDIDDocument(authenticationDIDDocument)
 
@@ -123,6 +120,7 @@ class HivePlugin : TrinityPlugin {
             // TODO: check
             clientAuthHandlersMap[clientId] = authHandler
             let ret = ["objectId": clientId]
+            print("getClient result: \(clientId)")
             self.success(command, retAsDict: ret as NSDictionary)
         } catch {
             self.error(command, retAsString: error.localizedDescription)
