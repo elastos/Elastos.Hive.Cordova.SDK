@@ -236,7 +236,7 @@ class HivePlugin : TrinityPlugin {
 //        }
 //        let documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentJson)
         vault?.database.insertOne(collectionName, documentJson, options: options).done{ result in
-            let ret = ["insertedIds": result.insertedIds()]
+            let ret = ["insertedIds": result.insertedId()]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
             self.error(command, retAsString: error.localizedDescription)
@@ -497,7 +497,7 @@ class HivePlugin : TrinityPlugin {
         let params = command.arguments[2] as? Dictionary<String, Any> ?? emptyDict
 
         let vault = vaultMap[vaultObjectId]
-        vault?.scripting.call(functionName, params).done{ [self] success in
+        vault?.scripting.call(functionName, params, String.self).done{ [self] success in
             self.success(command, retAsDict: ["success": success])
         }.catch{ error in
             self.error(command, retAsString: error.localizedDescription)
