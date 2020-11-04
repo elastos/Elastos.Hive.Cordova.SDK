@@ -188,9 +188,8 @@ class HivePlugin : TrinityPlugin {
         let optionsJson = command.arguments[2] as? NSDictionary ?? nil
         let options = CreateCollectionOptions()
 
-        guard optionsJson != nil else {
-            //TODO: // Nothing to do, no option handle for now.
-            return
+        if optionsJson != nil {
+            // Nothing to do, no option handle for now.
         }
 
         let vault = vaultMap[vaultObjectId]
