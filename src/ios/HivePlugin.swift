@@ -24,7 +24,7 @@ import Foundation
 import ElastosHiveSDK
 
 var clientAuthHandlerCompletionMap = Dictionary<String, Resolver<String>>()
-class VaultAuthenticator: TrinityPlugin, Authenticator {
+class VaultAuthenticator: Authenticator {
 
     var callbackId : String? = nil
     var delegate: Any? = nil
@@ -46,6 +46,7 @@ class HivePlugin : TrinityPlugin {
     private var clientAuthHandlerCallbackMap = Dictionary<String, String>()
     private var vaultMap  = Dictionary<String, Vault>()
     private var readerMap  = Dictionary<String, OutputStream>()
+    private var didResolverInitialized: Bool = false
 
     @objc func success(_ command: CDVInvokedUrlCommand, retAsString: String) {
         let result = CDVPluginResult(status: CDVCommandStatus_OK,
@@ -87,6 +88,14 @@ class HivePlugin : TrinityPlugin {
         return PreferenceManager.getShareInstance().getDIDResolver()
     }
 
+    @objc func setupDIDResolver() throws {
+        guard !didResolverInitialized else {
+            return
+        }
+        try HiveClientHandle.setupResolver(getDIDResolverUrl(), "\(NSHomeDirectory())/Library/Caches/didCache") //暂时拿不到appManager 先写死
+        didResolverInitialized = true
+    }
+
     @objc func getClient(_ command: CDVInvokedUrlCommand) {
         let optionsJson = command.arguments[0] as? Dictionary<String, Any> ?? nil
 
@@ -96,27 +105,27 @@ class HivePlugin : TrinityPlugin {
         }
 
         do {
+            try setupDIDResolver()
+
             // final atomic reference as a way to pass our non final client Id to the auth handler.
             var clientIdReference: [String] = [String]()
             let options = HiveClientOptions()
             _ = options.setLocalDataPath(getDataDir())
-            options.setDidResolverUrl(getDIDResolverUrl())
 
             // Set the authentication DID document
             let authDIDDocumentJson = optionsJson!["authenticationDIDDocument"]
             let authenticationDIDDocument = try DIDDocument.convertToDIDDocument(fromJson: authDIDDocumentJson as! String)
             _ = options.setAuthenticationDIDDocument(authenticationDIDDocument)
 
-            let client = try HiveClientHandle.createInstance(withOptions: options)
-            let clientId = "\(client.hashValue)"
-            clientIdReference.append(clientId)
-            clientMap[clientId] = client
             // Create a authentication handler
-            // TODO: check
             let authHandler = VaultAuthenticator()
             authHandler.delegate = self.commandDelegate
-            authHandler.callbackId = clientId
             _ = options.setAuthenticator(authHandler)
+            let client = try HiveClientHandle.createInstance(withOptions: options)
+            let clientId = "\(client.hashValue)"
+            authHandler.callbackId = clientId
+            clientIdReference.append(clientId)
+            clientMap[clientId] = client
 
             // Save the handler for later use
             // TODO: check
@@ -127,10 +136,9 @@ class HivePlugin : TrinityPlugin {
         } catch {
             self.error(command, retAsString: error.localizedDescription)
         }
-
     }
 
-    @objc func client_setVaultAddress(_ command: CDVInvokedUrlCommand) {
+     @objc func client_setVaultAddress(_ command: CDVInvokedUrlCommand) {
         let ownerDid = command.arguments[0] as? String ?? ""
         let vaultAddress = command.arguments[1] as? String ?? ""
         HiveClientHandle.setVaultProvider(ownerDid, vaultAddress)
@@ -166,11 +174,13 @@ class HivePlugin : TrinityPlugin {
         // Retrieve the auth response callback and send the authentication JWT back to the hive SDK
         let authResponseFuture: Resolver<String> = clientAuthHandlerCompletionMap[clientObjectId]!
         authResponseFuture.fulfill(challengeResponseJwt)
+        self.success(command, retAsDict: [: ])
     }
 
     @objc func client_getVault(_ command: CDVInvokedUrlCommand) {
         let clientObjectId = command.arguments[0] as? String ?? ""
         let vaultOwnerDid = command.arguments[1] as? String ?? ""
+        HiveClientHandle.setVaultProvider(vaultOwnerDid, "https://hive1.trinity-tech.io")
         let client = clientMap[clientObjectId]
         _ = client?.getVault(vaultOwnerDid).done{ [self] vault in
             let vaultId = "\(vault.hashValue)"
@@ -179,6 +189,8 @@ class HivePlugin : TrinityPlugin {
                        "vaultProviderAddress": vault.providerAddress,
                        "vaultOwnerDid": vaultOwnerDid]
             self.success(command, retAsDict: ret as NSDictionary)
+        }.catch{ error in
+            self.error(command, retAsString: error.localizedDescription)
         }
     }
 
@@ -496,10 +508,10 @@ class HivePlugin : TrinityPlugin {
         let params = command.arguments[2] as? Dictionary<String, Any> ?? emptyDict
 
         let vault = vaultMap[vaultObjectId]
-        vault?.scripting.call(functionName, params, String.self).done{ [self] success in
-            self.success(command, retAsDict: ["success": success])
-        }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
-        }
+//        vault?.scripting.call(functionName, params, String.self).done{ [self] success in
+//            self.success(command, retAsDict: ["success": success])
+//        }.catch{ error in
+//            self.error(command, retAsString: error.localizedDescription)
+//        }
     }
 }
