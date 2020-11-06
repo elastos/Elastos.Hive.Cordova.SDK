@@ -157,6 +157,8 @@ class HivePlugin : TrinityPlugin {
     @objc func client_setAuthHandlerChallengeCallback(_ command: CDVInvokedUrlCommand) {
         let clientObjectId = command.arguments[0] as? String ?? ""
         // Save current callback content to be able to call it back when an authentication is requests by the hive SDK
+        let auth: VaultAuthenticator = clientAuthHandlersMap[clientObjectId] as! VaultAuthenticator
+        auth.callbackId = command.callbackId
         clientAuthHandlerCallbackMap[clientObjectId] = command.callbackId
         let result: CDVPluginResult = CDVPluginResult(status: CDVCommandStatus_NO_RESULT)
         result.setKeepCallbackAs(true)
