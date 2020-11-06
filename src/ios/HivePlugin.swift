@@ -123,7 +123,6 @@ class HivePlugin : TrinityPlugin {
             _ = options.setAuthenticator(authHandler)
             let client = try HiveClientHandle.createInstance(withOptions: options)
             let clientId = "\(client.hashValue)"
-            authHandler.callbackId = clientId
             clientIdReference.append(clientId)
             clientMap[clientId] = client
 
@@ -174,7 +173,8 @@ class HivePlugin : TrinityPlugin {
         }
 
         // Retrieve the auth response callback and send the authentication JWT back to the hive SDK
-        let authResponseFuture: Resolver<String> = clientAuthHandlerCompletionMap[clientObjectId]!
+        let callbackId = clientAuthHandlerCallbackMap[clientObjectId]
+        let authResponseFuture: Resolver<String> = clientAuthHandlerCompletionMap[callbackId!]!
         authResponseFuture.fulfill(challengeResponseJwt)
         self.success(command, retAsDict: [: ])
     }
