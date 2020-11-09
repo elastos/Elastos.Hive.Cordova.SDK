@@ -7,7 +7,7 @@ import org.elastos.hive.database.DeleteOptions;
 import org.elastos.hive.database.FindOptions;
 import org.elastos.hive.database.Index;
 import org.elastos.hive.database.UpdateOptions;
-import org.elastos.hive.file.FileInfo;
+import org.elastos.hive.files.FileInfo;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -24,7 +24,7 @@ public class HivePluginHelper {
 
         ret.put("name", fileInfo.getName());
         ret.put("size", fileInfo.getSize());
-        ret.put("lastModified", fileInfo.getLastModify());
+        ret.put("lastModified", fileInfo.getLastModified());
 
         switch (fileInfo.getType()) {
             case FOLDER:
