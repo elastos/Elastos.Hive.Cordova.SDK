@@ -26,8 +26,9 @@ import ElastosHiveSDK
 var clientAuthHandlerCompletionMap = Dictionary<String, Resolver<String>>()
 class VaultAuthenticator: Authenticator {
 
-    var callbackId : String? = nil
+    var callbackId : String?
     var delegate: Any? = nil
+    var clientObjectId: String?
 
     func requestAuthentication(_ jwtToken: String) -> HivePromise<String> {
         return HivePromise<String> { resolver in
@@ -127,13 +128,19 @@ class HivePlugin : TrinityPlugin {
             clientMap[clientId] = client
 
             // Save the handler for later use
-            // TODO: check
             clientAuthHandlersMap[clientId] = authHandler
             let ret = ["objectId": clientId]
             print("getClient result: \(clientId)")
             self.success(command, retAsDict: ret as NSDictionary)
         } catch {
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -149,7 +156,14 @@ class HivePlugin : TrinityPlugin {
         HiveClientHandle.getVaultProvider(ownerDid).done { address in
             self.success(command, retAsString: "success")
         }.catch { error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -173,6 +187,7 @@ class HivePlugin : TrinityPlugin {
         }
 
         // Retrieve the auth response callback and send the authentication JWT back to the hive SDK
+        print("clientObjectId === \(clientObjectId)")
         let callbackId = clientAuthHandlerCallbackMap[clientObjectId]
         let authResponseFuture: Resolver<String> = clientAuthHandlerCompletionMap[callbackId!]!
         authResponseFuture.fulfill(challengeResponseJwt)
@@ -192,7 +207,14 @@ class HivePlugin : TrinityPlugin {
                        "vaultOwnerDid": vaultOwnerDid]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -215,7 +237,14 @@ class HivePlugin : TrinityPlugin {
             let ret = ["created": success]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -243,11 +272,6 @@ class HivePlugin : TrinityPlugin {
         let optionsJson = command.arguments[3] as? Dictionary<String, Any> ?? emptyDict
         let options = InsertOptions()
         let vault = vaultMap[vaultObjectId]
-//        guard optionsJson != emptyDict else {
-//            //TODO: // Nothing to do, no option handle for now.
-//            return
-//        }
-//        let documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentJson)
         vault?.database.insertOne(collectionName, documentJson, options: options).done{ result in
             let ret = ["insertedIds": result.insertedId()]
             self.success(command, retAsDict: ret as NSDictionary)
@@ -264,16 +288,18 @@ class HivePlugin : TrinityPlugin {
         let optionsJson = command.arguments[3] as? Dictionary<String, Any> ?? emptyDict
         let options = CountOptions()
         let vault = vaultMap[vaultObjectId]
-//        guard optionsJson != emptyDict else {
-//            //TODO: // Nothing to do, no option handle for now.
-//            return
-//        }
-//        let documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentJson)
         vault?.database.countDocuments(collectionName, queryJson, options: options).done{ count in
             let ret = ["count": count]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -285,15 +311,17 @@ class HivePlugin : TrinityPlugin {
         let optionsJson = command.arguments[3] as? Dictionary<String, Any> ?? emptyDict
         let options = HivePluginHelper.jsonFindOptionsToNative(optionsJson)
         let vault = vaultMap[vaultObjectId]
-//        guard optionsJson != emptyDict else {
-//            //TODO: // Nothing to do, no option handle for now.
-//            return
-//        }
-//        let documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentJson)
         vault?.database.findOne(collectionName, queryJson, options: options).done{ result in
             self.success(command, retAsDict: result as NSDictionary)
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -305,15 +333,17 @@ class HivePlugin : TrinityPlugin {
         let optionsJson = command.arguments[3] as? Dictionary<String, Any> ?? emptyDict
         let options = HivePluginHelper.jsonFindOptionsToNative(optionsJson)
         let vault = vaultMap[vaultObjectId]
-//        guard optionsJson != emptyDict else {
-//            //TODO: // Nothing to do, no option handle for now.
-//            return
-//        }
-//        let documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentJson)
         vault?.database.findMany(collectionName, queryJson, options: options).done{ result in
             self.success(command, retAsArray: result as NSArray)
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -327,11 +357,6 @@ class HivePlugin : TrinityPlugin {
 
         let options = HivePluginHelper.jsonUpdateOptionsToNative(optionsJson)
         let vault = vaultMap[vaultObjectId]
-//        guard optionsJson != emptyDict else {
-//            //TODO: // Nothing to do, no option handle for now.
-//            return
-//        }
-//        let documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentJson)
         vault?.database.updateOne(collectionName, filterJson, updatequeryJson, options: options).done{ result in
             let ret = ["matchedCount": result.matchedCount(),
                        "modifiedCount": result.modifiedCount(),
@@ -339,7 +364,14 @@ class HivePlugin : TrinityPlugin {
                        "upsertedId": result.upsertedId()]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -357,16 +389,18 @@ class HivePlugin : TrinityPlugin {
 
         let options = HivePluginHelper.jsonDeleteOptionsToNative(optionsJson)
         let vault = vaultMap[vaultObjectId]
-//        guard optionsJson != emptyDict else {
-//            //TODO: // Nothing to do, no option handle for now.
-//            return
-//        }
-//        let documentJsonNode = HivePluginHelper.jsonObjectToJsonNode(documentJson)
         vault?.database.deleteOne(collectionName, filterJson, options: options).done{ result in
             let ret = ["deletedCount": result.deletedCount()]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -384,7 +418,14 @@ class HivePlugin : TrinityPlugin {
         vault?.files.upload(dstPath, asRemoteFile: srcPath).done{ result in
             self.success(command, retAsDict: ["success": result])
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -398,7 +439,14 @@ class HivePlugin : TrinityPlugin {
             readerMap[objectId] = outstr
             self.success(command, retAsDict: ["objectId": objectId])
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -409,7 +457,14 @@ class HivePlugin : TrinityPlugin {
         vault?.files.delete(srcPath).done{ [self] success in
             self.success(command, retAsDict: ["success": success])
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -422,7 +477,14 @@ class HivePlugin : TrinityPlugin {
         vault?.files.move(srcPath, dstPath).done{ [self] success in
             self.success(command, retAsDict: ["success": success])
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -435,7 +497,14 @@ class HivePlugin : TrinityPlugin {
         vault?.files.copy(srcPath, dstPath).done{ [self] success in
             self.success(command, retAsDict: ["success": success])
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -447,7 +516,14 @@ class HivePlugin : TrinityPlugin {
         vault?.files.hash(srcPath).done{ [self] hash in
             self.success(command, retAsString: hash)
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -463,7 +539,14 @@ class HivePlugin : TrinityPlugin {
             }
             self.success(command, retAsArray: jsonArray as NSArray)
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -477,7 +560,14 @@ class HivePlugin : TrinityPlugin {
             jsonArray.append(HivePluginHelper.hiveFileInfoToPluginJson(fileInfo))
             self.success(command, retAsArray: jsonArray as NSArray)
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
@@ -499,7 +589,14 @@ class HivePlugin : TrinityPlugin {
         vault?.scripting.registerScript(functionName, condition, executable).done{ [self] success in
             self.success(command, retAsDict: ["success": success])
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
         }
     }
 
