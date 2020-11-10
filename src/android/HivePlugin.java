@@ -322,7 +322,12 @@ public class HivePlugin extends TrinityPlugin {
 
     private void client_getVault(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String clientObjectId = args.getString(0);
-        String vaultOwnerDid = args.getString(1);
+        String vaultOwnerDid = args.isNull(1) ? null : args.getString(1);
+
+        if (vaultOwnerDid == null) {
+            callbackContext.error("getVault() cannot be called with a null string as vault owner DID");
+            return;
+        }
 
         try {
             Client client = clientMap.get(clientObjectId);

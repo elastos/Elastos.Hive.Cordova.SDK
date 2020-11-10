@@ -196,10 +196,15 @@ class HivePlugin : TrinityPlugin {
 
     @objc func client_getVault(_ command: CDVInvokedUrlCommand) {
         let clientObjectId = command.arguments[0] as? String ?? ""
-        let vaultOwnerDid = command.arguments[1] as? String ?? ""
-        HiveClientHandle.setVaultProvider(vaultOwnerDid, "https://hive1.trinity-tech.io")
+        let vaultOwnerDid = command.arguments[1] as? String
+
+        if vaultOwnerDid == nil {
+            self.error(command, retAsString: "getVault() cannot be called with a null string as vault owner DID")
+            return
+        }
+
         let client = clientMap[clientObjectId]
-        _ = client?.getVault(vaultOwnerDid).done{ [self] vault in
+        _ = client?.getVault(vaultOwnerDid!).done{ [self] vault in
             let vaultId = "\(vault.hashValue)"
             vaultMap[vaultId] = vault
             let ret = ["objectId": vaultId,
