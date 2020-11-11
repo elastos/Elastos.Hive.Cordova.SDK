@@ -639,12 +639,22 @@ class HivePlugin : TrinityPlugin {
         let functionName = command.arguments[1] as? String ?? ""
         let emptyDict: Dictionary<String, Any> = [: ]
         let params = command.arguments[2] as? Dictionary<String, Any> ?? emptyDict
+        let appDID = command.arguments[3] as? String ?? ""
 
         let vault = vaultMap[vaultObjectId]
-//        vault?.scripting.call(functionName, params, String.self).done{ [self] success in
-//            self.success(command, retAsDict: ["success": success])
-//        }.catch{ error in
-//            self.error(command, retAsString: error.localizedDescription)
-//        }
+        if vault != nil {
+            vault?.scripting.call(functionName, params, appDID, Dictionary<String, Any>.self).done{ success in
+                self.success(command, retAsDict: ["success": success])
+            }.catch{ error in
+                if error is HiveError {
+                    let errstring =  HiveError.description(error as! HiveError)
+                    self.error(command, retAsString: errstring)
+                }
+                else
+                {
+                    self.error(command, retAsString: error.localizedDescription)
+                }
+            }
+        }
     }
 }
