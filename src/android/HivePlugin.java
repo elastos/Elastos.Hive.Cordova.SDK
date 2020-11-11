@@ -344,7 +344,12 @@ public class HivePlugin extends TrinityPlugin {
                     callbackContext.success((String)null);
                 }
             }).exceptionally(e -> {
-                callbackContext.error(e.getMessage());
+                Throwable cause = e.getCause();
+                if (cause instanceof ProviderNotSetException) {
+                    callbackContext.success((String)null);
+                } else {
+                    callbackContext.error(e.getMessage());
+                }
                 return null;
             });
         }
