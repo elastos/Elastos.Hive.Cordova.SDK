@@ -41,6 +41,7 @@ import org.elastos.hive.database.InsertOptions;
 import org.elastos.hive.database.UpdateOptions;
 import org.elastos.hive.database.UpdateResult;
 import org.elastos.hive.exception.HiveException;
+import org.elastos.hive.exception.ProviderNotSetException;
 import org.elastos.hive.files.FileInfo;
 import org.elastos.hive.scripting.Condition;
 import org.elastos.hive.scripting.Executable;
