@@ -285,6 +285,35 @@ class HivePlugin : TrinityPlugin {
         }
     }
 
+    @objc func database_insertMany(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let collectionName = command.arguments[1] as? String ?? ""
+        let emptyDict: Dictionary<String, Any> = [: ]
+        let emptyArray: Array<Dictionary<String, Any>> = [ ]
+        let documentArray = command.arguments[2] as? Array<Dictionary<String, Any>> ?? emptyArray
+        let optionsJson = command.arguments[3] as? Dictionary<String, Any> ?? emptyDict
+
+        let options = InsertOptions()
+        let vault = vaultMap[vaultObjectId]
+        print("documentArray === \(documentArray)")
+        if vault != nil {
+            vault?.database.insertMany(collectionName, documentArray, options: options).done{ inserResult in
+                let insertIds = inserResult.insertedIds()
+                let ret = ["insertedIds": insertIds]
+                self.success(command, retAsDict: ret as NSDictionary)
+            }.catch{ error in
+                if error is HiveError {
+                    let errstring =  HiveError.description(error as! HiveError)
+                    self.error(command, retAsString: errstring)
+                }
+                else
+                {
+                    self.error(command, retAsString: error.localizedDescription)
+                }
+            }
+        }
+    }
+
     @objc func database_countDocuments(_ command: CDVInvokedUrlCommand) {
         let vaultObjectId = command.arguments[0] as? String ?? ""
         let collectionName = command.arguments[1] as? String ?? ""
