@@ -278,7 +278,7 @@ class HivePlugin : TrinityPlugin {
         let options = InsertOptions()
         let vault = vaultMap[vaultObjectId]
         vault?.database.insertOne(collectionName, documentJson, options: options).done{ result in
-            let ret = ["insertedIds": result.insertedId()]
+            let ret = ["insertedId": result.insertedId()]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
             self.error(command, retAsString: error.localizedDescription)
