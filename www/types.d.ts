@@ -186,7 +186,7 @@ declare namespace HivePlugin {
             /**
              * Returns generic information about payment for this vault on this vault provider.
              */
-            paymentSettings(): PaymentSettings;
+            getPaymentSettings(): PaymentSettings;
         }
 
         export class PricingPlan {
@@ -218,6 +218,15 @@ declare namespace HivePlugin {
             getCurrency(): string;
         }
 
+        export const enum OrderState {
+            AWAITING_PAYMENT = "wait_pay",
+            AWAITING_TX_CONFIRMATION = "wait_tx",
+            TIMED_OUT_WHILE_WAITING_FOR_PAYMENT = "wait_pay_timeout",
+            TIMED_OUT_WHILE_WAITING_FOR_TX_CONFIRMATION = "wait_tx_timeout",
+            FAILED_UNSPECIFIED_REASON = "failed",
+            COMPLETED = "success"
+        }
+
         export class Order {
             /**
              * Returns the order unique ID.
@@ -235,8 +244,10 @@ declare namespace HivePlugin {
              */
             getPaymentTransactionIDs(): string[];
 
-            // TODO: enum instead of string
-            getState(): string;
+            /**
+             * Current state of this order.
+             */
+            getState(): OrderState;
 
             /**
              * Timestamp (seconds since epoch) at which this order was created.
@@ -244,13 +255,19 @@ declare namespace HivePlugin {
             getCreationTime(): number;
 
             /**
-             * Timestamp (seconds since epoch) at which XXX TODO
-             * TODO: rename the api, bad name.
+             * Timestamp (seconds since epoch) at which the order was closed.
+             * An order is closed after all payment transactions have been confirmed by the vault provider,
+             * or if the order expired without payments.
              */
-            finishTime(): number;
+            getCompletionTime(): number;
         }
 
         export class ActivePricingPlan {
+            /**
+             * Returns the pricing plan name.
+             */
+            getName(): string;
+
             /**
              * Maximum storage size allowed for this plan. Write operations will fail is this quota is reached.
              *
@@ -281,9 +298,6 @@ declare namespace HivePlugin {
              * Timestamp (seconds since epoch) at which the plan became inactive (ended).
              */
             endTime(): number;
-
-            // TODO
-            pricingUsing(): string;
         }
 
         export interface Payment {

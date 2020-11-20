@@ -12,6 +12,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -160,5 +161,13 @@ public class HivePluginHelper {
             array.put(it.next());
         }
         return array;
+    }
+
+    public static <T> List<T> JSONArrayToList(JSONArray array) throws JSONException {
+        ArrayList<T> list = new ArrayList<T>();
+        for (int i=0; i<array.length(); i++) {
+            list.add((T)array.get(i));
+        }
+        return list;
     }
 }

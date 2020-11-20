@@ -25,11 +25,13 @@ package org.elastos.trinity.plugins.hive;
 import android.util.Base64;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.util.JSONPObject;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 import org.elastos.did.DIDDocument;
 import org.elastos.hive.AuthenticationHandler;
+import org.elastos.hive.CallConfig;
 import org.elastos.hive.Client;
 import org.elastos.hive.Vault;
 import org.elastos.hive.database.CountOptions;
@@ -185,6 +187,30 @@ public class HivePlugin extends TrinityPlugin {
                     break;
                 case "reader_close":
                     this.reader_close(args, callbackContext);
+                    break;
+                case "payment_getPricingInfo":
+                    this.payment_getPricingInfo(args, callbackContext);
+                    break;
+                case "payment_getPricingPlan":
+                    this.payment_getPricingPlan(args, callbackContext);
+                    break;
+                case "payment_placeOrder":
+                    this.payment_placeOrder(args, callbackContext);
+                    break;
+                case "payment_payOrder":
+                    this.payment_payOrder(args, callbackContext);
+                    break;
+                case "payment_getOrder":
+                    this.payment_getOrder(args, callbackContext);
+                    break;
+                case "payment_getAllOrders":
+                    this.payment_getAllOrders(args, callbackContext);
+                    break;
+                case "payment_getActivePricingPlan":
+                    this.payment_getActivePricingPlan(args, callbackContext);
+                    break;
+                case "payment_getPaymentVersion":
+                    this.payment_getPaymentVersion(args, callbackContext);
                     break;
                 default:
                     return false;
@@ -990,10 +1016,17 @@ public class HivePlugin extends TrinityPlugin {
             }
         }
 
+
         try {
             Vault vault = vaultMap.get(vaultObjectId);
             if (ensureValidVault(vault, callbackContext)) {
-                vault.getScripting().call(functionName, HivePluginHelper.jsonObjectToJsonNode(params), appDID, JsonNode.class).thenAccept(success -> {
+
+                CallConfig callConfig = new CallConfig.Builder()
+                        .setPurpose(CallConfig.Purpose.General)
+                        .setParams(HivePluginHelper.jsonObjectToJsonNode(params))
+                        .setAppDid(appDID).build();
+
+                vault.getScripting().callScript(functionName, callConfig, JsonNode.class).thenAccept(success -> {
                     try {
                         JSONObject ret = new JSONObject();
                         ret.put("success", success);
@@ -1118,6 +1151,181 @@ public class HivePlugin extends TrinityPlugin {
             callbackContext.success();
         }
         catch (IOException e) {
+            callbackContext.error(e.getMessage());
+        }
+    }
+
+    private void payment_getPricingInfo(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+
+        try {
+            Vault vault = vaultMap.get(vaultObjectId);
+            if (ensureValidVault(vault, callbackContext)) {
+                vault.getPayment().getPaymentInfo().thenAccept(pricingInfo -> {
+                    try {
+                        callbackContext.success(new JSONObject(pricingInfo.serialize()));
+                    }
+                    catch (Exception e) {
+                        callbackContext.error(e.getMessage());
+                    }
+                });
+            }
+        }
+        catch (Exception e) {
+            callbackContext.error(e.getMessage());
+        }
+    }
+
+    private void payment_getPricingPlan(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String pricingPlanName = args.getString(1);
+
+        try {
+            Vault vault = vaultMap.get(vaultObjectId);
+            if (ensureValidVault(vault, callbackContext)) {
+                vault.getPayment().getPricingPlan(pricingPlanName).thenAccept(pricingPlan -> {
+                    try {
+                        callbackContext.success(new JSONObject(pricingPlan.serialize()));
+                    }
+                    catch (Exception e) {
+                        callbackContext.error(e.getMessage());
+                    }
+                });
+            }
+        }
+        catch (Exception e) {
+            callbackContext.error(e.getMessage());
+        }
+    }
+
+    private void payment_placeOrder(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String pricingPlanName = args.getString(1);
+
+        try {
+            Vault vault = vaultMap.get(vaultObjectId);
+            if (ensureValidVault(vault, callbackContext)) {
+                vault.getPayment().placeOrder(pricingPlanName).thenAccept(orderId -> {
+                    try {
+                        callbackContext.success(orderId);
+                    }
+                    catch (Exception e) {
+                        callbackContext.error(e.getMessage());
+                    }
+                });
+            }
+        }
+        catch (Exception e) {
+            callbackContext.error(e.getMessage());
+        }
+    }
+
+    private void payment_payOrder(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String orderId = args.getString(1);
+        JSONArray transactionIDsJson = args.getJSONArray(2);
+
+        try {
+            Vault vault = vaultMap.get(vaultObjectId);
+            if (ensureValidVault(vault, callbackContext)) {
+                vault.getPayment().payOrder(orderId, HivePluginHelper.JSONArrayToList(transactionIDsJson)).thenAccept(success -> {
+                    try {
+                        JSONObject ret = new JSONObject();
+                        ret.put("success", success);
+                        callbackContext.success(orderId);
+                    }
+                    catch (Exception e) {
+                        callbackContext.error(e.getMessage());
+                    }
+                });
+            }
+        }
+        catch (Exception e) {
+            callbackContext.error(e.getMessage());
+        }
+    }
+
+    private void payment_getOrder(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String orderId = args.getString(1);
+
+        try {
+            Vault vault = vaultMap.get(vaultObjectId);
+            if (ensureValidVault(vault, callbackContext)) {
+                vault.getPayment().getOrder(orderId).thenAccept(order -> {
+                    try {
+                        callbackContext.success(new JSONObject(order.serialize()));
+                    }
+                    catch (Exception e) {
+                        callbackContext.error(e.getMessage());
+                    }
+                });
+            }
+        }
+        catch (Exception e) {
+            callbackContext.error(e.getMessage());
+        }
+    }
+
+    private void payment_getAllOrders(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+
+        try {
+            Vault vault = vaultMap.get(vaultObjectId);
+            if (ensureValidVault(vault, callbackContext)) {
+                vault.getPayment().getAllOrders().thenAccept(orders -> {
+                    try {
+                        callbackContext.success(HivePluginHelper.listToJSONArray(orders));
+                    }
+                    catch (Exception e) {
+                        callbackContext.error(e.getMessage());
+                    }
+                });
+            }
+        }
+        catch (Exception e) {
+            callbackContext.error(e.getMessage());
+        }
+    }
+
+    private void payment_getActivePricingPlan(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+
+        try {
+            Vault vault = vaultMap.get(vaultObjectId);
+            if (ensureValidVault(vault, callbackContext)) {
+                vault.getPayment().getUsingPricePlan().thenAccept(activePlan -> {
+                    try {
+                        callbackContext.success(new JSONObject(activePlan.serialize()));
+                    }
+                    catch (Exception e) {
+                        callbackContext.error(e.getMessage());
+                    }
+                });
+            }
+        }
+        catch (Exception e) {
+            callbackContext.error(e.getMessage());
+        }
+    }
+
+    private void payment_getPaymentVersion(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+
+        try {
+            Vault vault = vaultMap.get(vaultObjectId);
+            if (ensureValidVault(vault, callbackContext)) {
+                vault.getPayment().getPaymentVersion().thenAccept(version -> {
+                    try {
+                        callbackContext.success(version);
+                    }
+                    catch (Exception e) {
+                        callbackContext.error(e.getMessage());
+                    }
+                });
+            }
+        }
+        catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
     }
