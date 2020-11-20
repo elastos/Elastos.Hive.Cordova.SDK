@@ -169,6 +169,180 @@ declare namespace HivePlugin {
         }
     }
 
+    namespace Payment {
+        export class PaymentSettings {
+            /**
+             * Crypto address that receives payments for placed orders.
+             */
+            getReceivingELAAddress(): Promise<string>;
+        }
+
+        export class PricingInfo {
+            /**
+             * Returns the list of all available pricing plans
+             */
+            getPricingPlans(): PricingPlan[];
+
+            /**
+             * Returns generic information about payment for this vault on this vault provider.
+             */
+            paymentSettings(): PaymentSettings;
+        }
+
+        export class PricingPlan {
+            /**
+             * Returns the pricing plan name.
+             */
+            getName(): string;
+
+            /**
+             * Maximum storage size allowed for this plan. Write operations will fail is this quota is reached.
+             *
+             * @returns Max storage size, in megabytes.
+             */
+            getMaxStorage(): number;
+
+            /**
+             * Number of days during which this plan remains active after been purchased and started.
+             */
+            getDuration(): number;
+
+            /**
+             * Cost in currency, for the getDuration() days during which this plan is active.
+             */
+            getCost(): number;
+
+            /**
+             * Currency to be used to pay for this plan, together with getCost().
+             */
+            getCurrency(): string;
+        }
+
+        export class Order {
+            /**
+             * Returns the order unique ID.
+             */
+            getId(): string;
+
+            /**
+             * Returns the pricing plan for which this order was created.
+             */
+            getPricingPlan(): PricingPlan;
+
+            /**
+             * Returns the list of transactions created to pay for this order.
+             * Those transactions can have been verified/confirmed, or not yet.
+             */
+            getPaymentTransactionIDs(): string[];
+
+            // TODO: enum instead of string
+            getState(): string;
+
+            /**
+             * Timestamp (seconds since epoch) at which this order was created.
+             */
+            getCreationTime(): number;
+
+            /**
+             * Timestamp (seconds since epoch) at which XXX TODO
+             * TODO: rename the api, bad name.
+             */
+            finishTime(): number;
+        }
+
+        export class ActivePricingPlan {
+            /**
+             * Maximum storage size allowed for this plan. Write operations will fail is this quota is reached.
+             *
+             * @returns Max storage size, in megabytes.
+             */
+            getMaxStorage(): number;
+
+            /**
+             * Returns the disk space currently used by this vault's files, in megabytes.
+             */
+            getCurrentFileStorageUsed(): number;
+
+            /**
+             * Returns the disk space currently used by this vault's database, in megabytes.
+             */
+            getCurrentDatabaseStorageUsed(): number;
+
+            // TODO
+            modifyTime(): number;
+
+            /**
+             * Timestamp (seconds since epoch) at which the plan became active. This could be in the future compared
+             * to the order date, in case the order is paid in advance.
+             */
+            getStartTime(): number;
+
+            /**
+             * Timestamp (seconds since epoch) at which the plan became inactive (ended).
+             */
+            endTime(): number;
+
+            // TODO
+            pricingUsing(): string;
+        }
+
+        export interface Payment {
+            /**
+            * Returns pricing information for the vault, on its current vault provider.
+            * Pricing information includes the list of purchaseable plans and other settings for payments.
+            */
+            getPricingInfo(): Promise<PricingInfo>;
+
+            /**
+            * Retrieves a pricing plan by its name, among the list of all available pricing plans on this vault
+            * provider, for the current vault.
+            */
+            getPricingPlan(pricingPlanName: string): Promise<PricingPlan>;
+
+            /**
+            * Places a new order for a given pricing plan. This is the first step required when
+            * willing to activate a new pricing plan. Based on this created order, the required payments can
+            * then be done by an external wallet and notified to the vault provider using payOrder().
+            *
+            * @returns The newly created order ID.
+            */
+            placeOrder(pricingPlanName: string): Promise<string>;
+
+            /**
+            * Notifies the hive provider that a payment has been issues for a previously created order.
+            * Once the payment transactions are confirmed by the vault provider, the order will be completed
+            * and the target plan will become active.
+            *
+            * @param transactionIDs List of transaction IDs created by an external wallet, for this order.
+            *
+            * @returns True if the operation was successful (TODO: clarify what this means), false otherwise.
+            */
+            payOrder(orderId: string, transactionIDs: string[]): Promise<boolean>;
+
+            /**
+            * Retrieves information about a previously created order.
+            */
+            getOrder(orderId: string): Promise<Order>;
+
+            /**
+            * Returns the list of all previously created orders for this vault, on the current vault provider.
+            */
+            getAllOrders(): Promise<Order[]>;
+
+            /**
+            * Returns the active pricing plan for this vault on this vault provider. Null in case there is no
+            * active plan (though this should normally never happen - as a plan may always be required, even if
+            * it is a free plan).
+            */
+            getActivePricingPlan(): Promise<ActivePricingPlan>;
+
+            /**
+            * Returns the version number for this payment module.
+            */
+            getPaymentVersion(): Promise<string>;
+        }
+    }
+
     namespace Database {
         /**
          * Options used during collection creation.
@@ -446,6 +620,18 @@ declare namespace HivePlugin {
              * script accessible anonimously.
              */
             call(functionName: string, params?: JSONObject, appDID?: string): Promise<JSONObject>;
+
+            /**
+             * See call(). Instead of returning a JSON object as a script result, this api returns a File Reader instance
+             * that can be used to receive the main result of the script execution as a file download stream.
+             */
+            callToDownloadFile(functionName: string, params?: JSONObject, appDID?: string): Promise<Files.Reader>;
+
+            /**
+             * See call(). Instead of returning a JSON object as a script result, this api returns a File Writer instance
+             * that can be used to upload a file stream to the hive node.
+             */
+            callToUploadFile(functionName: string, params?: JSONObject, appDID?: string): Promise<Files.Writer>;
         }
     }
 
@@ -455,7 +641,7 @@ declare namespace HivePlugin {
 
     interface Vault {
         /**
-         * Vault provider address (carrier or http)
+         *   provider address (carrier or http)
          */
         getVaultProviderAddress(): string;
 
@@ -463,6 +649,20 @@ declare namespace HivePlugin {
          * DID string of this vault owner
          */
         getVaultOwnerDid(): string;
+
+        /**
+         * Returns the deployment version for this vault's vault provider (node).
+         * This can be useful to maintain backward compatibility with older nodes.
+         */
+        getNodeVersion(): Promise<string>;
+
+        /**
+         * Gives access to the payment module that allows paying for vault usage, check active subscriptions
+         * and quotas and more.
+         *
+         * Returns null in case we are accessing a vault that is not the current user's.
+         */
+        getPayment(): Payment.Payment;
 
         /**
          * Gives access to database features on this vault.
@@ -504,6 +704,12 @@ declare namespace HivePlugin {
     }
 
     interface Client {
+        /**
+         * Creates a new vault for the target DID on the target vault provider.
+         * This is a mandatory step prior to using a vault provider, otherwise all API calls return an error.
+         */
+        createVault(vaultOwnerDid: string, vaultProviderAddress: string): Promise<Vault>;
+
         /**
          * Gets a reference to a personal vault or another user's vault.
          * The resulting Vault object is used to access vault features such as database, fils, scripting.

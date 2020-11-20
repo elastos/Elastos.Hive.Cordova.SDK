@@ -36,6 +36,137 @@ class JSONObjectImpl implements HivePlugin.JSONObject {
     [k: string]: string | number | boolean | HivePlugin.JSONObject | HivePlugin.JSONObject[];
 }
 
+class PaymentSettingsImpl implements HivePlugin.Payment.PaymentSettings {
+    getReceivingELAAddress(): Promise<string> {
+        throw new Error("Method not implemented.");
+    }
+
+    static fromJson(json: HivePlugin.JSONObject): PaymentSettingsImpl {
+        let result = new PaymentSettingsImpl();
+        Object.assign(result, json);
+        return result;
+    }
+}
+
+class PricingPlanImpl implements HivePlugin.Payment.PricingPlan {
+    getName(): string {
+        throw new Error("Method not implemented.");
+    }
+    getMaxStorage(): number {
+        throw new Error("Method not implemented.");
+    }
+    getDuration(): number {
+        throw new Error("Method not implemented.");
+    }
+    getCost(): number {
+        throw new Error("Method not implemented.");
+    }
+    getCurrency(): string {
+        throw new Error("Method not implemented.");
+    }
+
+    static fromJson(json: HivePlugin.JSONObject): PricingPlanImpl {
+        let result = new PricingPlanImpl();
+        Object.assign(result, json);
+        return result;
+    }
+}
+
+class PricingInfoImpl implements HivePlugin.Payment.PricingInfo {
+    getPricingPlans(): HivePlugin.Payment.PricingPlan[] {
+        throw new Error("Method not implemented.");
+    }
+    paymentSettings(): HivePlugin.Payment.PaymentSettings {
+        throw new Error("Method not implemented.");
+    }
+
+    static fromJson(json: HivePlugin.JSONObject): PricingInfoImpl {
+        let result = new PricingInfoImpl();
+        Object.assign(result, json);
+        return result;
+    }
+}
+
+class OrderImpl implements HivePlugin.Payment.Order {
+    private order_id: string;
+    private pricing_info: PricingPlanImpl;
+    private pay_txids: string[];
+    private creat_time: number;
+    private finish_time: number;
+
+    getId(): string {
+        return this.order_id;
+    }
+
+    getPricingPlan(): HivePlugin.Payment.PricingPlan {
+        return this.pricing_info;
+    }
+
+    getPaymentTransactionIDs(): string[] {
+        return this.pay_txids;
+    }
+
+    getState(): string {
+        throw new Error("Method not implemented.");
+    }
+
+    getCreationTime(): number {
+        return this.creat_time;
+    }
+
+    finishTime(): number {
+        return this.finish_time;
+    }
+
+    static fromJson(json: HivePlugin.JSONObject): OrderImpl {
+        let result = new OrderImpl();
+        Object.assign(result, json);
+
+        result.pricing_info = PricingPlanImpl.fromJson(json.pricing_info as JSONObjectImpl);
+
+        return result;
+    }
+}
+
+class PaymentImpl implements HivePlugin.Payment.Payment {
+    constructor(private vault: VaultImpl) {}
+
+    async getPricingInfo(): Promise<HivePlugin.Payment.PricingInfo> {
+        let resultJson = await execAsPromise<HivePlugin.JSONObject>("payment_getPaymentInfo", [this.vault.objectId]);
+        return PricingInfoImpl.fromJson(resultJson);
+    }
+
+    async getPricingPlan(pricingPlanName: string): Promise<HivePlugin.Payment.PricingPlan> {
+        let resultJson = await execAsPromise<HivePlugin.JSONObject>("payment_getPaymentInfo", [this.vault.objectId, pricingPlanName]);
+        return PricingPlanImpl.fromJson(resultJson);
+    }
+
+    placeOrder(pricingPlanName: string): Promise<string> {
+        return execAsPromise<string>("payment_placeOrder", [this.vault.objectId, pricingPlanName]);
+    }
+
+    payOrder(orderId: string, transactionIDs: string[]): Promise<boolean> {
+        throw new Error("Method not implemented.");
+    }
+
+    async getOrder(orderId: string): Promise<HivePlugin.Payment.Order> {
+        let resultJson = await execAsPromise<HivePlugin.JSONObject>("payment_getOrder", [this.vault.objectId, orderId]);
+        return OrderImpl.fromJson(resultJson);
+    }
+
+    getAllOrders(): Promise<HivePlugin.Payment.Order[]> {
+        throw new Error("Method not implemented.");
+    }
+
+    getActivePricingPlan(): Promise<HivePlugin.Payment.ActivePricingPlan> {
+        throw new Error("Method not implemented.");
+    }
+
+    getPaymentVersion(): Promise<string> {
+        throw new Error("Method not implemented.");
+    }
+}
+
 class InsertOneResultImpl implements HivePlugin.Database.InsertOneResult {
     insertedId: string;
 
@@ -504,6 +635,16 @@ class ScriptingImpl implements HivePlugin.Scripting.Scripting {
     call(functionName: string, params?: HivePlugin.JSONObject, appDID?: string): Promise<HivePlugin.JSONObject> {
         return execAsPromise<HivePlugin.JSONObject>("scripting_call", [this.vault.objectId, functionName, params, appDID]);
     }
+
+    async callToDownloadFile(functionName: string, params?: HivePlugin.JSONObject, appDID?: string): Promise<HivePlugin.Files.Reader> {
+        let resultJson = await execAsPromise<HivePlugin.JSONObject>("scripting_call_to_download_file", [this.vault.objectId, functionName, params, appDID]);
+        return ReaderImpl.fromJson(resultJson);
+    }
+
+    async callToUploadFile(functionName: string, params?: HivePlugin.JSONObject, appDID?: string): Promise<HivePlugin.Files.Writer> {
+        let resultJson = await execAsPromise<HivePlugin.JSONObject>("scripting_call_to_upload_file", [this.vault.objectId, functionName, params, appDID]);
+        return WriterImpl.fromJson(resultJson);
+    }
 }
 
 class VaultImpl implements HivePlugin.Vault {
@@ -512,6 +653,7 @@ class VaultImpl implements HivePlugin.Vault {
     private vaultProviderAddress: string;
     private vaultOwnerDid: string;
 
+    private payment: PaymentImpl;
     private database: DatabaseImpl;
     private files: FilesImpl;
     private scripting: ScriptingImpl;
@@ -520,11 +662,11 @@ class VaultImpl implements HivePlugin.Vault {
         this.vaultProviderAddress = vaultProviderAddress;
         this.vaultOwnerDid = vaultOwnerDid;
 
+        this.payment = new PaymentImpl(this);
         this.database = new DatabaseImpl(this);
         this.files = new FilesImpl(this);
         this.scripting = new ScriptingImpl(this);
     }
-
 
     static fromJson(json: HivePlugin.JSONObject): VaultImpl {
         if (!json)
@@ -543,6 +685,10 @@ class VaultImpl implements HivePlugin.Vault {
         return this.vaultOwnerDid;
     }
 
+    getPayment(): HivePlugin.Payment.Payment {
+        return this.payment;
+    }
+
     getDatabase(): HivePlugin.Database.Database {
         return this.database;
     }
@@ -554,10 +700,19 @@ class VaultImpl implements HivePlugin.Vault {
     getScripting(): HivePlugin.Scripting.Scripting {
         return this.scripting;
     }
+
+    getNodeVersion(): Promise<string> {
+        return execAsPromise<string>("vault_getNodeVersion", [this.objectId]);
+    }
 }
 
 class ClientImpl implements HivePlugin.Client {
     objectId: string;
+
+    async createVault(vaultOwnerDid: string): Promise<HivePlugin.Vault> {
+        let vaultJson = await execAsPromise<HivePlugin.JSONObject>("client_createVault", [this.objectId, vaultOwnerDid]);
+        return VaultImpl.fromJson(vaultJson);
+    }
 
     async getVault(vaultOwnerDid: string): Promise<HivePlugin.Vault> {
         let vaultJson = await execAsPromise<HivePlugin.JSONObject>("client_getVault", [this.objectId, vaultOwnerDid]);
