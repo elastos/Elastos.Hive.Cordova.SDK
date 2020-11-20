@@ -107,6 +107,9 @@ public class HivePlugin extends TrinityPlugin {
                 case "client_getVault":
                     this.client_getVault(args, callbackContext);
                     break;
+                case "vault_getNodeVersion":
+                    this.vault_getNodeVersion(args, callbackContext);
+                    break;
                 case "database_createCollection":
                     this.database_createCollection(args, callbackContext);
                     break;
@@ -334,10 +337,10 @@ public class HivePlugin extends TrinityPlugin {
         String clientObjectId = args.getString(0);
         String challengeResponseJwt = args.isNull(1) ? null : args.getString(1);
 
-        if (challengeResponseJwt == null) {
+        /*if (challengeResponseJwt == null) {
             callbackContext.error("Empty challenge response given!");
             return;
-        }
+        }*/
 
         // Retrieve the auth response callback and send the authentication JWT back to the hive SDK
         CompletableFuture<String> authResponseFuture = clientAuthHandlerCompletionMap.get(clientObjectId);
@@ -384,6 +387,25 @@ public class HivePlugin extends TrinityPlugin {
                 }
                 return null;
             });
+        }
+        catch (Exception e) {
+            callbackContext.error(e.toString());
+        }
+    }
+
+    private void vault_getNodeVersion(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+
+        try {
+            Vault vault = vaultMap.get(vaultObjectId);
+            if (ensureValidVault(vault, callbackContext)) {
+                vault.getNodeVersion().thenAccept(version -> {
+                    callbackContext.success(version);
+                }).exceptionally(e -> {
+                    callbackContext.error(e.getMessage());
+                    return null;
+                });
+            }
         }
         catch (Exception e) {
             callbackContext.error(e.toString());
