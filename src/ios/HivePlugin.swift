@@ -144,29 +144,6 @@ class HivePlugin : TrinityPlugin {
         }
     }
 
-     @objc func client_setVaultAddress(_ command: CDVInvokedUrlCommand) {
-        let ownerDid = command.arguments[0] as? String ?? ""
-        let vaultAddress = command.arguments[1] as? String ?? ""
-        HiveClientHandle.setVaultProvider(ownerDid, vaultAddress)
-        self.success(command, retAsString: "success")
-    }
-
-    @objc func client_getVaultAddress(_ command: CDVInvokedUrlCommand) {
-        let ownerDid = command.arguments[0] as? String ?? ""
-        HiveClientHandle.getVaultProvider(ownerDid).done { address in
-            self.success(command, retAsString: "success")
-        }.catch { error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
-        }
-    }
-
     @objc func client_setAuthHandlerChallengeCallback(_ command: CDVInvokedUrlCommand) {
         let clientObjectId = command.arguments[0] as? String ?? ""
         // Save current callback content to be able to call it back when an authentication is requests by the hive SDK
@@ -192,6 +169,48 @@ class HivePlugin : TrinityPlugin {
         let authResponseFuture: Resolver<String> = clientAuthHandlerCompletionMap[callbackId!]!
         authResponseFuture.fulfill(challengeResponseJwt)
         self.success(command, retAsDict: [: ])
+    }
+
+    @objc func client_createVault(_ command: CDVInvokedUrlCommand) {
+        let clientObjectId = command.arguments[0] as? String ?? ""
+        let vaultOwnerDid = command.arguments[1] as? String
+        let vaultProviderAddress = command.arguments[1] as? String
+
+        if vaultOwnerDid == nil {
+            self.error(command, retAsString: "createVault() cannot be called with a null string as vault owner DID")
+            return
+        }
+
+        if vaultProviderAddress == nil {
+            self.error(command, retAsString: "createVault() cannot be called with a null string as vault provider address")
+            return
+        }
+
+        let client = clientMap[clientObjectId]
+        /* TODO - UNCOMMENT AFTER HIVE SDK IS READY _ = client?.createVault(vaultOwnerDid!, vaultProviderAddress!).done{ [self] vault in
+            let vaultId = "\(vault.hashValue)"
+            vaultMap[vaultId] = vault
+            let ret = ["objectId": vaultId,
+                       "vaultProviderAddress": vault.providerAddress,
+                       "vaultOwnerDid": vaultOwnerDid]
+            self.success(command, retAsDict: ret as NSDictionary)
+        }.catch{ error in
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
+        }*/
+
+        // TMP FAKE RETURN - TODO DELETE AFTER HIVE SDK IS READY
+        let ret = ["objectId": "123456",
+                   "vaultProviderAddress": vaultProviderAddress,
+                   "vaultOwnerDid": vaultOwnerDid]
+        self.success(command, retAsDict: ret as NSDictionary)
+        // END OF TMP FAKE RETURN
     }
 
     @objc func client_getVault(_ command: CDVInvokedUrlCommand) {
@@ -220,6 +239,23 @@ class HivePlugin : TrinityPlugin {
             {
                 self.error(command, retAsString: error.localizedDescription)
             }
+        }
+    }
+
+    @objc func vault_getNodeVersion(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+
+        let vault = vaultMap[vaultObjectId]
+        if ensureValidVault(vault, command) {
+            /* TODO - UNCOMMENT AFTER HIVE SDK IS READY vault!.getNodeVersion().done { version in
+                self.success(command, retAsString: version)
+            }.catch { error in
+                self.error(command, retAsString: error.localizedDescription)
+            }*/
+
+            // TMP FAKE RETURN - TODO DELETE AFTER HIVE SDK IS READY
+            self.success(command, retAsString: "1.0.0-TODO")
+            // END OF TMP FAKE RETURN
         }
     }
 
@@ -655,6 +691,206 @@ class HivePlugin : TrinityPlugin {
                     self.error(command, retAsString: error.localizedDescription)
                 }
             }
+        }
+    }
+
+    @objc func payment_getPricingInfo(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+
+        let vault = vaultMap[vaultObjectId]
+        if ensureValidVault(vault, command) {
+            /* TODO vault!.getPayment().getPaymentInfo().done { pricingInfo in
+                do {
+                    callbackContext.success(new JSONObject(pricingInfo.serialize()));
+                }
+                catch { error in
+                    callbackContext.error(e.getMessage());
+                }
+            }*/
+
+            // TMP WAITING FOR HIVE SDK
+            self.success(command, retAsDict: [
+                "paymentSettings": [],
+                "pricingPlans": []
+            ])
+            // END TMP WAITING FOR HIVE SDK
+        }
+    }
+
+    @objc func payment_getPricingPlan(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let pricingPlanName = command.arguments[1] as? String
+
+        guard pricingPlanName != nil else {
+            self.error(command, retAsString: "payment_getPricingPlan(): Pricing plan cannot be empty")
+            return
+        }
+
+        let vault = vaultMap[vaultObjectId]
+        if ensureValidVault(vault, command) {
+            /* TODO vault.getPayment().getPricingPlan(pricingPlanName).thenAccept(pricingPlan -> {
+                try {
+                    callbackContext.success(new JSONObject(pricingPlan.serialize()));
+                }
+                catch (Exception e) {
+                    callbackContext.error(e.getMessage());
+                }
+            });*/
+        }
+    }
+
+    @objc func payment_placeOrder(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let pricingPlanName = command.arguments[1] as? String
+
+        guard pricingPlanName != nil else {
+            self.error(command, retAsString: "payment_placeOrder(): Pricing plan cannot be empty")
+            return
+        }
+
+        let vault = vaultMap[vaultObjectId]
+        if ensureValidVault(vault, command) {
+            /* TODO vault.getPayment().placeOrder(pricingPlanName).thenAccept(orderId -> {
+                try {
+                    callbackContext.success(orderId);
+                }
+                catch (Exception e) {
+                    callbackContext.error(e.getMessage());
+                }
+            });*/
+
+            // TMP WAITING FOR HIVE SDK
+            self.success(command, retAsDict: [
+                "orderId": "12345"
+            ])
+            // END TMP WAITING FOR HIVE SDK
+        }
+    }
+
+    @objc func payment_payOrder(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let orderId = command.arguments[1] as? String
+
+        guard orderId != nil else {
+            self.error(command, retAsString: "payment_payOrder(): orderId cannot be empty")
+            return
+        }
+
+        let transactionIDsJson = command.arguments[2] as? Dictionary<String, Any>
+
+        guard transactionIDsJson != nil else {
+            self.error(command, retAsString: "payment_payOrder(): transactionIDsJson cannot be empty")
+            return
+        }
+
+        let vault = vaultMap[vaultObjectId]
+        if ensureValidVault(vault, command) {
+            /* TODO vault.getPayment().payOrder(orderId, HivePluginHelper.JSONArrayToList(transactionIDsJson)).thenAccept(success -> {
+                try {
+                    JSONObject ret = new JSONObject();
+                    ret.put("success", success);
+                    callbackContext.success(orderId);
+                }
+                catch (Exception e) {
+                    callbackContext.error(e.getMessage());
+                }
+            });*/
+
+            // TMP WAITING FOR HIVE SDK
+            self.success(command, retAsDict: [
+                "success":true
+            ])
+            // END TMP WAITING FOR HIVE SDK
+        }
+    }
+
+    @objc func payment_getOrder(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let orderId = command.arguments[1] as? String
+
+        guard orderId != nil else {
+            self.error(command, retAsString: "payment_getOrder(): orderId cannot be empty")
+            return
+        }
+
+        let vault = vaultMap[vaultObjectId]
+        if ensureValidVault(vault, command) {
+            /* TODO vault.getPayment().getOrder(orderId).thenAccept(order -> {
+                try {
+                    callbackContext.success(new JSONObject(order.serialize()));
+                }
+                catch (Exception e) {
+                    callbackContext.error(e.getMessage());
+                }
+            });*/
+        }
+    }
+
+    @objc func payment_getAllOrders(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+
+        let vault = vaultMap[vaultObjectId]
+        if ensureValidVault(vault, command) {
+            /* TODO vault.getPayment().getAllOrders().thenAccept(orders -> {
+                try {
+                    callbackContext.success(HivePluginHelper.listToJSONArray(orders));
+                }
+                catch (Exception e) {
+                    callbackContext.error(e.getMessage());
+                }
+            });*/
+
+            // TMP WAITING FOR HIVE SDK
+            self.success(command, retAsArray: [])
+            // END TMP WAITING FOR HIVE SDK
+        }
+    }
+
+    @objc func payment_getActivePricingPlan(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+
+        let vault = vaultMap[vaultObjectId]
+        if ensureValidVault(vault, command) {
+            /* TODO vault.getPayment().getUsingPricePlan().thenAccept(activePlan -> {
+                try {
+                    callbackContext.success(new JSONObject(activePlan.serialize()));
+                }
+                catch (Exception e) {
+                    callbackContext.error(e.getMessage());
+                }
+            });*/
+
+            // TMP WAITING FOR HIVE SDK
+            self.success(command, retAsDict: [
+                "name": "FakePlanTODO"
+            ])
+            // END TMP WAITING FOR HIVE SDK
+        }
+    }
+
+    @objc func payment_getPaymentVersion(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+
+        let vault = vaultMap[vaultObjectId]
+        if ensureValidVault(vault, command) {
+            /* TODO vault.getPayment().getPaymentVersion().thenAccept(version -> {
+                try {
+                    callbackContext.success(version);
+                }
+                catch (Exception e) {
+                    callbackContext.error(e.getMessage());
+                }
+            });*/
+        }
+    }
+
+    private func ensureValidVault(_ vault: Vault?, _ command: CDVInvokedUrlCommand) -> Bool {
+        if vault == nil {
+            self.error(command, retAsString: "The passed vault is a null object...")
+            return false
+        }
+        else {
+            return true
         }
     }
 }
