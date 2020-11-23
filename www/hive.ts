@@ -187,7 +187,7 @@ class ActivePricingPlanImpl implements HivePlugin.Payment.ActivePricingPlan {
         return this.start_time;
     }
 
-    endTime(): number {
+    getEndTime(): number {
         return this.end_time;
     }
 
@@ -787,8 +787,8 @@ class VaultImpl implements HivePlugin.Vault {
 class ClientImpl implements HivePlugin.Client {
     objectId: string;
 
-    async createVault(vaultOwnerDid: string): Promise<HivePlugin.Vault> {
-        let vaultJson = await execAsPromise<HivePlugin.JSONObject>("client_createVault", [this.objectId, vaultOwnerDid]);
+    async createVault(vaultOwnerDid: string, vaultProviderAddress: string): Promise<HivePlugin.Vault> {
+        let vaultJson = await execAsPromise<HivePlugin.JSONObject>("client_createVault", [this.objectId, vaultOwnerDid, vaultProviderAddress]);
         return VaultImpl.fromJson(vaultJson);
     }
 

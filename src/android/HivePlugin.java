@@ -31,7 +31,6 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 import org.elastos.did.DIDDocument;
 import org.elastos.hive.AuthenticationHandler;
-import org.elastos.hive.CallConfig;
 import org.elastos.hive.Client;
 import org.elastos.hive.Vault;
 import org.elastos.hive.database.CountOptions;
@@ -45,8 +44,10 @@ import org.elastos.hive.database.UpdateResult;
 import org.elastos.hive.exception.HiveException;
 import org.elastos.hive.exception.ProviderNotSetException;
 import org.elastos.hive.files.FileInfo;
+import org.elastos.hive.scripting.CallConfig;
 import org.elastos.hive.scripting.Condition;
 import org.elastos.hive.scripting.Executable;
+import org.elastos.hive.scripting.GeneralCallConfig;
 import org.elastos.hive.scripting.RawCondition;
 import org.elastos.hive.scripting.RawExecutable;
 import org.elastos.trinity.runtime.PreferenceManager;
@@ -92,17 +93,14 @@ public class HivePlugin extends TrinityPlugin {
                 case "getClient":
                     this.getClient(args, callbackContext);
                     break;
-                /*case "client_getVaultAddress":
-                    this.client_getVaultAddress(args, callbackContext);
-                    break;
-                case "client_setVaultAddress":
-                    this.client_setVaultAddress(args, callbackContext);
-                    break;*/
                 case "client_setAuthHandlerChallengeCallback":
                     this.client_setAuthHandlerChallengeCallback(args, callbackContext);
                     break;
                 case "client_sendAuthHandlerChallengeResponse":
                     this.client_sendAuthHandlerChallengeResponse(args, callbackContext);
+                    break;
+                case "client_createVault":
+                    this.client_createVault(args, callbackContext);
                     break;
                 case "client_getVault":
                     this.client_getVault(args, callbackContext);
@@ -349,18 +347,24 @@ public class HivePlugin extends TrinityPlugin {
         callbackContext.success();
     }
 
-    private void client_getVault(JSONArray args, CallbackContext callbackContext) throws JSONException {
+    private void client_createVault(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String clientObjectId = args.getString(0);
         String vaultOwnerDid = args.isNull(1) ? null : args.getString(1);
+        String vaultProviderAddress = args.isNull(2) ? null : args.getString(2);
 
         if (vaultOwnerDid == null) {
-            callbackContext.error("getVault() cannot be called with a null string as vault owner DID");
+            callbackContext.error("createVault() cannot be called with a null string as vault owner DID");
+            return;
+        }
+
+        if (vaultProviderAddress == null) {
+            callbackContext.error("createVault() cannot be called with a null string as vault provider address");
             return;
         }
 
         try {
             Client client = clientMap.get(clientObjectId);
-            client.getVault(vaultOwnerDid).thenAccept(vault -> {
+            client.createVault(vaultOwnerDid, vaultProviderAddress).thenAccept(vault -> {
                 if (vault != null) {
                     String vaultId = "" + System.identityHashCode(vault);
                     vaultMap.put(vaultId, vault);
@@ -384,6 +388,50 @@ public class HivePlugin extends TrinityPlugin {
                     callbackContext.success((String)null);
                 } else {
                     callbackContext.error(e.getMessage());
+                }
+                return null;
+            });
+        }
+        catch (Exception e) {
+            callbackContext.error(e.toString());
+        }
+    }
+
+    private void client_getVault(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String clientObjectId = args.getString(0);
+        String vaultOwnerDid = args.isNull(1) ? null : args.getString(1);
+
+        if (vaultOwnerDid == null) {
+            callbackContext.error("getVault() cannot be called with a null string as vault owner DID");
+            return;
+        }
+
+        try {
+            Client client = clientMap.get(clientObjectId);
+            client.getVault(vaultOwnerDid, null).thenAccept(vault -> {
+                if (vault != null) {
+                    String vaultId = "" + System.identityHashCode(vault);
+                    vaultMap.put(vaultId, vault);
+
+                    try {
+                        JSONObject ret = new JSONObject();
+                        ret.put("objectId", vaultId);
+                        ret.put("vaultProviderAddress", vault.getProviderAddress());
+                        ret.put("vaultOwnerDid", vaultOwnerDid);
+                        callbackContext.success(ret);
+                    } catch (JSONException e) {
+                        callbackContext.error(e.toString());
+                    }
+                }
+                else {
+                    callbackContext.success((String)null);
+                }
+            }).exceptionally(e -> {
+                Throwable cause = e.getCause();
+                if (cause instanceof ProviderNotSetException) {
+                    callbackContext.success((String)null);
+                } else {
+                    callbackContext.error("client_getVault error: "+e.getMessage());
                 }
                 return null;
             });
@@ -1043,10 +1091,7 @@ public class HivePlugin extends TrinityPlugin {
             Vault vault = vaultMap.get(vaultObjectId);
             if (ensureValidVault(vault, callbackContext)) {
 
-                CallConfig callConfig = new CallConfig.Builder()
-                        .setPurpose(CallConfig.Purpose.General)
-                        .setParams(HivePluginHelper.jsonObjectToJsonNode(params))
-                        .setAppDid(appDID).build();
+                CallConfig callConfig = new GeneralCallConfig(appDID, HivePluginHelper.jsonObjectToJsonNode(params));
 
                 vault.getScripting().callScript(functionName, callConfig, JsonNode.class).thenAccept(success -> {
                     try {

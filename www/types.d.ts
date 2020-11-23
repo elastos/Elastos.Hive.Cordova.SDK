@@ -297,7 +297,7 @@ declare namespace HivePlugin {
             /**
              * Timestamp (seconds since epoch) at which the plan became inactive (ended).
              */
-            endTime(): number;
+            getEndTime(): number;
         }
 
         export interface Payment {
