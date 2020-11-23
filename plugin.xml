@@ -41,6 +41,18 @@
                 <param name="ios-package" value="HivePlugin" />
             </feature>
         </config-file>
+
+        <podspec>
+            <config>
+                <source url="https://cdn.cocoapods.org/"/>
+            </config>
+            <pods use-frameworks="true">
+                <pod name="ElastosHiveSDK" spec='~> 1.0.1'/>
+                <pod name="Alamofire" spec='~> 5.4'/>
+                <pod name="PromiseKit" spec='~> 6.13.1'/>
+            </pods>
+        </podspec>
+
         <!-- <dependency id="cordova-plugin-add-swift-support" version="1.7.2"/> -->
         <resource-file src="ipfsnodes.json" />
         <source-file src="src/ios/HivePlugin.swift" />
@@ -51,10 +63,6 @@
         <source-file src="src/ios/database/UpdateResult.swift" />
         <source-file src="src/ios/files/FileInfo.swift" />
         <source-file src="src/ios/files/FileType.swift" />
-        <framework src="src/ios/libs/ElastosHiveSDK.framework" custom="true" embed="true" />
-        <framework src="src/ios/libs/Alamofire.framework" custom="true" embed="true" />
-        <framework src="src/ios/libs/PromiseKit.framework" custom="true" embed="true" />
-        <framework src="src/ios/libs/Swifter.framework" custom="true" embed="true" />
     </platform>
 	<platform name="electron">
         <js-module src="src/electron/HivePluginProxy.js" name="HivePluginProxy">
