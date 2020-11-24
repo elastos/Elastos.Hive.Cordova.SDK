@@ -46,7 +46,9 @@ class HivePlugin : TrinityPlugin {
     private var clientAuthHandlersMap   = Dictionary<String, Authenticator>()
     private var clientAuthHandlerCallbackMap = Dictionary<String, String>()
     private var vaultMap  = Dictionary<String, Vault>()
-    private var readerMap  = Dictionary<String, OutputStream>()
+    private var readerMap  = Dictionary<String, FileReader>()
+    private var writerMap   = Dictionary<String, FileWriter>()
+    private var readerOffsetsMap   = Dictionary<String, Int>()
     private var didResolverInitialized: Bool = false
 
     @objc func success(_ command: CDVInvokedUrlCommand, retAsString: String) {
@@ -215,15 +217,14 @@ class HivePlugin : TrinityPlugin {
 
     @objc func client_getVault(_ command: CDVInvokedUrlCommand) {
         let clientObjectId = command.arguments[0] as? String ?? ""
-        let vaultOwnerDid = command.arguments[1] as? String
-
-        if vaultOwnerDid == nil {
+        let vaultOwnerDid = command.arguments[1] as? String ?? ""
+        if vaultOwnerDid == "" {
             self.error(command, retAsString: "getVault() cannot be called with a null string as vault owner DID")
             return
         }
-
+        HiveClientHandle.setVaultProvider(vaultOwnerDid, "https://hive1.trinity-tech.io")
         let client = clientMap[clientObjectId]
-        _ = client?.getVault(vaultOwnerDid!).done{ [self] vault in
+        _ = client?.getVault(vaultOwnerDid, nil).done{ [self] vault in
             let vaultId = "\(vault.hashValue)"
             vaultMap[vaultId] = vault
             let ret = ["objectId": vaultId,
@@ -431,7 +432,7 @@ class HivePlugin : TrinityPlugin {
             let ret = ["matchedCount": result.matchedCount(),
                        "modifiedCount": result.modifiedCount(),
                        "upsertedCount": result.upsertedCount(),
-                       "upsertedId": result.upsertedId()]
+                       "upsertedId": result.upsertedId()] as [String : Any]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
             if error is HiveError {
@@ -460,7 +461,7 @@ class HivePlugin : TrinityPlugin {
         let options = HivePluginHelper.jsonDeleteOptionsToNative(optionsJson)
         let vault = vaultMap[vaultObjectId]
         vault?.database.deleteOne(collectionName, filterJson, options: options).done{ result in
-            let ret = ["deletedCount": result.deletedCount()]
+            let ret = ["deletedCount": result.deletedCount]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
             if error is HiveError {
@@ -482,11 +483,12 @@ class HivePlugin : TrinityPlugin {
     @objc func files_upload(_ command: CDVInvokedUrlCommand) {
         let vaultObjectId = command.arguments[0] as? String ?? ""
         let srcPath = command.arguments[1] as? String ?? ""
-        let dstPath = command.arguments[2] as? String ?? ""
         let vault = vaultMap[vaultObjectId]
-        // TODO: CHECK
-        vault?.files.upload(dstPath, asRemoteFile: srcPath).done{ result in
-            self.success(command, retAsDict: ["success": result])
+        vault?.files.upload(srcPath).done{ [self] writer in
+            let objectId = "\(writer.hashValue)"
+            writerMap[objectId] = writer
+            let ret = ["objectId": objectId] as [String : Any]
+            self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
             if error is HiveError {
                 let errstring =  HiveError.description(error as! HiveError)
@@ -503,11 +505,11 @@ class HivePlugin : TrinityPlugin {
         let vaultObjectId = command.arguments[0] as? String ?? ""
         let srcPath = command.arguments[1] as? String ?? ""
         let vault = vaultMap[vaultObjectId]
-        // TODO: CHECK
-        vault?.files.download(srcPath).done{ [self] outstr in
-            let objectId = "\(outstr.hashValue)"
-            readerMap[objectId] = outstr
-            self.success(command, retAsDict: ["objectId": objectId])
+        vault?.files.download(srcPath).done{ [self] reader in
+            let objectId = "\(reader.hashValue)"
+            readerMap[objectId] = reader
+            let ret = ["objectId": objectId] as [String : Any]
+            self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
             if error is HiveError {
                 let errstring =  HiveError.description(error as! HiveError)
@@ -653,7 +655,7 @@ class HivePlugin : TrinityPlugin {
         let condition = RawCondition(accessConditionJsonstr!)
         data = try? JSONSerialization.data(withJSONObject: executionSequenceJson, options: [])
         let executionSequenceJsonstr = String(data: data!, encoding: String.Encoding.utf8)
-        let executable = RawExecutable(executionSequenceJsonstr!)
+        let executable = RawExecutable(executable: executionSequenceJsonstr!)
 
         let vault = vaultMap[vaultObjectId]
         vault?.scripting.registerScript(functionName, condition, executable).done{ [self] success in
@@ -892,5 +894,87 @@ class HivePlugin : TrinityPlugin {
         else {
             return true
         }
+    }
+
+    @objc func writer_write(_ command: CDVInvokedUrlCommand) {
+        let writerObjectId = command.arguments[0] as? String ?? ""
+        let data = command.arguments[1] as? Data
+
+        do {
+            if let _ = data {
+            let writer = writerMap[writerObjectId]
+                try writer?.write(data: data!, { error in
+                    self.error(command, retAsString: HiveError.description(error))
+                })
+            self.success(command, retAsDict: ["success": "success"])
+            }
+            else {
+                self.error(command, retAsString: "data is nil.")
+            }
+        } catch {
+            if error is HiveError {
+                let errstring =  HiveError.description(error as! HiveError)
+                self.error(command, retAsString: errstring)
+            }
+            else
+            {
+                self.error(command, retAsString: error.localizedDescription)
+            }
+        }
+    }
+
+    @objc func writer_flush(_ command: CDVInvokedUrlCommand) {
+        self.success(command, retAsDict: ["success": "success"])
+    }
+
+    @objc func writer_close(_ command: CDVInvokedUrlCommand) {
+        let writerObjectId = command.arguments[0] as? String ?? ""
+        let writer = writerMap[writerObjectId]
+        writer?.close()
+        writerMap.removeValue(forKey: writerObjectId)
+        self.success(command, retAsDict: ["success": "success"])
+    }
+
+    @objc func reader_read(_ command: CDVInvokedUrlCommand) {
+        let readerObjectId = command.arguments[0] as? String ?? ""
+        let bytesCount = command.arguments[1] as? Int ?? 0
+        let reader = readerMap[readerObjectId]
+        // Resume reading at the previous read offset
+        var data: Data?
+        while !reader!.didLoadFinish {
+            data = reader!.read(bytesCount, { error in
+                self.error(command, retAsString: HiveError.description(error))
+            })
+            if data != nil {
+                break
+            }
+        }
+        self.success(command, retAsString: data?.base64EncodedString() ?? "")
+    }
+
+    @objc func reader_readAll(_ command: CDVInvokedUrlCommand) {
+        let readerObjectId = command.arguments[0] as? String ?? ""
+
+        let reader = readerMap[readerObjectId]
+
+        var data: Data?
+        while !reader!.didLoadFinish {
+            if let d = reader!.read({ error in
+                self.error(command, retAsString: HiveError.description(error))
+            }){
+                data?.append(d)
+            }
+        }
+
+        self.success(command, retAsString: data?.base64EncodedString() ?? "")
+    }
+
+    @objc func reader_close(_ command: CDVInvokedUrlCommand) {
+        let readerObjectId = command.arguments[0] as? String ?? ""
+
+        let reader = readerMap[readerObjectId]
+        reader?.close()
+        readerMap.removeValue(forKey: readerObjectId)
+        self.success(command, retAsString: "success")
     }
 }
