@@ -611,6 +611,20 @@ declare namespace HivePlugin {
                  */
                 export interface DeleteQuery extends Executable {}
             }
+
+            export namespace Files {
+                /**
+                 * Client side representation of a back-end execution that will initiate a file upload operation
+                 * and save it with the given name.
+                 */
+                export interface UploadExecutable extends Executable {}
+
+                /**
+                 * Client side representation of a back-end execution that will initiate a file download operation
+                 * for an existing vault file that has the given name.
+                 */
+                export interface DownloadExecutable extends Executable {}
+            }
         }
 
         export interface Scripting {
@@ -765,6 +779,27 @@ declare namespace HivePlugin {
                     newInsertQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.InsertOptions, output?: boolean, executableName?: string) => Scripting.Executables.Database.InsertQuery;
                     newUpdateQuery: (collectionName: string, filter: JSONObject, updateQuery: JSONObject, options?: HivePlugin.Database.UpdateOptions, output?: boolean, executableName?: string) => Scripting.Executables.Database.UpdateQuery;
                     newDeleteQuery: (collectionName: string, query?: JSONObject, options?: HivePlugin.Database.DeleteOptions, output?: boolean, executableName?: string) => Scripting.Executables.Database.DeleteQuery;
+                }
+
+                Files: {
+                    /**
+                     * See newDownloadExecutable().
+                     */
+                    newUploadExecutable: (filePath: string, executableName?: string) => Scripting.Executables.Files.UploadExecutable;
+
+                    /**
+                     * Creates a new DownloadExecutable for setScript().
+                     *
+                     * filePath can be hardcoded (ex: "icons/userProfile.png"), or composed with values of call()
+                     * parameters (ex: "icons/appIcon_${params.path}" + call() with a "path" field in params).
+                     *
+                     * Please note that using call() parameters can potentially be harmful if you make it too permissive, as
+                     * a remote user could potentially access any file from your app storage. For example, we highly discourage
+                     * registering "filePath:${params.path}" that would be very flexible from the application to download any file,
+                     * but would also allow anyone pass an unexpected path and access other files. Also, it is suggested
+                     * to use access conditions to verify that the caller is allowed to access a resoruce based on the target path.
+                     */
+                    newDownloadExecutable: (filePath: string, executableName?: string) => Scripting.Executables.Files.DownloadExecutable;
                 }
             }
         }

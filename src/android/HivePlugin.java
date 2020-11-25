@@ -46,10 +46,12 @@ import org.elastos.hive.exception.ProviderNotSetException;
 import org.elastos.hive.files.FileInfo;
 import org.elastos.hive.scripting.CallConfig;
 import org.elastos.hive.scripting.Condition;
+import org.elastos.hive.scripting.DownloadCallConfig;
 import org.elastos.hive.scripting.Executable;
 import org.elastos.hive.scripting.GeneralCallConfig;
 import org.elastos.hive.scripting.RawCondition;
 import org.elastos.hive.scripting.RawExecutable;
+import org.elastos.hive.scripting.UploadCallConfig;
 import org.elastos.trinity.runtime.PreferenceManager;
 import org.elastos.trinity.runtime.TrinityPlugin;
 import org.json.JSONArray;
@@ -170,6 +172,12 @@ public class HivePlugin extends TrinityPlugin {
                     break;
                 case "scripting_call":
                     this.scripting_call(args, callbackContext);
+                    break;
+                case "scripting_call_to_download_file":
+                    this.scripting_call_to_download_file(args, callbackContext);
+                    break;
+                case "scripting_call_to_upload_file":
+                    this.scripting_call_to_upload_file(args, callbackContext);
                     break;
                 case "writer_write":
                     this.writer_write(args, callbackContext);
@@ -1110,6 +1118,90 @@ public class HivePlugin extends TrinityPlugin {
         catch (Exception e) {
             callbackContext.error(e.getMessage());
         }
+    }
+
+    private void scripting_call_to_download_file(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String functionName = args.getString(1);
+
+        JSONObject params = null;
+        String appDID = null;
+        if (!args.isNull(2)) {
+            params = args.getJSONObject(2);
+            if (!args.isNull(3)) {
+                appDID = args.getString(3);
+            }
+        }
+
+        try {
+            Vault vault = vaultMap.get(vaultObjectId);
+            if (ensureValidVault(vault, callbackContext)) {
+                CallConfig callConfig = new DownloadCallConfig(appDID, HivePluginHelper.jsonObjectToJsonNode(params));
+
+                vault.getScripting().callScript(functionName, callConfig, InputStream.class).thenAccept(reader -> {
+                    // Same implementation as for files_download()
+                    try {
+                        String objectId = "" + System.identityHashCode(reader);
+                        readerMap.put(objectId, reader);
+                        readerOffsetsMap.put(objectId, 0); // Current read offset is 0
+
+                        JSONObject ret = new JSONObject();
+                        ret.put("objectId", objectId);
+                        callbackContext.success(ret);
+                    } catch (JSONException e) {
+                        callbackContext.error(e.getMessage());
+                    }
+                }).exceptionally(e -> {
+                    callbackContext.error(e.getMessage());
+                    return null;
+                });
+            }
+        }
+        catch (Exception e) {
+            callbackContext.error(e.getMessage());
+        }
+    }
+
+    private void scripting_call_to_upload_file(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        /*String vaultObjectId = args.getString(0);
+        String functionName = args.getString(1);
+
+        JSONObject params = null;
+        String appDID = null;
+        if (!args.isNull(2)) {
+            params = args.getJSONObject(2);
+            if (!args.isNull(3)) {
+                appDID = args.getString(3);
+            }
+        }
+
+        try {
+            Vault vault = vaultMap.get(vaultObjectId);
+            if (ensureValidVault(vault, callbackContext)) {
+                CallConfig callConfig = new UploadCallConfig(appDID, HivePluginHelper.jsonObjectToJsonNode(params), "TODO-KO");
+
+                vault.getScripting().callScript(functionName, callConfig, InputStream.class).thenAccept(reader -> {
+                    // Same implementation as for files_download()
+                    try {
+                        String objectId = "" + System.identityHashCode(reader);
+                        readerMap.put(objectId, reader);
+                        readerOffsetsMap.put(objectId, 0); // Current read offset is 0
+
+                        JSONObject ret = new JSONObject();
+                        ret.put("objectId", objectId);
+                        callbackContext.success(ret);
+                    } catch (JSONException e) {
+                        callbackContext.error(e.getMessage());
+                    }
+                }).exceptionally(e -> {
+                    callbackContext.error(e.getMessage());
+                    return null;
+                });
+            }
+        }
+        catch (Exception e) {
+            callbackContext.error(e.getMessage());
+        }*/
     }
 
     private void writer_write(JSONArray args, CallbackContext callbackContext) throws JSONException {

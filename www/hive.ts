@@ -693,6 +693,40 @@ class DeleteQueryImpl extends ExecutableImpl implements HivePlugin.Scripting.Exe
     }
 }
 
+class UploadExecutableImpl extends ExecutableImpl implements HivePlugin.Scripting.Executables.Files.UploadExecutable {
+    constructor(private filePath: string, executableName: string = "upload") {
+        super(executableName, "fileUpload");
+    }
+
+    toJSON(): JSONObjectImpl {
+        return {
+            type: this.type,
+            name: this.executableName,
+            output: true,
+            body: {
+                path: this.filePath
+            }
+        }
+    }
+}
+
+class DownloadExecutableImpl extends ExecutableImpl implements HivePlugin.Scripting.Executables.Files.DownloadExecutable {
+    constructor(private filePath: string, executableName: string = "download") {
+        super(executableName, "fileDownload");
+    }
+
+    toJSON(): JSONObjectImpl {
+        return {
+            type: this.type,
+            name: this.executableName,
+            output: true,
+            body: {
+                path: this.filePath
+            }
+        }
+    }
+}
+
 class ObjectIdImpl extends JSONObjectImpl implements HivePlugin.Database.ObjectId {
     // Matches the extended mongo JSON format {"$oid": "the_string_id"}
     constructor(public $oid: string) {
@@ -829,6 +863,11 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
                 newUpdateQuery: (collectionName: string, filter: HivePlugin.JSONObject, updateQuery: HivePlugin.JSONObject, options?: HivePlugin.Database.UpdateOptions, output?: boolean, executableName?: string) => HivePlugin.Scripting.Executables.Database.UpdateQuery;
                 newDeleteQuery: (collectionName: String, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions, output?: boolean, executableName?: string) => HivePlugin.Scripting.Executables.Database.DeleteQuery;
             }
+
+            Files: {
+                newUploadExecutable: (filePath: string, executableName?: string) => HivePlugin.Scripting.Executables.Files.UploadExecutable;
+                newDownloadExecutable: (filePath: string, executableName?: string) => HivePlugin.Scripting.Executables.Files.DownloadExecutable;
+            }
         };
     };
 
@@ -890,6 +929,16 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
 
                     newDeleteQuery: function(collectionName: string, query?: HivePlugin.JSONObject, options?: HivePlugin.Database.DeleteOptions, output?: boolean, executableName?: string): HivePlugin.Scripting.Executables.Database.DeleteQuery {
                         return new DeleteQueryImpl(executableName, collectionName, query, options, output);
+                    }
+                },
+
+                Files: {
+                    newUploadExecutable: function(filePath: string, executableName?: string): HivePlugin.Scripting.Executables.Files.UploadExecutable {
+                        return new UploadExecutableImpl(filePath, executableName);
+                    },
+
+                    newDownloadExecutable: function(filePath: string, executableName?: string): HivePlugin.Scripting.Executables.Files.DownloadExecutable {
+                        return new DownloadExecutableImpl(filePath, executableName);
                     }
                 }
             }
