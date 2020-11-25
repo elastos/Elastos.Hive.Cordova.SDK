@@ -735,6 +735,8 @@ declare namespace HivePlugin {
         /**
          * Creates a new vault for the target DID on the target vault provider.
          * This is a mandatory step prior to using a vault provider, otherwise all API calls return an error.
+         *
+         * @returns The created vault if it didn't exists, or null in case the vault already exists on this provider.
          */
         createVault(vaultOwnerDid: string, vaultProviderAddress: string): Promise<Vault>;
 

@@ -43,7 +43,9 @@ import org.elastos.hive.database.UpdateOptions;
 import org.elastos.hive.database.UpdateResult;
 import org.elastos.hive.exception.HiveException;
 import org.elastos.hive.exception.ProviderNotSetException;
+import org.elastos.hive.exception.VaultNotFoundException;
 import org.elastos.hive.files.FileInfo;
+import org.elastos.hive.payment.Order;
 import org.elastos.hive.scripting.CallConfig;
 import org.elastos.hive.scripting.Condition;
 import org.elastos.hive.scripting.DownloadCallConfig;
@@ -72,6 +74,7 @@ import java.io.Writer;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
@@ -394,6 +397,9 @@ public class HivePlugin extends TrinityPlugin {
                 Throwable cause = e.getCause();
                 if (cause instanceof ProviderNotSetException) {
                     callbackContext.success((String)null);
+                } else if (e.getLocalizedMessage().contains("Vault has been created")) {
+                    // Vault already exists, return null, not an error.
+                    callbackContext.success((String)null);
                 } else {
                     callbackContext.error(e.getMessage());
                 }
@@ -437,6 +443,8 @@ public class HivePlugin extends TrinityPlugin {
             }).exceptionally(e -> {
                 Throwable cause = e.getCause();
                 if (cause instanceof ProviderNotSetException) {
+                    callbackContext.success((String)null);
+                } else if (cause instanceof VaultNotFoundException) {
                     callbackContext.success((String)null);
                 } else {
                     callbackContext.error("client_getVault error: "+e.getMessage());
@@ -1434,7 +1442,13 @@ public class HivePlugin extends TrinityPlugin {
             if (ensureValidVault(vault, callbackContext)) {
                 vault.getPayment().getAllOrders().thenAccept(orders -> {
                     try {
-                        callbackContext.success(HivePluginHelper.listToJSONArray(orders));
+                        /* TODO JSONArray array = new JSONArray();
+                        Iterator<Order> it = orders.iterator();
+                        while (it.hasNext()) {
+                            array.put(it.next().serialize());
+                        }
+                        callbackContext.success(HivePluginHelper.listToJSONArray(orders));*/
+                        callbackContext.success(new JSONArray());
                     }
                     catch (Exception e) {
                         callbackContext.error(e.getMessage());
