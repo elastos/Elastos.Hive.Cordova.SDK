@@ -1442,13 +1442,12 @@ public class HivePlugin extends TrinityPlugin {
             if (ensureValidVault(vault, callbackContext)) {
                 vault.getPayment().getAllOrders().thenAccept(orders -> {
                     try {
-                        /* TODO JSONArray array = new JSONArray();
+                        JSONArray array = new JSONArray();
                         Iterator<Order> it = orders.iterator();
                         while (it.hasNext()) {
-                            array.put(it.next().serialize());
+                            array.put(new JSONObject(it.next().serialize()));
                         }
-                        callbackContext.success(HivePluginHelper.listToJSONArray(orders));*/
-                        callbackContext.success(new JSONArray());
+                        callbackContext.success(array);
                     }
                     catch (Exception e) {
                         callbackContext.error(e.getMessage());
