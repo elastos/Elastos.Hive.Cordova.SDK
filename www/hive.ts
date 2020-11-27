@@ -32,10 +32,6 @@ function execAsPromise<T>(method: string, params: any[] = []): Promise<T> {
     });
 }
 
-enum NativeErrorCode {
-    NATIVE_ERROR_COLLECTION_NOT_FOUND = -1000
-}
-
 /**
  * Tries to convert a native error into a better TS error type for app convenience.
  */
@@ -46,21 +42,34 @@ function nativeToTSException(nativeErr) {
     }
 
     switch (nativeErr.code) {
-        case NativeErrorCode.NATIVE_ERROR_COLLECTION_NOT_FOUND:
-            return new CollectionNotFoundExceptionImpl("CollectionNotFoundException", nativeErr.message);
+        case HivePlugin.EnhancedErrorType.COLLECTION_NOT_FOUND:
+            return new EnhancedErrorImpl(nativeErr.code, nativeErr.message);
         default:
-            return nativeErr;
+            return EnhancedErrorImpl.fromRawError(nativeErr.message);
     }
 }
 
-class EnhancedError extends Error {
-    constructor(name: string, message: string) {
+class EnhancedErrorImpl extends Error implements HivePlugin.EnhancedError {
+    constructor(private errorType: HivePlugin.EnhancedErrorType, message: string) {
         super(message);
-        this.name = name;
+
+        // Mandatory manual prototype override to be able to extend built-in error classes
+        Object.setPrototypeOf(this, EnhancedErrorImpl.prototype);
+    }
+
+    getType(): HivePlugin.EnhancedErrorType {
+        return this.errorType;
+    }
+
+    static fromRawError(error: any): EnhancedErrorImpl {
+        let enhancedError = new EnhancedErrorImpl(HivePlugin.EnhancedErrorType.UNSPECIFIED, "");
+
+        // Apply all fields of the existing error to this enhanced error to preserve all information.
+        Object.assign(enhancedError, error);
+
+        return enhancedError;
     }
 }
-
-class CollectionNotFoundExceptionImpl extends EnhancedError implements HivePlugin.Database.Exceptions.CollectionNotFoundException {}
 
 class JSONObjectImpl implements HivePlugin.JSONObject {
     [k: string]: string | number | boolean | HivePlugin.JSONObject | HivePlugin.JSONObject[];

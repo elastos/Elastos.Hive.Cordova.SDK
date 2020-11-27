@@ -48,7 +48,17 @@ declare namespace HivePlugin {
         [k:string]: JSONObject | JSONObject[] | string | number | boolean
     }
 
-    //export type JSONObjectOrArray = JSONObject | JSONObject[];
+    export const enum EnhancedErrorType {
+        // Database errors - range -1000 ~ -2000
+        COLLECTION_NOT_FOUND = -1000,
+
+        // Unknown error
+        UNSPECIFIED = 999
+    }
+
+    export class EnhancedError {
+        getType(): EnhancedErrorType;
+    }
 
     export namespace Files {
         /**
@@ -169,7 +179,7 @@ declare namespace HivePlugin {
         }
     }
 
-    namespace Payment {
+    export namespace Payment {
         export class PaymentSettings {
             /**
              * Crypto address that receives payments for placed orders.
@@ -357,8 +367,8 @@ declare namespace HivePlugin {
         }
     }
 
-    namespace Database {
-        namespace Exceptions {
+    export namespace Database {
+        export namespace Exceptions {
             /** The requested collection was not found */
             export interface CollectionNotFoundException extends Error {}
         }
