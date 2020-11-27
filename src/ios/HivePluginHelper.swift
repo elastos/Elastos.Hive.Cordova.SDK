@@ -21,7 +21,7 @@
  */
 
 import Foundation
-import ElastosHiveSDK
+import PreHive
 
 public class HivePluginHelper: NSObject {
 

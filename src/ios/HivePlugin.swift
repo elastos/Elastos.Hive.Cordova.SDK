@@ -21,7 +21,7 @@
  */
 
 import Foundation
-import ElastosHiveSDK
+import PreHive
 
 var clientAuthHandlerCompletionMap = Dictionary<String, Resolver<String>>()
 class VaultAuthenticator: Authenticator {
@@ -38,6 +38,11 @@ class VaultAuthenticator: Authenticator {
             (self.delegate! as AnyObject).send(result, callbackId: self.callbackId)
         }
     }
+}
+
+private enum EnhancedErrorCodes : Int {
+    case collectionNotFound = 0
+    case unspecified = 9999
 }
 
 @objc(HivePlugin)
@@ -81,6 +86,35 @@ class HivePlugin : TrinityPlugin {
                                      messageAs: retAsString);
 
         self.commandDelegate.send(result, callbackId: command.callbackId)
+    }
+
+    private func createEnhancedError(code: EnhancedErrorCodes, message: String) -> Dictionary<AnyHashable, Any> {
+        var error = Dictionary<AnyHashable, Any>()
+        error["code"] = code.rawValue
+        error["message"] = message
+        return error
+    }
+
+    /**
+     * Returns the passed  error as a JSON object with a clear error code if we are able to know it. Otherwise,
+     * the error description is returned as a string.
+     */
+    private func enhancedError(_ command: CDVInvokedUrlCommand, error: Error) {
+        let errorMessage = error.localizedDescription
+        var result: CDVPluginResult?
+
+        if error is HiveError {
+            let hiveErrorMessage = HiveError.description(error as! HiveError)
+            if hiveErrorMessage.contains("collection not exist") {
+                result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .collectionNotFound, message: hiveErrorMessage))
+            }
+        }
+
+        if result == nil {
+            result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: errorMessage)
+        }
+
+        self.commandDelegate.send(result!, callbackId: command.callbackId)
     }
 
     private func getDataDir() -> String {
@@ -135,14 +169,7 @@ class HivePlugin : TrinityPlugin {
             print("getClient result: \(clientId)")
             self.success(command, retAsDict: ret as NSDictionary)
         } catch {
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -197,14 +224,7 @@ class HivePlugin : TrinityPlugin {
                        "vaultOwnerDid": vaultOwnerDid]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+         self.enhancedError(command, error: error)
         }*/
 
         // TMP FAKE RETURN - TODO DELETE AFTER HIVE SDK IS READY
@@ -222,7 +242,7 @@ class HivePlugin : TrinityPlugin {
             self.error(command, retAsString: "getVault() cannot be called with a null string as vault owner DID")
             return
         }
-        HiveClientHandle.setVaultProvider(vaultOwnerDid, "https://hive1.trinity-tech.io")
+
         let client = clientMap[clientObjectId]
         _ = client?.getVault(vaultOwnerDid, nil).done{ [self] vault in
             let vaultId = "\(vault.hashValue)"
@@ -232,14 +252,7 @@ class HivePlugin : TrinityPlugin {
                        "vaultOwnerDid": vaultOwnerDid]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -251,7 +264,7 @@ class HivePlugin : TrinityPlugin {
             /* TODO - UNCOMMENT AFTER HIVE SDK IS READY vault!.getNodeVersion().done { version in
                 self.success(command, retAsString: version)
             }.catch { error in
-                self.error(command, retAsString: error.localizedDescription)
+             self.enhancedError(command, error: error)
             }*/
 
             // TMP FAKE RETURN - TODO DELETE AFTER HIVE SDK IS READY
@@ -279,14 +292,7 @@ class HivePlugin : TrinityPlugin {
             let ret = ["created": success]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -302,7 +308,7 @@ class HivePlugin : TrinityPlugin {
             let ret = ["deleted": success]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -318,7 +324,7 @@ class HivePlugin : TrinityPlugin {
             let ret = ["insertedId": result.insertedId()]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            self.error(command, retAsString: error.localizedDescription)
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -339,14 +345,7 @@ class HivePlugin : TrinityPlugin {
                 let ret = ["insertedIds": insertIds]
                 self.success(command, retAsDict: ret as NSDictionary)
             }.catch{ error in
-                if error is HiveError {
-                    let errstring =  HiveError.description(error as! HiveError)
-                    self.error(command, retAsString: errstring)
-                }
-                else
-                {
-                    self.error(command, retAsString: error.localizedDescription)
-                }
+                self.enhancedError(command, error: error)
             }
         }
     }
@@ -363,14 +362,7 @@ class HivePlugin : TrinityPlugin {
             let ret = ["count": count]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -385,14 +377,7 @@ class HivePlugin : TrinityPlugin {
         vault?.database.findOne(collectionName, queryJson, options: options).done{ result in
             self.success(command, retAsDict: result as NSDictionary)
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -407,14 +392,7 @@ class HivePlugin : TrinityPlugin {
         vault?.database.findMany(collectionName, queryJson, options: options).done{ result in
             self.success(command, retAsArray: result as NSArray)
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -435,14 +413,7 @@ class HivePlugin : TrinityPlugin {
                        "upsertedId": result.upsertedId()] as [String : Any]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -464,14 +435,7 @@ class HivePlugin : TrinityPlugin {
             let ret = ["deletedCount": result.deletedCount]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -490,14 +454,7 @@ class HivePlugin : TrinityPlugin {
             let ret = ["objectId": objectId] as [String : Any]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -511,14 +468,7 @@ class HivePlugin : TrinityPlugin {
             let ret = ["objectId": objectId] as [String : Any]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -529,14 +479,7 @@ class HivePlugin : TrinityPlugin {
         vault?.files.delete(srcPath).done{ [self] success in
             self.success(command, retAsDict: ["success": success])
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -549,14 +492,7 @@ class HivePlugin : TrinityPlugin {
         vault?.files.move(srcPath, dstPath).done{ [self] success in
             self.success(command, retAsDict: ["success": success])
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -569,14 +505,7 @@ class HivePlugin : TrinityPlugin {
         vault?.files.copy(srcPath, dstPath).done{ [self] success in
             self.success(command, retAsDict: ["success": success])
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -588,14 +517,7 @@ class HivePlugin : TrinityPlugin {
         vault?.files.hash(srcPath).done{ [self] hash in
             self.success(command, retAsString: hash)
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -611,14 +533,7 @@ class HivePlugin : TrinityPlugin {
             }
             self.success(command, retAsArray: jsonArray as NSArray)
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -632,14 +547,7 @@ class HivePlugin : TrinityPlugin {
             jsonArray.append(HivePluginHelper.hiveFileInfoToPluginJson(fileInfo))
             self.success(command, retAsArray: jsonArray as NSArray)
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -661,14 +569,7 @@ class HivePlugin : TrinityPlugin {
         vault?.scripting.registerScript(functionName, condition, executable).done{ [self] success in
             self.success(command, retAsDict: ["success": success])
         }.catch{ error in
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -684,14 +585,7 @@ class HivePlugin : TrinityPlugin {
             vault?.scripting.call(functionName, params, appDID, Dictionary<String, Any>.self).done{ success in
                 self.success(command, retAsDict: ["success": success])
             }.catch{ error in
-                if error is HiveError {
-                    let errstring =  HiveError.description(error as! HiveError)
-                    self.error(command, retAsString: errstring)
-                }
-                else
-                {
-                    self.error(command, retAsString: error.localizedDescription)
-                }
+                self.enhancedError(command, error: error)
             }
         }
     }
@@ -912,14 +806,7 @@ class HivePlugin : TrinityPlugin {
                 self.error(command, retAsString: "data is nil.")
             }
         } catch {
-            if error is HiveError {
-                let errstring =  HiveError.description(error as! HiveError)
-                self.error(command, retAsString: errstring)
-            }
-            else
-            {
-                self.error(command, retAsString: error.localizedDescription)
-            }
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -943,7 +830,7 @@ class HivePlugin : TrinityPlugin {
         var data: Data?
         while !reader!.didLoadFinish {
             data = reader!.read(bytesCount, { error in
-                self.error(command, retAsString: HiveError.description(error))
+                self.enhancedError(command, error: error)
             })
             if data != nil {
                 break
@@ -960,7 +847,7 @@ class HivePlugin : TrinityPlugin {
         var data: Data?
         while !reader!.didLoadFinish {
             if let d = reader!.read({ error in
-                self.error(command, retAsString: HiveError.description(error))
+                self.enhancedError(command, error: error)
             }){
                 data?.append(d)
             }

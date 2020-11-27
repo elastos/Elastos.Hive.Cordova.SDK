@@ -27,10 +27,40 @@ function execAsPromise<T>(method: string, params: any[] = []): Promise<T> {
         exec((result: any)=>{
             resolve(result);
         }, (err: any)=>{
-            reject(err);
+            reject(nativeToTSException(err));
         }, 'HivePlugin', method, params);
     });
 }
+
+enum NativeErrorCode {
+    NATIVE_ERROR_COLLECTION_NOT_FOUND = -1000
+}
+
+/**
+ * Tries to convert a native error into a better TS error type for app convenience.
+ */
+function nativeToTSException(nativeErr) {
+    if (!nativeErr.code) {
+        // Not our custom format, just return the raw exception
+        return nativeErr;
+    }
+
+    switch (nativeErr.code) {
+        case NativeErrorCode.NATIVE_ERROR_COLLECTION_NOT_FOUND:
+            return new CollectionNotFoundExceptionImpl("CollectionNotFoundException", nativeErr.message);
+        default:
+            return nativeErr;
+    }
+}
+
+class EnhancedError extends Error {
+    constructor(name: string, message: string) {
+        super(message);
+        this.name = name;
+    }
+}
+
+class CollectionNotFoundExceptionImpl extends EnhancedError implements HivePlugin.Database.Exceptions.CollectionNotFoundException {}
 
 class JSONObjectImpl implements HivePlugin.JSONObject {
     [k: string]: string | number | boolean | HivePlugin.JSONObject | HivePlugin.JSONObject[];

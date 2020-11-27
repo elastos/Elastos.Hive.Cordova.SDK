@@ -358,6 +358,11 @@ declare namespace HivePlugin {
     }
 
     namespace Database {
+        namespace Exceptions {
+            /** The requested collection was not found */
+            export interface CollectionNotFoundException extends Error {}
+        }
+
         /**
          * Options used during collection creation.
          */
