@@ -41,8 +41,9 @@ class VaultAuthenticator: Authenticator {
 }
 
 private enum EnhancedErrorCodes : Int {
-    case collectionNotFound = 0
-    case unspecified = 9999
+    // DATABASE ERRORS - Range 1000-2000
+    case collectionNotFound = -1000
+    case unspecified = -9999
 }
 
 @objc(HivePlugin)
