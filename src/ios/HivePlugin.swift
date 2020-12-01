@@ -103,7 +103,7 @@ class HivePlugin : TrinityPlugin {
         self.commandDelegate.send(result, callbackId: command.callbackId)
     }
 
-    private func createEnhancedError(code: EnhancedErrorCodes, message: String) -> Dictionary<AnyHashable, Any> {
+    private func createEnhancedError(code: EnhancedErrorCodes, message: String) -> [AnyHashable : Any] {
         var error = Dictionary<AnyHashable, Any>()
         error["code"] = code.rawValue
         error["message"] = message
@@ -122,6 +122,9 @@ class HivePlugin : TrinityPlugin {
             let hiveErrorMessage = HiveError.description(error as! HiveError)
             if hiveErrorMessage.contains("collection not exist") {
                 result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .collectionNotFound, message: hiveErrorMessage))
+            }
+            else {
+                result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .unspecified, message: hiveErrorMessage))
             }
         }
 
@@ -592,11 +595,19 @@ class HivePlugin : TrinityPlugin {
         let functionName = command.arguments[1] as? String ?? ""
         let emptyDict: Dictionary<String, Any> = [: ]
         let params = command.arguments[2] as? Dictionary<String, Any> ?? emptyDict
-        let appDID = command.arguments[3] as? String ?? ""
+        let appDID = command.arguments[3] as? String
 
         let vault = vaultMap[vaultObjectId]
         if vault != nil {
-            vault?.scripting.call(functionName, params, appDID, Dictionary<String, Any>.self).done{ success in
+            let callAction: HivePromise<Dictionary<String, Any>>?
+            if appDID != nil {
+                callAction = vault?.scripting.call(functionName, params, appDID!, Dictionary<String, Any>.self)
+            }
+            else {
+                callAction = vault?.scripting.call(functionName, params, Dictionary<String, Any>.self)
+            }
+
+            callAction?.done{ success in
                 self.success(command, retAsDict: ["success": success])
             }.catch{ error in
                 self.enhancedError(command, error: error)

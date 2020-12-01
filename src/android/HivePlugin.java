@@ -1169,7 +1169,6 @@ public class HivePlugin extends TrinityPlugin {
         try {
             Vault vault = vaultMap.get(vaultObjectId);
             if (ensureValidVault(vault, callbackContext)) {
-
                 CallConfig callConfig = new GeneralCallConfig(appDID, HivePluginHelper.jsonObjectToJsonNode(params));
 
                 vault.getScripting().callScript(functionName, callConfig, JsonNode.class).thenAccept(success -> {

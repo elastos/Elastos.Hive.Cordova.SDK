@@ -42,7 +42,7 @@ function nativeToTSException(nativeErr) {
 
     if (!nativeErr.code) {
         // Not our custom format, just return the raw exception
-        return nativeErr;
+        return EnhancedErrorImpl.fromRawError(nativeErr);
     }
 
     switch (nativeErr.code) {
@@ -50,7 +50,7 @@ function nativeToTSException(nativeErr) {
         case HivePlugin.EnhancedErrorType.VAULT_NOT_FOUND:
             return new EnhancedErrorImpl(nativeErr.code, nativeErr.message);
         default:
-            return EnhancedErrorImpl.fromRawError(nativeErr.message);
+            return new EnhancedErrorImpl(HivePlugin.EnhancedErrorType.UNSPECIFIED, nativeErr.message);
     }
 }
 
