@@ -32,6 +32,12 @@ class VaultAuthenticator: Authenticator {
 
     func requestAuthentication(_ jwtToken: String) -> HivePromise<String> {
         return HivePromise<String> { resolver in
+            // Should normally not happen but that happen. In case we receive an invalid JWT, avoid crashing
+            if jwtToken == "" {
+                print("HivePlugin CRITICAL ERROR - Empty JWT token challenge received! Auth process cancelled and probably stuck.")
+                return
+            }
+
             clientAuthHandlerCompletionMap[callbackId!] = resolver
             let result: CDVPluginResult = CDVPluginResult(status: CDVCommandStatus.ok, messageAs: jwtToken)
             result.setKeepCallbackAs(true)
@@ -41,7 +47,10 @@ class VaultAuthenticator: Authenticator {
 }
 
 private enum EnhancedErrorCodes : Int {
-    // DATABASE ERRORS - Range 1000-2000
+    // Vault errors - range -1 ~ -999
+    case vaultNotFound = -1
+
+    // Database errors - range -1000 ~ -1999
     case collectionNotFound = -1000
     case unspecified = -9999
 }
@@ -79,6 +88,11 @@ class HivePlugin : TrinityPlugin {
     @objc func success(_ command: CDVInvokedUrlCommand, retAsArray: NSArray) {
         let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: (retAsArray as! [Any]))
 
+        self.commandDelegate.send(result, callbackId: command.callbackId)
+    }
+
+    @objc func successAsNil(_ command: CDVInvokedUrlCommand) {
+        let result = CDVPluginResult(status: CDVCommandStatus_OK)
         self.commandDelegate.send(result, callbackId: command.callbackId)
     }
 
@@ -217,23 +231,16 @@ class HivePlugin : TrinityPlugin {
         }
 
         let client = clientMap[clientObjectId]
-        /* TODO - UNCOMMENT AFTER HIVE SDK IS READY _ = client?.createVault(vaultOwnerDid!, vaultProviderAddress!).done{ [self] vault in
+        _ = client?.createVault(vaultOwnerDid!, vaultProviderAddress!).done{ [self] vault in
             let vaultId = "\(vault.hashValue)"
             vaultMap[vaultId] = vault
             let ret = ["objectId": vaultId,
                        "vaultProviderAddress": vault.providerAddress,
                        "vaultOwnerDid": vaultOwnerDid]
             self.success(command, retAsDict: ret as NSDictionary)
-        }.catch{ error in
+        }.catch { error in
          self.enhancedError(command, error: error)
-        }*/
-
-        // TMP FAKE RETURN - TODO DELETE AFTER HIVE SDK IS READY
-        let ret = ["objectId": "123456",
-                   "vaultProviderAddress": vaultProviderAddress,
-                   "vaultOwnerDid": vaultOwnerDid]
-        self.success(command, retAsDict: ret as NSDictionary)
-        // END OF TMP FAKE RETURN
+        }
     }
 
     @objc func client_getVault(_ command: CDVInvokedUrlCommand) {
@@ -262,15 +269,11 @@ class HivePlugin : TrinityPlugin {
 
         let vault = vaultMap[vaultObjectId]
         if ensureValidVault(vault, command) {
-            /* TODO - UNCOMMENT AFTER HIVE SDK IS READY vault!.getNodeVersion().done { version in
+            vault!.nodeVersion().done { version in
                 self.success(command, retAsString: version)
             }.catch { error in
              self.enhancedError(command, error: error)
-            }*/
-
-            // TMP FAKE RETURN - TODO DELETE AFTER HIVE SDK IS READY
-            self.success(command, retAsString: "1.0.0-TODO")
-            // END OF TMP FAKE RETURN
+            }
         }
     }
 
@@ -376,7 +379,12 @@ class HivePlugin : TrinityPlugin {
         let options = HivePluginHelper.jsonFindOptionsToNative(optionsJson)
         let vault = vaultMap[vaultObjectId]
         vault?.database.findOne(collectionName, queryJson, options: options).done{ result in
-            self.success(command, retAsDict: result as NSDictionary)
+            if result == nil {
+                self.successAsNil(command)
+            }
+            else {
+                self.success(command, retAsDict: result! as NSDictionary)
+            }
         }.catch{ error in
             self.enhancedError(command, error: error)
         }
@@ -391,7 +399,12 @@ class HivePlugin : TrinityPlugin {
         let options = HivePluginHelper.jsonFindOptionsToNative(optionsJson)
         let vault = vaultMap[vaultObjectId]
         vault?.database.findMany(collectionName, queryJson, options: options).done{ result in
-            self.success(command, retAsArray: result as NSArray)
+            if result == nil {
+                self.success(command, retAsArray: [])
+            }
+            else {
+                self.success(command, retAsArray: result! as NSArray)
+            }
         }.catch{ error in
             self.enhancedError(command, error: error)
         }
@@ -596,21 +609,16 @@ class HivePlugin : TrinityPlugin {
 
         let vault = vaultMap[vaultObjectId]
         if ensureValidVault(vault, command) {
-            /* TODO vault!.getPayment().getPaymentInfo().done { pricingInfo in
-                do {
-                    callbackContext.success(new JSONObject(pricingInfo.serialize()));
+            vault!.payment.getPaymentInfo().done { pricingInfo in
+                if let info = try? pricingInfo.serialize().toDict() {
+                    self.success(command, retAsDict: info as NSDictionary)
                 }
-                catch { error in
-                    callbackContext.error(e.getMessage());
+                else {
+                    self.error(command, retAsString: "Invalid payment info received (json format)")
                 }
-            }*/
-
-            // TMP WAITING FOR HIVE SDK
-            self.success(command, retAsDict: [
-                "paymentSettings": [],
-                "pricingPlans": []
-            ])
-            // END TMP WAITING FOR HIVE SDK
+            }.catch { error in
+                self.enhancedError(command, error: error)
+            }
         }
     }
 
@@ -625,14 +633,16 @@ class HivePlugin : TrinityPlugin {
 
         let vault = vaultMap[vaultObjectId]
         if ensureValidVault(vault, command) {
-            /* TODO vault.getPayment().getPricingPlan(pricingPlanName).thenAccept(pricingPlan -> {
-                try {
-                    callbackContext.success(new JSONObject(pricingPlan.serialize()));
+            vault!.payment.getPricingPlan(pricingPlanName!).done { pricingPlan in
+                if let plan = try? pricingPlan.serialize().toDict() {
+                    self.success(command, retAsDict: plan as NSDictionary)
                 }
-                catch (Exception e) {
-                    callbackContext.error(e.getMessage());
+                else {
+                    self.error(command, retAsString: "Invalid pricing plan received (json format)")
                 }
-            });*/
+            }.catch { error in
+                self.enhancedError(command, error: error)
+            }
         }
     }
 
@@ -647,20 +657,11 @@ class HivePlugin : TrinityPlugin {
 
         let vault = vaultMap[vaultObjectId]
         if ensureValidVault(vault, command) {
-            /* TODO vault.getPayment().placeOrder(pricingPlanName).thenAccept(orderId -> {
-                try {
-                    callbackContext.success(orderId);
-                }
-                catch (Exception e) {
-                    callbackContext.error(e.getMessage());
-                }
-            });*/
-
-            // TMP WAITING FOR HIVE SDK
-            self.success(command, retAsDict: [
-                "orderId": "12345"
-            ])
-            // END TMP WAITING FOR HIVE SDK
+            vault!.payment.placeOrder(pricingPlanName!).done { orderId in
+                self.success(command, retAsString: orderId)
+            }.catch { error in
+                self.enhancedError(command, error: error)
+            }
         }
     }
 
@@ -682,7 +683,8 @@ class HivePlugin : TrinityPlugin {
 
         let vault = vaultMap[vaultObjectId]
         if ensureValidVault(vault, command) {
-            /* TODO vault.getPayment().payOrder(orderId, HivePluginHelper.JSONArrayToList(transactionIDsJson)).thenAccept(success -> {
+            /*vault!.payment.payOrder(orderId!, <#T##txids: Array<String>##Array<String>#>)
+             TODO vault.getPayment().payOrder(orderId, HivePluginHelper.JSONArrayToList(transactionIDsJson)).thenAccept(success -> {
                 try {
                     JSONObject ret = new JSONObject();
                     ret.put("success", success);
@@ -712,14 +714,16 @@ class HivePlugin : TrinityPlugin {
 
         let vault = vaultMap[vaultObjectId]
         if ensureValidVault(vault, command) {
-            /* TODO vault.getPayment().getOrder(orderId).thenAccept(order -> {
-                try {
-                    callbackContext.success(new JSONObject(order.serialize()));
+            vault!.payment.getOrder(orderId!).done { order in
+                if let order = try? order.serialize().toDict() {
+                    self.success(command, retAsDict: order as NSDictionary)
                 }
-                catch (Exception e) {
-                    callbackContext.error(e.getMessage());
+                else {
+                    self.error(command, retAsString: "Invalid order received (json format)")
                 }
-            });*/
+            }.catch { error in
+                self.enhancedError(command, error: error)
+            }
         }
     }
 
@@ -728,18 +732,17 @@ class HivePlugin : TrinityPlugin {
 
         let vault = vaultMap[vaultObjectId]
         if ensureValidVault(vault, command) {
-            /* TODO vault.getPayment().getAllOrders().thenAccept(orders -> {
-                try {
-                    callbackContext.success(HivePluginHelper.listToJSONArray(orders));
+            vault!.payment.getAllOrders().done { orders in
+                var retOrders = Array<Dictionary<String, Any>>()
+                for order in orders {
+                    if let retOrder = try? order.serialize().toDict() {
+                        retOrders.append(retOrder)
+                    }
                 }
-                catch (Exception e) {
-                    callbackContext.error(e.getMessage());
-                }
-            });*/
-
-            // TMP WAITING FOR HIVE SDK
-            self.success(command, retAsArray: [])
-            // END TMP WAITING FOR HIVE SDK
+                self.success(command, retAsArray: retOrders as NSArray)
+            }.catch { error in
+                self.enhancedError(command, error: error)
+            }
         }
     }
 
@@ -748,20 +751,16 @@ class HivePlugin : TrinityPlugin {
 
         let vault = vaultMap[vaultObjectId]
         if ensureValidVault(vault, command) {
-            /* TODO vault.getPayment().getUsingPricePlan().thenAccept(activePlan -> {
-                try {
-                    callbackContext.success(new JSONObject(activePlan.serialize()));
+            vault!.payment.getUsingPricePlan().done { activePlan in
+                if let plan = try? activePlan.serialize().toDict() {
+                    self.success(command, retAsDict: plan as NSDictionary)
                 }
-                catch (Exception e) {
-                    callbackContext.error(e.getMessage());
+                else {
+                    self.error(command, retAsString: "Invalid active plan received (json format)")
                 }
-            });*/
-
-            // TMP WAITING FOR HIVE SDK
-            self.success(command, retAsDict: [
-                "name": "FakePlanTODO"
-            ])
-            // END TMP WAITING FOR HIVE SDK
+            }.catch { error in
+                self.enhancedError(command, error: error)
+            }
         }
     }
 
@@ -770,14 +769,11 @@ class HivePlugin : TrinityPlugin {
 
         let vault = vaultMap[vaultObjectId]
         if ensureValidVault(vault, command) {
-            /* TODO vault.getPayment().getPaymentVersion().thenAccept(version -> {
-                try {
-                    callbackContext.success(version);
-                }
-                catch (Exception e) {
-                    callbackContext.error(e.getMessage());
-                }
-            });*/
+            vault!.payment.getPaymentVersion().done { version in
+                self.success(command, retAsString: version)
+            }.catch { error in
+                self.enhancedError(command, error: error)
+            }
         }
     }
 

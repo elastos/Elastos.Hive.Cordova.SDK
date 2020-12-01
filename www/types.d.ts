@@ -49,7 +49,10 @@ declare namespace HivePlugin {
     }
 
     export const enum EnhancedErrorType {
-        // Database errors - range -1000 ~ -2000
+        // Vault errors - range -1 ~ -999
+        VAULT_NOT_FOUND = -1,
+
+        // Database errors - range -1000 ~ -1999
         COLLECTION_NOT_FOUND = -1000,
 
         // Unknown error

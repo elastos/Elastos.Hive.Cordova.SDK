@@ -36,6 +36,10 @@ function execAsPromise<T>(method: string, params: any[] = []): Promise<T> {
  * Tries to convert a native error into a better TS error type for app convenience.
  */
 function nativeToTSException(nativeErr) {
+    if (!nativeErr) {
+        return new EnhancedErrorImpl(HivePlugin.EnhancedErrorType.UNSPECIFIED, "Null error received, this is strange. Check native logs.");
+    }
+
     if (!nativeErr.code) {
         // Not our custom format, just return the raw exception
         return nativeErr;
@@ -43,6 +47,7 @@ function nativeToTSException(nativeErr) {
 
     switch (nativeErr.code) {
         case HivePlugin.EnhancedErrorType.COLLECTION_NOT_FOUND:
+        case HivePlugin.EnhancedErrorType.VAULT_NOT_FOUND:
             return new EnhancedErrorImpl(nativeErr.code, nativeErr.message);
         default:
             return EnhancedErrorImpl.fromRawError(nativeErr.message);
