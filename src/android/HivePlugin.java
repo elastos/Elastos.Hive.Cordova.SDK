@@ -1165,20 +1165,13 @@ public class HivePlugin extends TrinityPlugin {
             }
         }
 
-
         try {
             Vault vault = vaultMap.get(vaultObjectId);
             if (ensureValidVault(vault, callbackContext)) {
                 CallConfig callConfig = new GeneralCallConfig(appDID, HivePluginHelper.jsonObjectToJsonNode(params));
 
-                vault.getScripting().callScript(functionName, callConfig, JsonNode.class).thenAccept(success -> {
-                    try {
-                        JSONObject ret = new JSONObject();
-                        ret.put("success", success);
-                        callbackContext.success(ret);
-                    } catch (JSONException e) {
-                        enhancedError(callbackContext, e);
-                    }
+                vault.getScripting().callScript(functionName, callConfig, JsonNode.class).thenAccept(scriptResult -> {
+                    callbackContext.success(HivePluginHelper.jsonNodeToJsonObject(scriptResult));
                 }).exceptionally(e -> {
                     enhancedError(callbackContext, e);
                     return null;

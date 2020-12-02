@@ -607,8 +607,8 @@ class HivePlugin : TrinityPlugin {
                 callAction = vault?.scripting.call(functionName, params, Dictionary<String, Any>.self)
             }
 
-            callAction?.done{ success in
-                self.success(command, retAsDict: ["success": success])
+            callAction?.done{ scriptOutput in
+                self.success(command, retAsDict: scriptOutput as NSDictionary)
             }.catch{ error in
                 self.enhancedError(command, error: error)
             }
