@@ -817,7 +817,7 @@ class HivePlugin : TrinityPlugin {
                 try writer?.write(data: data!, { error in
                     self.error(command, retAsString: HiveError.description(error))
                 })
-            self.success(command, retAsDict: ["success": "success"])
+                self.success(command, retAsDict: ["success": "success"])
             }
             else {
                 self.error(command, retAsString: "data is nil.")
@@ -834,7 +834,8 @@ class HivePlugin : TrinityPlugin {
     @objc func writer_close(_ command: CDVInvokedUrlCommand) {
         let writerObjectId = command.arguments[0] as? String ?? ""
         let writer = writerMap[writerObjectId]
-        writer?.close()
+        writer!.close()
+
         writerMap.removeValue(forKey: writerObjectId)
         self.success(command, retAsDict: ["success": "success"])
     }
