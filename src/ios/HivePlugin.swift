@@ -52,6 +52,10 @@ private enum EnhancedErrorCodes : Int {
 
     // Database errors - range -1000 ~ -1999
     case collectionNotFound = -1000
+
+    // File errors - range -2000 ~ -2999
+    case fileNotFound = -2000
+
     case unspecified = -9999
 }
 
@@ -122,6 +126,11 @@ class HivePlugin : TrinityPlugin {
             let hiveErrorMessage = HiveError.description(error as! HiveError)
             if hiveErrorMessage.contains("collection not exist") {
                 result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .collectionNotFound, message: hiveErrorMessage))
+            }
+            else if hiveErrorMessage.contains("code: 404") {
+                // TODO: DIRTY AND DANGEROUS! Doesn't work for errors reported not by the download() api!
+                // TODO: replace this with a exception class when available in client SDK
+                result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .fileNotFound, message: hiveErrorMessage))
             }
             else {
                 result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .unspecified, message: hiveErrorMessage))

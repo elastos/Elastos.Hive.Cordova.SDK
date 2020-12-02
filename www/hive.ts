@@ -46,8 +46,9 @@ function nativeToTSException(nativeErr) {
     }
 
     switch (nativeErr.code) {
-        case HivePlugin.EnhancedErrorType.COLLECTION_NOT_FOUND:
         case HivePlugin.EnhancedErrorType.VAULT_NOT_FOUND:
+        case HivePlugin.EnhancedErrorType.COLLECTION_NOT_FOUND:
+        case HivePlugin.EnhancedErrorType.FILE_NOT_FOUND:
             return new EnhancedErrorImpl(nativeErr.code, nativeErr.message);
         default:
             return new EnhancedErrorImpl(HivePlugin.EnhancedErrorType.UNSPECIFIED, nativeErr.message);
@@ -1007,6 +1008,11 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
         }, 'HivePlugin', "client_setAuthHandlerChallengeCallback", [client.objectId]);
 
         return client;
+    }
+
+    errorOfType(error: any, errorType: HivePlugin.EnhancedErrorType): boolean {
+        let enhancedError = error as HivePlugin.EnhancedError;
+        return (enhancedError.getType && enhancedError.getType() == errorType);
     }
 
     getVaultAddress(ownerDid: string): Promise<string> {

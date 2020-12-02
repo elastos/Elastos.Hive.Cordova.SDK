@@ -55,6 +55,9 @@ declare namespace HivePlugin {
         // Database errors - range -1000 ~ -1999
         COLLECTION_NOT_FOUND = -1000,
 
+        // File errors - range -2000 ~ -2999
+        FILE_NOT_FOUND = -2000,
+
         // Unknown error
         UNSPECIFIED = 999
     }
@@ -829,6 +832,11 @@ declare namespace HivePlugin {
          * further operations.
          */
         getClient(options: ClientCreationOptions): Promise<Client>;
+
+        /**
+         * Tells if a javascript error is a specific hive error, and that error is of the given type.
+         */
+        errorOfType(error: any, errorType: HivePlugin.EnhancedErrorType): boolean;
 
         /**
          * Tries to find a vault address in the public DID document of the given user's DID.
