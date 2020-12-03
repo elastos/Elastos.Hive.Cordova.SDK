@@ -118,23 +118,31 @@ class HivePlugin : TrinityPlugin {
      * Returns the passed  error as a JSON object with a clear error code if we are able to know it. Otherwise,
      * the error description is returned as a string.
      */
-    private func enhancedError(_ command: CDVInvokedUrlCommand, error: Error) {
-        let errorMessage = error.localizedDescription
+    private func enhancedError(_ command: CDVInvokedUrlCommand, error: Error?) {
+        let errorMessage: String
         var result: CDVPluginResult?
 
-        if error is HiveError {
-            let hiveErrorMessage = HiveError.description(error as! HiveError)
-            if hiveErrorMessage.contains("collection not exist") {
-                result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .collectionNotFound, message: hiveErrorMessage))
+        if let error = error {
+            errorMessage = error.localizedDescription
+
+            if error is HiveError {
+                let hiveErrorMessage = HiveError.description(error as! HiveError)
+                if hiveErrorMessage.contains("collection not exist") {
+                    result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .collectionNotFound, message: hiveErrorMessage))
+                }
+                else if hiveErrorMessage.contains("code: 404") {
+                    // TODO: DIRTY AND DANGEROUS! Doesn't work for errors reported not by the download() api!
+                    // TODO: replace this with a exception class when available in client SDK
+                    result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .fileNotFound, message: hiveErrorMessage))
+                }
+                else {
+                    result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .unspecified, message: hiveErrorMessage))
+                }
             }
-            else if hiveErrorMessage.contains("code: 404") {
-                // TODO: DIRTY AND DANGEROUS! Doesn't work for errors reported not by the download() api!
-                // TODO: replace this with a exception class when available in client SDK
-                result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .fileNotFound, message: hiveErrorMessage))
-            }
-            else {
-                result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .unspecified, message: hiveErrorMessage))
-            }
+        }
+        else {
+            // Error is nil
+            errorMessage = "Empty error content - no additional information"
         }
 
         if result == nil {
@@ -170,6 +178,9 @@ class HivePlugin : TrinityPlugin {
 
         do {
             try setupDIDResolver()
+
+            // Enable HTTP calls logging
+            PreHive.Log.setLevel(.Debug)
 
             // final atomic reference as a way to pass our non final client Id to the auth handler.
             var clientIdReference: [String] = [String]()
@@ -608,15 +619,8 @@ class HivePlugin : TrinityPlugin {
 
         let vault = vaultMap[vaultObjectId]
         if vault != nil {
-            let callAction: HivePromise<Dictionary<String, Any>>?
-            if appDID != nil {
-                callAction = vault?.scripting.call(functionName, params, appDID!, Dictionary<String, Any>.self)
-            }
-            else {
-                callAction = vault?.scripting.call(functionName, params, Dictionary<String, Any>.self)
-            }
-
-            callAction?.done{ scriptOutput in
+            let callConfig = GeneralCallConfig(appDID, params)
+            vault?.scripting.callScript(functionName, callConfig, Dictionary<String, Any>.self).done{ scriptOutput in
                 self.success(command, retAsDict: scriptOutput as NSDictionary)
             }.catch{ error in
                 self.enhancedError(command, error: error)
@@ -834,10 +838,16 @@ class HivePlugin : TrinityPlugin {
     @objc func writer_close(_ command: CDVInvokedUrlCommand) {
         let writerObjectId = command.arguments[0] as? String ?? ""
         let writer = writerMap[writerObjectId]
-        writer!.close()
+        writer!.close() { (success, error) in
+            if (success) {
+                self.success(command, retAsDict: ["success": "success"])
+            }
+            else {
+                self.enhancedError(command, error: error)
+            }
 
-        writerMap.removeValue(forKey: writerObjectId)
-        self.success(command, retAsDict: ["success": "success"])
+            self.writerMap.removeValue(forKey: writerObjectId)
+        }
     }
 
     @objc func reader_read(_ command: CDVInvokedUrlCommand) {
@@ -878,8 +888,15 @@ class HivePlugin : TrinityPlugin {
         let readerObjectId = command.arguments[0] as? String ?? ""
 
         let reader = readerMap[readerObjectId]
-        reader?.close()
-        readerMap.removeValue(forKey: readerObjectId)
-        self.success(command, retAsString: "success")
+        reader?.close() { (success, error) in
+            if (success) {
+                self.success(command, retAsString: "success")
+            }
+            else {
+                self.enhancedError(command, error: error)
+            }
+
+            self.readerMap.removeValue(forKey: readerObjectId)
+        }
     }
 }

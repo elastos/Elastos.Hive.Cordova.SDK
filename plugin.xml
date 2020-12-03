@@ -48,7 +48,7 @@
             </config>
             <pods use-frameworks="true">
                 <!-- <pod name="ElastosHiveSDK" spec='~> 1.0.1'/> -->
-                <pod name="PreHive" spec='2.1'/>
+                <pod name="PreHive" spec='2.5'/>
                 <!-- <pod name="Alamofire" spec='~> 5.4'/>
                 <pod name="PromiseKit" spec='~> 6.13.1'/> -->
             </pods>
