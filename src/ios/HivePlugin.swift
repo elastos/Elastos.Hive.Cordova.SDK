@@ -130,13 +130,13 @@ class HivePlugin : TrinityPlugin {
                 if hiveErrorMessage.contains("collection not exist") {
                     result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .collectionNotFound, message: hiveErrorMessage))
                 }
-                else if hiveErrorMessage.contains("code: 404") {
-                    // TODO: DIRTY AND DANGEROUS! Doesn't work for errors reported not by the download() api!
-                    // TODO: replace this with a exception class when available in client SDK
-                    result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .fileNotFound, message: hiveErrorMessage))
-                }
                 else {
-                    result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .unspecified, message: hiveErrorMessage))
+                    switch error as! HiveError {
+                    case .fileNotFound:
+                        result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .fileNotFound, message: hiveErrorMessage))
+                    default:
+                        result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .unspecified, message: hiveErrorMessage))
+                    }
                 }
             }
         }

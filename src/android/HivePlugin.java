@@ -32,6 +32,7 @@ import org.apache.cordova.PluginResult;
 import org.elastos.did.DIDDocument;
 import org.elastos.hive.AuthenticationHandler;
 import org.elastos.hive.Client;
+import org.elastos.hive.Scripting;
 import org.elastos.hive.Vault;
 import org.elastos.hive.database.CountOptions;
 import org.elastos.hive.database.CreateCollectionOptions;
@@ -41,19 +42,14 @@ import org.elastos.hive.database.FindOptions;
 import org.elastos.hive.database.InsertOptions;
 import org.elastos.hive.database.UpdateOptions;
 import org.elastos.hive.database.UpdateResult;
+import org.elastos.hive.exception.FileNotFoundException;
 import org.elastos.hive.exception.HiveException;
 import org.elastos.hive.exception.ProviderNotSetException;
 import org.elastos.hive.exception.VaultNotFoundException;
 import org.elastos.hive.files.FileInfo;
 import org.elastos.hive.payment.Order;
-import org.elastos.hive.scripting.CallConfig;
-import org.elastos.hive.scripting.Condition;
-import org.elastos.hive.scripting.DownloadCallConfig;
-import org.elastos.hive.scripting.Executable;
-import org.elastos.hive.scripting.GeneralCallConfig;
 import org.elastos.hive.scripting.RawCondition;
 import org.elastos.hive.scripting.RawExecutable;
-import org.elastos.hive.scripting.UploadCallConfig;
 import org.elastos.trinity.runtime.PreferenceManager;
 import org.elastos.trinity.runtime.TrinityPlugin;
 import org.json.JSONArray;
@@ -98,6 +94,10 @@ public class HivePlugin extends TrinityPlugin {
 
         // Database errors - range -1000 ~ -1999
         COLLECTION_NOT_FOUND(-1000),
+
+        // File errors - range -2000 ~ -2999
+        FILE_NOT_FOUND(-2000),
+
         UNSPECIFIED(-9999);
 
         public int mValue;
@@ -274,7 +274,7 @@ public class HivePlugin extends TrinityPlugin {
     }
 
     /**
-     * Returns the passed  error as a JSON object with a clear error code if we are able to know it. Otherwise,
+     * Returns the passed error as a JSON object with a clear error code if we are able to know it. Otherwise,
      * the error description is returned as a string.
      */
     private void enhancedError(CallbackContext callbackContext, Throwable exception) {
@@ -287,6 +287,9 @@ public class HivePlugin extends TrinityPlugin {
         }
         else if (exception instanceof VaultNotFoundException) {
             result = new PluginResult(PluginResult.Status.ERROR, Objects.requireNonNull(createEnhancedError(EnhancedErrorCodes.VAULT_NOT_FOUND, "Vault does not exist. It has to be created by calling createVault()")));
+        }
+        else if (exception instanceof FileNotFoundException) {
+            result = new PluginResult(PluginResult.Status.ERROR, Objects.requireNonNull(createEnhancedError(EnhancedErrorCodes.FILE_NOT_FOUND, hiveErrorMessage)));
         }
 
         if (result == null) {
@@ -464,7 +467,7 @@ public class HivePlugin extends TrinityPlugin {
                     // Vault already exists, return null, not an error.
                     callbackContext.success((String)null);
                 } else {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                 }
                 return null;
             });
@@ -529,7 +532,7 @@ public class HivePlugin extends TrinityPlugin {
                 vault.getNodeVersion().thenAccept(version -> {
                     callbackContext.success(version);
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -567,7 +570,7 @@ public class HivePlugin extends TrinityPlugin {
                         enhancedError(callbackContext, e);
                     }
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -593,7 +596,7 @@ public class HivePlugin extends TrinityPlugin {
                         enhancedError(callbackContext, e);
                     }
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -634,7 +637,7 @@ public class HivePlugin extends TrinityPlugin {
                         enhancedError(callbackContext, e);
                     }
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -682,7 +685,7 @@ public class HivePlugin extends TrinityPlugin {
                         enhancedError(callbackContext, e);
                     }
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -723,7 +726,7 @@ public class HivePlugin extends TrinityPlugin {
                         enhancedError(callbackContext, e);
                     }
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -752,7 +755,7 @@ public class HivePlugin extends TrinityPlugin {
                     else
                         callbackContext.success(HivePluginHelper.jsonNodeToJsonObject(result));
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -782,7 +785,7 @@ public class HivePlugin extends TrinityPlugin {
                     }
                     callbackContext.success(jsonArray);
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -829,7 +832,7 @@ public class HivePlugin extends TrinityPlugin {
                         enhancedError(callbackContext, e);
                     }
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -879,7 +882,7 @@ public class HivePlugin extends TrinityPlugin {
                         enhancedError(callbackContext, e);
                     }
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -915,7 +918,7 @@ public class HivePlugin extends TrinityPlugin {
                         enhancedError(callbackContext, e);
                     }
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -945,7 +948,7 @@ public class HivePlugin extends TrinityPlugin {
                         enhancedError(callbackContext, e);
                     }
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -982,7 +985,7 @@ public class HivePlugin extends TrinityPlugin {
                         }
                     }
                     else {
-                        enhancedError(callbackContext, e);
+                        enhancedError(callbackContext, e.getCause());
                     }
 
                     return null;
@@ -1011,7 +1014,7 @@ public class HivePlugin extends TrinityPlugin {
                         enhancedError(callbackContext, e);
                     }
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -1033,7 +1036,7 @@ public class HivePlugin extends TrinityPlugin {
                     JSONObject ret = new JSONObject();
                     callbackContext.success(ret);
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -1053,7 +1056,7 @@ public class HivePlugin extends TrinityPlugin {
                 vault.getFiles().hash(srcPath).thenAccept(hash -> {
                     callbackContext.success(hash);
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -1081,7 +1084,7 @@ public class HivePlugin extends TrinityPlugin {
                         enhancedError(callbackContext, e);
                     }
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -1111,7 +1114,7 @@ public class HivePlugin extends TrinityPlugin {
                         enhancedError(callbackContext, e);
                     }
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -1142,7 +1145,7 @@ public class HivePlugin extends TrinityPlugin {
                         enhancedError(callbackContext, e);
                     }
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -1168,12 +1171,10 @@ public class HivePlugin extends TrinityPlugin {
         try {
             Vault vault = vaultMap.get(vaultObjectId);
             if (ensureValidVault(vault, callbackContext)) {
-                CallConfig callConfig = new GeneralCallConfig(appDID, HivePluginHelper.jsonObjectToJsonNode(params));
-
-                vault.getScripting().callScript(functionName, callConfig, JsonNode.class).thenAccept(scriptResult -> {
+                vault.getScripting().callScript(functionName, HivePluginHelper.jsonObjectToJsonNode(params), appDID, JsonNode.class).thenAccept(scriptResult -> {
                     callbackContext.success(HivePluginHelper.jsonNodeToJsonObject(scriptResult));
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
@@ -1184,7 +1185,7 @@ public class HivePlugin extends TrinityPlugin {
     }
 
     private void scripting_call_to_download_file(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        String vaultObjectId = args.getString(0);
+        /*String vaultObjectId = args.getString(0);
         String functionName = args.getString(1);
 
         JSONObject params = null;
@@ -1201,7 +1202,7 @@ public class HivePlugin extends TrinityPlugin {
             if (ensureValidVault(vault, callbackContext)) {
                 CallConfig callConfig = new DownloadCallConfig(appDID, HivePluginHelper.jsonObjectToJsonNode(params));
 
-                vault.getScripting().callScript(functionName, callConfig, InputStream.class).thenAccept(reader -> {
+                vault.getScripting().callToDownloadFile().callScript(functionName, callConfig, InputStream.class).thenAccept(reader -> {
                     // Same implementation as for files_download()
                     try {
                         String objectId = "" + System.identityHashCode(reader);
@@ -1212,17 +1213,17 @@ public class HivePlugin extends TrinityPlugin {
                         ret.put("objectId", objectId);
                         callbackContext.success(ret);
                     } catch (JSONException e) {
-                        enhancedError(callbackContext, e);
+                        enhancedError(callbackContext, e.getCause());
                     }
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
         }
         catch (Exception e) {
-            enhancedError(callbackContext, e);
-        }
+            enhancedError(callbackContext, e.getCause());
+        }*/
     }
 
     private void scripting_call_to_upload_file(JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -1254,16 +1255,16 @@ public class HivePlugin extends TrinityPlugin {
                         ret.put("objectId", objectId);
                         callbackContext.success(ret);
                     } catch (JSONException e) {
-                        enhancedError(callbackContext, e);
+                        enhancedError(callbackContext, e.getCause());
                     }
                 }).exceptionally(e -> {
-                    enhancedError(callbackContext, e);
+                    enhancedError(callbackContext, e.getCause());
                     return null;
                 });
             }
         }
         catch (Exception e) {
-            enhancedError(callbackContext, e);
+            enhancedError(callbackContext, e.getCause());
         }*/
     }
 
@@ -1390,6 +1391,9 @@ public class HivePlugin extends TrinityPlugin {
                     catch (Exception e) {
                         enhancedError(callbackContext, e);
                     }
+                }).exceptionally(e->{
+                    enhancedError(callbackContext, e.getCause());
+                    return null;
                 });
             }
         }
@@ -1412,6 +1416,9 @@ public class HivePlugin extends TrinityPlugin {
                     catch (Exception e) {
                         enhancedError(callbackContext, e);
                     }
+                }).exceptionally(e->{
+                    enhancedError(callbackContext, e.getCause());
+                    return null;
                 });
             }
         }
@@ -1434,6 +1441,9 @@ public class HivePlugin extends TrinityPlugin {
                     catch (Exception e) {
                         enhancedError(callbackContext, e);
                     }
+                }).exceptionally(e->{
+                    enhancedError(callbackContext, e.getCause());
+                    return null;
                 });
             }
         }
@@ -1459,6 +1469,9 @@ public class HivePlugin extends TrinityPlugin {
                     catch (Exception e) {
                         enhancedError(callbackContext, e);
                     }
+                }).exceptionally(e->{
+                    enhancedError(callbackContext, e.getCause());
+                    return null;
                 });
             }
         }
@@ -1481,6 +1494,9 @@ public class HivePlugin extends TrinityPlugin {
                     catch (Exception e) {
                         enhancedError(callbackContext, e);
                     }
+                }).exceptionally(e->{
+                    enhancedError(callbackContext, e.getCause());
+                    return null;
                 });
             }
         }
@@ -1507,6 +1523,9 @@ public class HivePlugin extends TrinityPlugin {
                     catch (Exception e) {
                         enhancedError(callbackContext, e);
                     }
+                }).exceptionally(e->{
+                    enhancedError(callbackContext, e.getCause());
+                    return null;
                 });
             }
         }
@@ -1528,6 +1547,9 @@ public class HivePlugin extends TrinityPlugin {
                     catch (Exception e) {
                         enhancedError(callbackContext, e);
                     }
+                }).exceptionally(e->{
+                    enhancedError(callbackContext, e.getCause());
+                    return null;
                 });
             }
         }
@@ -1549,6 +1571,9 @@ public class HivePlugin extends TrinityPlugin {
                     catch (Exception e) {
                         enhancedError(callbackContext, e);
                     }
+                }).exceptionally(e->{
+                    enhancedError(callbackContext, e.getCause());
+                    return null;
                 });
             }
         }
