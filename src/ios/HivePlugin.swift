@@ -290,7 +290,18 @@ class HivePlugin : TrinityPlugin {
                        "vaultOwnerDid": vaultOwnerDid]
             self.success(command, retAsDict: ret as NSDictionary)
         }.catch{ error in
-            self.enhancedError(command, error: error)
+            if let hiveError = error as? HiveError {
+                switch hiveError {
+                    case .providerIsNil:
+                        self.successAsNil(command)
+                        break
+                default:
+                    self.enhancedError(command, error: error)
+                }
+            }
+            else {
+                self.enhancedError(command, error: error)
+            }
         }
     }
 
