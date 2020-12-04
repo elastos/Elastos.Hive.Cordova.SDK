@@ -51,6 +51,8 @@ declare namespace HivePlugin {
     export const enum EnhancedErrorType {
         // Vault errors - range -1 ~ -999
         VAULT_NOT_FOUND = -1,
+        PROVIDER_NOT_PUBLISHED = -1, // No vault provider information inside a DID document
+        DID_NOT_PUBLISHED = -3,
 
         // Database errors - range -1000 ~ -1999
         COLLECTION_NOT_FOUND = -1000,

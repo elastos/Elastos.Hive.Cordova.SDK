@@ -91,6 +91,8 @@ public class HivePlugin extends TrinityPlugin {
     private enum EnhancedErrorCodes {
         // Vault errors - range -1 ~ -999
         VAULT_NOT_FOUND(-1),
+        PROVIDER_NOT_PUBLISHED(-2),
+        DID_NOT_PUBLISHED(-3),
 
         // Database errors - range -1000 ~ -1999
         COLLECTION_NOT_FOUND(-1000),

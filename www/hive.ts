@@ -47,6 +47,8 @@ function nativeToTSException(nativeErr) {
 
     switch (nativeErr.code) {
         case HivePlugin.EnhancedErrorType.VAULT_NOT_FOUND:
+        case HivePlugin.EnhancedErrorType.PROVIDER_NOT_PUBLISHED:
+        case HivePlugin.EnhancedErrorType.DID_NOT_PUBLISHED:
         case HivePlugin.EnhancedErrorType.COLLECTION_NOT_FOUND:
         case HivePlugin.EnhancedErrorType.FILE_NOT_FOUND:
             return new EnhancedErrorImpl(nativeErr.code, nativeErr.message);

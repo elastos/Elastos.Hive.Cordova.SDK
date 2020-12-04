@@ -49,6 +49,8 @@ class VaultAuthenticator: Authenticator {
 private enum EnhancedErrorCodes : Int {
     // Vault errors - range -1 ~ -999
     case vaultNotFound = -1
+    case providerNotPublished = -2
+    case didNotPublished = -3
 
     // Database errors - range -1000 ~ -1999
     case collectionNotFound = -1000
@@ -134,6 +136,11 @@ class HivePlugin : TrinityPlugin {
                     switch error as! HiveError {
                     case .fileNotFound:
                         result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .fileNotFound, message: hiveErrorMessage))
+                        break
+                    case .providerIsNil:
+                        // TODO: differenciate "nil" because of network error VS really not published.
+                        result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .providerNotPublished, message: hiveErrorMessage))
+                        break
                     default:
                         result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .unspecified, message: hiveErrorMessage))
                     }
@@ -241,7 +248,7 @@ class HivePlugin : TrinityPlugin {
     @objc func client_createVault(_ command: CDVInvokedUrlCommand) {
         let clientObjectId = command.arguments[0] as? String ?? ""
         let vaultOwnerDid = command.arguments[1] as? String
-        let vaultProviderAddress = command.arguments[1] as? String
+        let vaultProviderAddress = command.arguments[2] as? String
 
         if vaultOwnerDid == nil {
             self.error(command, retAsString: "createVault() cannot be called with a null string as vault owner DID")
