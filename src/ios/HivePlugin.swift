@@ -716,32 +716,22 @@ class HivePlugin : TrinityPlugin {
             return
         }
 
-        let transactionIDsJson = command.arguments[2] as? Dictionary<String, Any>
+        let transactionIDs = command.arguments[2] as? Array<String>
 
-        guard transactionIDsJson != nil else {
-            self.error(command, retAsString: "payment_payOrder(): transactionIDsJson cannot be empty")
+        guard transactionIDs != nil else {
+            self.error(command, retAsString: "payment_payOrder(): transaction ids list cannot be empty")
             return
         }
 
         let vault = vaultMap[vaultObjectId]
         if ensureValidVault(vault, command) {
-            /*vault!.payment.payOrder(orderId!, <#T##txids: Array<String>##Array<String>#>)
-             TODO vault.getPayment().payOrder(orderId, HivePluginHelper.JSONArrayToList(transactionIDsJson)).thenAccept(success -> {
-                try {
-                    JSONObject ret = new JSONObject();
-                    ret.put("success", success);
-                    callbackContext.success(orderId);
-                }
-                catch (Exception e) {
-                    callbackContext.error(e.getMessage());
-                }
-            });*/
-
-            // TMP WAITING FOR HIVE SDK
-            self.success(command, retAsDict: [
-                "success":true
-            ])
-            // END TMP WAITING FOR HIVE SDK
+            vault!.payment.payOrder(orderId!, transactionIDs!).done { success in
+                var ret = Dictionary<String, Any>()
+                ret["success"] = success
+                self.success(command, retAsDict: ret as NSDictionary)
+            }.catch { error in
+                self.enhancedError(command, error: error)
+            }
         }
     }
 
