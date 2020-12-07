@@ -777,7 +777,7 @@ declare namespace HivePlugin {
          *
          * @param vaultOwnerDid: Target user DID for which we want to get vault access
          */
-        getVault(vaultOwnerDid: string | URL): Promise<Vault>;
+        getVault(vaultOwnerDid: string): Promise<Vault>;
 
         /**
          * Parses a Hive standard url into a url info that can later be executed to get the result or the
