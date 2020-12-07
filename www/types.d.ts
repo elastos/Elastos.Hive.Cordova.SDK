@@ -777,8 +777,32 @@ declare namespace HivePlugin {
          *
          * @param vaultOwnerDid: Target user DID for which we want to get vault access
          */
-        getVault(vaultOwnerDid: string): Promise<Vault>;
+        getVault(vaultOwnerDid: string | URL): Promise<Vault>;
+
+        /**
+         * Parses a Hive standard url into a url info that can later be executed to get the result or the
+         * target url.
+         *
+         * For example, later calling a url such as ...
+         *      hive://userdid:appdid/getAvatar
+         *
+         * ... results in a call to the "getAvatar" script, previously registered by "userdid" on his vault,
+         * in the "appdid" scope. This is similar to calling:
+         *      hiveClient.getVault(userdid).getScripting().call("getAvatar");
+         *
+         * Usage example (assuming the url is a call to a getAvatar script that contains a FileDownload
+         * executable named "download"):
+         *
+         * - let hiveURLInfo = hiveclient.parseHiveURL(urlstring)
+         * - let scriptOutput = await hiveURLInfo.callScript();
+         * - hiveURLInfo.getVault().getScripting().downloadFile(scriptOutput.items["download"].getTransferID())
+         */
+        //parseHiveURL(hiveURL: string): Promise<HiveURLInfo>;
     }
+
+    /*interface HiveURLInfo {
+        callScript(): Promise<HivePlugin.JSONObject>;
+    }*/
 
     interface HiveManager {
         Database: {
