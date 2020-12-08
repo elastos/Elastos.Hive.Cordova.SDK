@@ -863,6 +863,10 @@ class VaultImpl implements HivePlugin.Vault {
     getNodeVersion(): Promise<string> {
         return execAsPromise<string>("vault_getNodeVersion", [this.objectId]);
     }
+
+    revokeAccessToken(): Promise<void> {
+        return execAsPromise<void>("vault_revokeAccessToken", [this.objectId]);
+    }
 }
 
 class ClientImpl implements HivePlugin.Client {

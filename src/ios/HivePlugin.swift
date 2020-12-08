@@ -318,6 +318,16 @@ class HivePlugin : TrinityPlugin {
         }
     }
 
+    @objc func vault_revokeAccessToken(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+
+        let vault = vaultMap[vaultObjectId]
+        if ensureValidVault(vault, command) {
+            // TODO vault!.revokeAccessToken()
+            self.successAsNil(command)
+        }
+    }
+
     @objc func database_createCollection(_ command: CDVInvokedUrlCommand) {
         let vaultObjectId = command.arguments[0] as? String ?? ""
         let collectionName = command.arguments[1] as? String ?? ""

@@ -731,6 +731,12 @@ declare namespace HivePlugin {
          * Gives access to all vault scripting features on this vault.
          */
         getScripting(): Scripting.Scripting;
+
+        /**
+         * Revokes the existing access token linking the current user with the vault. Next operation on the vault
+         * after calling launches a new authentication flow in order to generate a new access token.
+         */
+        revokeAccessToken(): Promise<void>;
     }
 
     /**

@@ -140,6 +140,9 @@ public class HivePlugin extends TrinityPlugin {
                 case "vault_getNodeVersion":
                     this.vault_getNodeVersion(args, callbackContext);
                     break;
+                case "vault_revokeAccessToken":
+                    this.vault_revokeAccessToken(args, callbackContext);
+                    break;
                 case "database_createCollection":
                     this.database_createCollection(args, callbackContext);
                     break;
@@ -537,6 +540,21 @@ public class HivePlugin extends TrinityPlugin {
                     enhancedError(callbackContext, e.getCause());
                     return null;
                 });
+            }
+        }
+        catch (Exception e) {
+            enhancedError(callbackContext, e);
+        }
+    }
+
+    private void vault_revokeAccessToken(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+
+        try {
+            Vault vault = vaultMap.get(vaultObjectId);
+            if (ensureValidVault(vault, callbackContext)) {
+                vault.revokeAccessToken();
+                callbackContext.success();
             }
         }
         catch (Exception e) {
