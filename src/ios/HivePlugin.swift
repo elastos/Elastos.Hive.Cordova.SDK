@@ -323,7 +323,12 @@ class HivePlugin : TrinityPlugin {
 
         let vault = vaultMap[vaultObjectId]
         if ensureValidVault(vault, command) {
-            // TODO vault!.revokeAccessToken()
+            do {
+                try vault!.revokeAccessToken()
+            }
+            catch let error {
+                self.enhancedError(command, error: error)
+            }
             self.successAsNil(command)
         }
     }
