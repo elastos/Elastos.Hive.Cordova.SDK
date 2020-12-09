@@ -21,7 +21,7 @@
  */
 
 import Foundation
-import PreHive
+import ElastosHiveSDK
 
 var clientAuthHandlerCompletionMap = Dictionary<String, Resolver<String>>()
 class VaultAuthenticator: Authenticator {
@@ -187,7 +187,7 @@ class HivePlugin : TrinityPlugin {
             try setupDIDResolver()
 
             // Enable HTTP calls logging
-            PreHive.Log.setLevel(.Debug)
+            ElastosHiveSDK.Log.setLevel(.Debug)
 
             // final atomic reference as a way to pass our non final client Id to the auth handler.
             var clientIdReference: [String] = [String]()
