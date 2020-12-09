@@ -206,11 +206,11 @@ public class HivePlugin extends TrinityPlugin {
                 case "scripting_call":
                     this.scripting_call(args, callbackContext);
                     break;
-                case "scripting_call_to_download_file":
-                    this.scripting_call_to_download_file(args, callbackContext);
+                case "scripting_downloadFile":
+                    this.scripting_downloadFile(args, callbackContext);
                     break;
-                case "scripting_call_to_upload_file":
-                    this.scripting_call_to_upload_file(args, callbackContext);
+                case "scripting_uploadFile":
+                    this.scripting_uploadFile(args, callbackContext);
                     break;
                 case "writer_write":
                     this.writer_write(args, callbackContext);
@@ -291,7 +291,8 @@ public class HivePlugin extends TrinityPlugin {
             result = new PluginResult(PluginResult.Status.ERROR, Objects.requireNonNull(createEnhancedError(EnhancedErrorCodes.COLLECTION_NOT_FOUND, hiveErrorMessage)));
         }
         else if (exception instanceof VaultNotFoundException) {
-            result = new PluginResult(PluginResult.Status.ERROR, Objects.requireNonNull(createEnhancedError(EnhancedErrorCodes.VAULT_NOT_FOUND, "Vault does not exist. It has to be created by calling createVault()")));
+            result = new PluginResult(PluginResult.Status.ERROR, Objects.requireNonNull(createEnhancedError(EnhancedErrorCodes.VAULT_NOT_FOUND,
+                    "Vault does not exist. It has to be created by calling createVault()")));
         }
         else if (exception instanceof FileNotFoundException) {
             result = new PluginResult(PluginResult.Status.ERROR, Objects.requireNonNull(createEnhancedError(EnhancedErrorCodes.FILE_NOT_FOUND, hiveErrorMessage)));
@@ -1204,25 +1205,14 @@ public class HivePlugin extends TrinityPlugin {
         }
     }
 
-    private void scripting_call_to_download_file(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        /*String vaultObjectId = args.getString(0);
-        String functionName = args.getString(1);
-
-        JSONObject params = null;
-        String appDID = null;
-        if (!args.isNull(2)) {
-            params = args.getJSONObject(2);
-            if (!args.isNull(3)) {
-                appDID = args.getString(3);
-            }
-        }
+    private void scripting_downloadFile(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String transactionId = args.getString(1);
 
         try {
             Vault vault = vaultMap.get(vaultObjectId);
             if (ensureValidVault(vault, callbackContext)) {
-                CallConfig callConfig = new DownloadCallConfig(appDID, HivePluginHelper.jsonObjectToJsonNode(params));
-
-                vault.getScripting().callToDownloadFile().callScript(functionName, callConfig, InputStream.class).thenAccept(reader -> {
+                vault.getScripting().downloadFile(transactionId, InputStream.class).thenAccept(reader -> {
                     // Same implementation as for files_download()
                     try {
                         String objectId = "" + System.identityHashCode(reader);
@@ -1243,33 +1233,21 @@ public class HivePlugin extends TrinityPlugin {
         }
         catch (Exception e) {
             enhancedError(callbackContext, e.getCause());
-        }*/
+        }
     }
 
-    private void scripting_call_to_upload_file(JSONArray args, CallbackContext callbackContext) throws JSONException {
-        /*String vaultObjectId = args.getString(0);
-        String functionName = args.getString(1);
-
-        JSONObject params = null;
-        String appDID = null;
-        if (!args.isNull(2)) {
-            params = args.getJSONObject(2);
-            if (!args.isNull(3)) {
-                appDID = args.getString(3);
-            }
-        }
+    private void scripting_uploadFile(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String vaultObjectId = args.getString(0);
+        String transactionId = args.getString(1);
 
         try {
             Vault vault = vaultMap.get(vaultObjectId);
             if (ensureValidVault(vault, callbackContext)) {
-                CallConfig callConfig = new UploadCallConfig(appDID, HivePluginHelper.jsonObjectToJsonNode(params), "TODO-KO");
-
-                vault.getScripting().callScript(functionName, callConfig, InputStream.class).thenAccept(reader -> {
-                    // Same implementation as for files_download()
+                vault.getScripting().uploadFile(transactionId, OutputStream.class).thenAccept(writer -> {
+                    // Same implementation as for files_upload()
                     try {
-                        String objectId = "" + System.identityHashCode(reader);
-                        readerMap.put(objectId, reader);
-                        readerOffsetsMap.put(objectId, 0); // Current read offset is 0
+                        String objectId = "" + System.identityHashCode(writer);
+                        writerMap.put(objectId, writer);
 
                         JSONObject ret = new JSONObject();
                         ret.put("objectId", objectId);
@@ -1285,7 +1263,7 @@ public class HivePlugin extends TrinityPlugin {
         }
         catch (Exception e) {
             enhancedError(callbackContext, e.getCause());
-        }*/
+        }
     }
 
     private void writer_write(JSONArray args, CallbackContext callbackContext) throws JSONException {

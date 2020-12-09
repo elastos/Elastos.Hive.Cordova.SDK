@@ -70,11 +70,7 @@ class EnhancedErrorImpl extends Error implements HivePlugin.EnhancedError {
     }
 
     static fromRawError(error: any): EnhancedErrorImpl {
-        let enhancedError = new EnhancedErrorImpl(HivePlugin.EnhancedErrorType.UNSPECIFIED, "");
-
-        // Apply all fields of the existing error to this enhanced error to preserve all information.
-        Object.assign(enhancedError, error);
-
+        let enhancedError = new EnhancedErrorImpl(HivePlugin.EnhancedErrorType.UNSPECIFIED, JSON.stringify(error));
         return enhancedError;
     }
 }
@@ -795,13 +791,13 @@ class ScriptingImpl implements HivePlugin.Scripting.Scripting {
         return execAsPromise<HivePlugin.JSONObject>("scripting_call", [this.vault.objectId, functionName, params, appDID]);
     }
 
-    async callToDownloadFile(functionName: string, params?: HivePlugin.JSONObject, appDID?: string): Promise<HivePlugin.Files.Reader> {
-        let resultJson = await execAsPromise<HivePlugin.JSONObject>("scripting_call_to_download_file", [this.vault.objectId, functionName, params, appDID]);
+    async downloadFile(transactionId: string): Promise<HivePlugin.Files.Reader> {
+        let resultJson = await execAsPromise<HivePlugin.JSONObject>("scripting_downloadFile", [this.vault.objectId, transactionId]);
         return ReaderImpl.fromJson(resultJson);
     }
 
-    async callToUploadFile(functionName: string, params?: HivePlugin.JSONObject, appDID?: string): Promise<HivePlugin.Files.Writer> {
-        let resultJson = await execAsPromise<HivePlugin.JSONObject>("scripting_call_to_upload_file", [this.vault.objectId, functionName, params, appDID]);
+    async uploadFile(transactionId: string): Promise<HivePlugin.Files.Writer> {
+        let resultJson = await execAsPromise<HivePlugin.JSONObject>("scripting_uploadFile", [this.vault.objectId, transactionId]);
         return WriterImpl.fromJson(resultJson);
     }
 }

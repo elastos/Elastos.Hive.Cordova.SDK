@@ -673,16 +673,18 @@ declare namespace HivePlugin {
             call(functionName: string, params?: JSONObject, appDID?: string): Promise<JSONObject>;
 
             /**
-             * See call(). Instead of returning a JSON object as a script result, this api returns a File Reader instance
-             * that can be used to receive the main result of the script execution as a file download stream.
+             * After calling a script that runs a DownloadExecutable, a call() to that script returns a transaction_id in its
+             * response. That transaction_id can be used with downloadFile() to download a file that is provided by the
+             * script output.
              */
-            callToDownloadFile(functionName: string, params?: JSONObject, appDID?: string): Promise<Files.Reader>;
+            downloadFile(transactionId: string): Promise<Files.Reader>;
 
             /**
-             * See call(). Instead of returning a JSON object as a script result, this api returns a File Writer instance
-             * that can be used to upload a file stream to the hive node.
+             * After calling a script that runs a UploadExecutable, a call() to that script returns a transaction_id in its
+             * response. That transaction_id can be used with uploadFile() to upload a file that has to be provided as part
+             * of the script.
              */
-            callToUploadFile(functionName: string, params?: JSONObject, appDID?: string): Promise<Files.Writer>;
+            uploadFile(transactionId: string): Promise<Files.Writer>;
         }
     }
 
