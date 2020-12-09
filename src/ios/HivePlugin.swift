@@ -30,8 +30,8 @@ class VaultAuthenticator: Authenticator {
     var delegate: Any? = nil
     var clientObjectId: String?
 
-    func requestAuthentication(_ jwtToken: String) -> HivePromise<String> {
-        return HivePromise<String> { resolver in
+    func requestAuthentication(_ jwtToken: String) -> Promise<String> {
+        return Promise<String> { resolver in
             // Should normally not happen but that happen. In case we receive an invalid JWT, avoid crashing
             if jwtToken == "" {
                 print("HivePlugin CRITICAL ERROR - Empty JWT token challenge received! Auth process cancelled and probably stuck.")
@@ -71,6 +71,18 @@ class HivePlugin : TrinityPlugin {
     private var writerMap   = Dictionary<String, FileWriter>()
     private var readerOffsetsMap   = Dictionary<String, Int>()
     private var didResolverInitialized: Bool = false
+
+    /*@objc override func pluginInitialize() {
+    }
+
+    @objc override func onAppTerminate() {
+    }
+
+    @objc override func onReset() {
+    }
+
+    @objc override func dispose() {
+    }*/
 
     @objc func success(_ command: CDVInvokedUrlCommand, retAsString: String) {
         let result = CDVPluginResult(status: CDVCommandStatus_OK,
@@ -313,7 +325,7 @@ class HivePlugin : TrinityPlugin {
             vault!.nodeVersion().done { version in
                 self.success(command, retAsString: version)
             }.catch { error in
-             self.enhancedError(command, error: error)
+                self.enhancedError(command, error: error)
             }
         }
     }
@@ -652,9 +664,42 @@ class HivePlugin : TrinityPlugin {
 
         let vault = vaultMap[vaultObjectId]
         if vault != nil {
-            let callConfig = GeneralCallConfig(appDID, params)
-            vault?.scripting.callScript(functionName, callConfig, Dictionary<String, Any>.self).done{ scriptOutput in
+            vault?.scripting.callScript(functionName, params, appDID, Dictionary<String, Any>.self).done{ scriptOutput in
                 self.success(command, retAsDict: scriptOutput as NSDictionary)
+            }.catch{ error in
+                self.enhancedError(command, error: error)
+            }
+        }
+    }
+
+    @objc func scripting_uploadFile(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let transactionId = command.arguments[1] as? String ?? ""
+
+        let vault = vaultMap[vaultObjectId]
+        if ensureValidVault(vault, command) {
+            vault!.scripting.uploadFile(transactionId).done{ [self] writer in
+                let objectId = "\(writer.hashValue)"
+                writerMap[objectId] = writer
+                let ret = ["objectId": objectId] as [String : Any]
+                self.success(command, retAsDict: ret as NSDictionary)
+            }.catch{ error in
+                self.enhancedError(command, error: error)
+            }
+        }
+    }
+
+    @objc func scripting_downloadFile(_ command: CDVInvokedUrlCommand) {
+        let vaultObjectId = command.arguments[0] as? String ?? ""
+        let transactionId = command.arguments[1] as? String ?? ""
+
+        let vault = vaultMap[vaultObjectId]
+        if ensureValidVault(vault, command) {
+            vault!.scripting.downloadFile(transactionId).done{ [self] reader in
+                let objectId = "\(reader.hashValue)"
+                readerMap[objectId] = reader
+                let ret = ["objectId": objectId] as [String : Any]
+                self.success(command, retAsDict: ret as NSDictionary)
             }.catch{ error in
                 self.enhancedError(command, error: error)
             }
