@@ -25,14 +25,12 @@ package org.elastos.trinity.plugins.hive;
 import android.util.Base64;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.util.JSONPObject;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 import org.elastos.did.DIDDocument;
 import org.elastos.hive.AuthenticationHandler;
 import org.elastos.hive.Client;
-import org.elastos.hive.Scripting;
 import org.elastos.hive.Vault;
 import org.elastos.hive.database.CountOptions;
 import org.elastos.hive.database.CreateCollectionOptions;
@@ -56,24 +54,15 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Reader;
-import java.io.Writer;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class HivePlugin extends TrinityPlugin {
@@ -582,18 +571,21 @@ public class HivePlugin extends TrinityPlugin {
         try {
             Vault vault = vaultMap.get(vaultObjectId);
             if (ensureValidVault(vault, callbackContext)) {
-                vault.getDatabase().createCollection(collectionName, options).thenAccept(success -> {
-                    try {
-                        JSONObject ret = new JSONObject();
-                        ret.put("created", success);
-                        callbackContext.success(ret);
-                    } catch (JSONException e) {
-                        enhancedError(callbackContext, e);
-                    }
-                }).exceptionally(e -> {
-                    enhancedError(callbackContext, e.getCause());
-                    return null;
-                });
+                new Thread(()->{
+                    vault.getDatabase().createCollection(collectionName, options).thenAccept(success -> {
+                        try {
+                            JSONObject ret = new JSONObject();
+                            ret.put("created", success);
+                            callbackContext.success(ret);
+                        } catch (JSONException e) {
+                            enhancedError(callbackContext, e);
+                        }
+                    }).exceptionally(e -> {
+                        enhancedError(callbackContext, e.getCause());
+                        return null;
+                    });
+
+                }).start();
             }
         }
         catch (Exception e) {
@@ -1270,110 +1262,119 @@ public class HivePlugin extends TrinityPlugin {
         String writerObjectId = args.getString(0);
         String base64encodedFromUint8Array = args.getString(1);
 
-        // TODO: get threading / looper from carrier file transfer
+        new Thread(() -> {
+            try {
+                OutputStream writer = writerMap.get(writerObjectId);
 
-        try {
-            OutputStream writer = writerMap.get(writerObjectId);
+                // Cordova encodes UInt8Array in TS to base64 encoded in java.
+                byte[] data = Base64.decode(base64encodedFromUint8Array, Base64.DEFAULT);
+                writer.write(data);
 
-            // Cordova encodes UInt8Array in TS to base64 encoded in java.
-            byte[] data = Base64.decode(base64encodedFromUint8Array, Base64.DEFAULT);
-            writer.write(data);
-
-            callbackContext.success();
-        }
-        catch (IOException e) {
-            enhancedError(callbackContext, e);
-        }
+                callbackContext.success();
+            }
+            catch (IOException e) {
+                enhancedError(callbackContext, e);
+            }
+        }).start();
     }
 
     private void writer_flush(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String writerObjectId = args.getString(0);
 
-        try {
-            OutputStream writer = writerMap.get(writerObjectId);
-            writer.flush();
-            callbackContext.success();
-        }
-        catch (IOException e) {
-            enhancedError(callbackContext, e);
-        }
+        new Thread(() -> {
+            try {
+                OutputStream writer = writerMap.get(writerObjectId);
+                writer.flush();
+                callbackContext.success();
+            }
+            catch (IOException e) {
+                enhancedError(callbackContext, e);
+            }
+        }).start();
     }
 
     private void writer_close(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String writerObjectId = args.getString(0);
 
-        try {
-            OutputStream writer = writerMap.get(writerObjectId);
-            writer.close();
-            writerMap.remove(writerObjectId);
-            callbackContext.success();
-        }
-        catch (IOException e) {
-            enhancedError(callbackContext, e);
-        }
+        new Thread(() -> {
+            try {
+                OutputStream writer = writerMap.get(writerObjectId);
+                writer.close();
+                writerMap.remove(writerObjectId);
+                callbackContext.success();
+            }
+            catch (IOException e) {
+                enhancedError(callbackContext, e);
+            }
+        }).start();
     }
 
     private void reader_read(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String readerObjectId = args.getString(0);
         int bytesCount = args.getInt(1);
 
-        try {
-            byte[] buffer = new byte[bytesCount];
-            InputStream reader = readerMap.get(readerObjectId);
+        new Thread(() -> {
+            try {
+                byte[] buffer = new byte[bytesCount];
+                InputStream reader = readerMap.get(readerObjectId);
 
-            // Resume reading at the previous read offset
-            //int currentReadOffset = readerOffsetsMap.get(readerObjectId);
-            int readBytes = reader.read(buffer, 0, bytesCount);
+                // Resume reading at the previous read offset
+                //int currentReadOffset = readerOffsetsMap.get(readerObjectId);
+                int readBytes = reader.read(buffer, 0, bytesCount);
 
-            if (readBytes != -1) {
-                // Move read offset to the next position
-                //readerOffsetsMap.put(readerObjectId, currentReadOffset + readBytes);
-                callbackContext.success(Base64.encodeToString(buffer, 0, readBytes, Base64.NO_WRAP));
+                if (readBytes != -1) {
+                    // Move read offset to the next position
+                    //readerOffsetsMap.put(readerObjectId, currentReadOffset + readBytes);
+                    callbackContext.success(Base64.encodeToString(buffer, 0, readBytes, Base64.NO_WRAP));
+                } else {
+                    callbackContext.success((String) null);
+                }
+
+            } catch (IOException e) {
+                enhancedError(callbackContext, e);
             }
-            else {
-                callbackContext.success((String)null);
-            }
-        }
-        catch (IOException e) {
-            enhancedError(callbackContext, e);
-        }
+        }).start();
     }
 
     private void reader_readAll(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String readerObjectId = args.getString(0);
 
-        try {
-            byte[] buffer = new byte[1024];
-            InputStream reader = readerMap.get(readerObjectId);
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        new Thread(() -> {
+            try {
+                byte[] buffer = new byte[1024];
+                InputStream reader = readerMap.get(readerObjectId);
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-            int readBytes;
-            do {
-                readBytes = reader.read(buffer);
-                outputStream.write(buffer, 0, readBytes);
+                int readBytes;
+                do {
+                    readBytes = reader.read(buffer);
+                    outputStream.write(buffer, 0, readBytes);
+                }
+                while (readBytes != -1);
+
+                callbackContext.success(outputStream.toByteArray());
             }
-            while (readBytes != -1);
-
-            callbackContext.success(outputStream.toByteArray());
-        }
-        catch (IOException e) {
-            enhancedError(callbackContext, e);
-        }
+            catch (IOException e) {
+                enhancedError(callbackContext, e);
+            }
+        }).start();
     }
 
     private void reader_close(JSONArray args, CallbackContext callbackContext) throws JSONException {
         String readerObjectId = args.getString(0);
 
-        try {
-            InputStream reader = readerMap.get(readerObjectId);
-            reader.close();
-            readerMap.remove(readerObjectId);
-            readerOffsetsMap.remove(readerObjectId);
-            callbackContext.success();
-        }
-        catch (IOException e) {
-            enhancedError(callbackContext, e);
-        }
+        new Thread(() -> {
+            try {
+                InputStream reader = readerMap.get(readerObjectId);
+                reader.close();
+                readerMap.remove(readerObjectId);
+                readerOffsetsMap.remove(readerObjectId);
+                callbackContext.success();
+            }
+            catch (IOException e) {
+                enhancedError(callbackContext, e);
+            }
+        }).start();
     }
 
     private void payment_getPricingInfo(JSONArray args, CallbackContext callbackContext) throws JSONException {
