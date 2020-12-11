@@ -63,6 +63,8 @@ private enum EnhancedErrorCodes : Int {
 
 @objc(HivePlugin)
 class HivePlugin : TrinityPlugin {
+    private var pluginInitialized = false
+    private var safeRunLock = NSLock()
     private var clientMap = Dictionary<String, HiveClientHandle>()
     private var clientAuthHandlersMap   = Dictionary<String, Authenticator>()
     private var clientAuthHandlerCallbackMap = Dictionary<String, String>()
@@ -72,53 +74,79 @@ class HivePlugin : TrinityPlugin {
     private var readerOffsetsMap   = Dictionary<String, Int>()
     private var didResolverInitialized: Bool = false
 
-    /*@objc override func pluginInitialize() {
-    }
-
-    @objc override func onAppTerminate() {
-    }
-
-    @objc override func onReset() {
+    @objc override func pluginInitialize() {
+        pluginInitialized = true
     }
 
     @objc override func dispose() {
-    }*/
+        pluginInitialized = false
+    }
+
+    /**
+     * Ensures that the plugin is still running. If not, false is returned and the caller may not execute any code.
+     * If true, it locks an execution context to make sure dispose() will not be called while executing such code while in a different thread.
+     * This method is to be used from asynchronous callbacks.
+     */
+    private func safelyExecuteStart() -> Bool {
+        if !pluginInitialized {
+            return false
+        }
+        else {
+            safeRunLock.lock()
+            return true
+        }
+    }
+
+    private func safelyExecuteEnd() {
+        safeRunLock.unlock()
+    }
 
     @objc func success(_ command: CDVInvokedUrlCommand, retAsString: String) {
         let result = CDVPluginResult(status: CDVCommandStatus_OK,
                                      messageAs: retAsString);
 
-        self.commandDelegate.send(result, callbackId: command.callbackId)
+        // Command delegate can become nil in case the pluign is deinitialized while
+        // doing an asynchronous call.
+        self.commandDelegate?.send(result, callbackId: command.callbackId)
     }
 
     @objc func success(_ command: CDVInvokedUrlCommand, retAsDict: NSDictionary) {
         let result = CDVPluginResult(status: CDVCommandStatus_OK,
                                      messageAs: (retAsDict as! [AnyHashable : Any]));
 
-        self.commandDelegate.send(result, callbackId: command.callbackId)
+        // Command delegate can become nil in case the pluign is deinitialized while
+        // doing an asynchronous call.
+        self.commandDelegate?.send(result, callbackId: command.callbackId)
     }
 
     @objc func success(_ command: CDVInvokedUrlCommand, retAsPluginResult: CDVPluginResult) {
-
-        self.commandDelegate.send(retAsPluginResult, callbackId: command.callbackId)
+        // Command delegate can become nil in case the pluign is deinitialized while
+        // doing an asynchronous call.
+        self.commandDelegate?.send(retAsPluginResult, callbackId: command.callbackId)
     }
 
     @objc func success(_ command: CDVInvokedUrlCommand, retAsArray: NSArray) {
         let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: (retAsArray as! [Any]))
 
-        self.commandDelegate.send(result, callbackId: command.callbackId)
+        // Command delegate can become nil in case the pluign is deinitialized while
+        // doing an asynchronous call.
+        self.commandDelegate?.send(result, callbackId: command.callbackId)
     }
 
     @objc func successAsNil(_ command: CDVInvokedUrlCommand) {
         let result = CDVPluginResult(status: CDVCommandStatus_OK)
-        self.commandDelegate.send(result, callbackId: command.callbackId)
+        // Command delegate can become nil in case the pluign is deinitialized while
+        // doing an asynchronous call.
+        self.commandDelegate?.send(result, callbackId: command.callbackId)
     }
 
     @objc func error(_ command: CDVInvokedUrlCommand, retAsString: String) {
         let result = CDVPluginResult(status: CDVCommandStatus_ERROR,
                                      messageAs: retAsString);
 
-        self.commandDelegate.send(result, callbackId: command.callbackId)
+        // Command delegate can become nil in case the pluign is deinitialized while
+        // doing an asynchronous call.
+        self.commandDelegate?.send(result, callbackId: command.callbackId)
     }
 
     private func createEnhancedError(code: EnhancedErrorCodes, message: String) -> [AnyHashable : Any] {
@@ -168,7 +196,9 @@ class HivePlugin : TrinityPlugin {
             result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: errorMessage)
         }
 
-        self.commandDelegate.send(result!, callbackId: command.callbackId)
+        // Command delegate can become nil in case the pluign is deinitialized while
+        // doing an asynchronous call.
+        self.commandDelegate?.send(result!, callbackId: command.callbackId)
     }
 
     private func getDataDir() -> String {
@@ -274,14 +304,18 @@ class HivePlugin : TrinityPlugin {
 
         let client = clientMap[clientObjectId]
         _ = client?.createVault(vaultOwnerDid!, vaultProviderAddress!).done{ [self] vault in
-            let vaultId = "\(vault.hashValue)"
-            vaultMap[vaultId] = vault
-            let ret = ["objectId": vaultId,
-                       "vaultProviderAddress": vault.providerAddress,
-                       "vaultOwnerDid": vaultOwnerDid]
-            self.success(command, retAsDict: ret as NSDictionary)
+            if safelyExecuteStart() {
+                let vaultId = "\(vault.hashValue)"
+                vaultMap[vaultId] = vault
+                let ret = ["objectId": vaultId,
+                           "vaultProviderAddress": vault.providerAddress,
+                           "vaultOwnerDid": vaultOwnerDid]
+                self.success(command, retAsDict: ret as NSDictionary)
+
+                safelyExecuteEnd()
+            }
         }.catch { error in
-         self.enhancedError(command, error: error)
+            self.enhancedError(command, error: error)
         }
     }
 
@@ -295,12 +329,16 @@ class HivePlugin : TrinityPlugin {
 
         let client = clientMap[clientObjectId]
         _ = client?.getVault(vaultOwnerDid, nil).done{ [self] vault in
-            let vaultId = "\(vault.hashValue)"
-            vaultMap[vaultId] = vault
-            let ret = ["objectId": vaultId,
-                       "vaultProviderAddress": vault.providerAddress,
-                       "vaultOwnerDid": vaultOwnerDid]
-            self.success(command, retAsDict: ret as NSDictionary)
+            if safelyExecuteStart() {
+                let vaultId = "\(vault.hashValue)"
+                vaultMap[vaultId] = vault
+                let ret = ["objectId": vaultId,
+                           "vaultProviderAddress": vault.providerAddress,
+                           "vaultOwnerDid": vaultOwnerDid]
+                self.success(command, retAsDict: ret as NSDictionary)
+
+                safelyExecuteEnd()
+            }
         }.catch{ error in
             if let hiveError = error as? HiveError {
                 switch hiveError {
@@ -531,10 +569,14 @@ class HivePlugin : TrinityPlugin {
         let srcPath = command.arguments[1] as? String ?? ""
         let vault = vaultMap[vaultObjectId]
         vault?.files.upload(srcPath).done{ [self] writer in
-            let objectId = "\(writer.hashValue)"
-            writerMap[objectId] = writer
-            let ret = ["objectId": objectId] as [String : Any]
-            self.success(command, retAsDict: ret as NSDictionary)
+            if safelyExecuteStart() {
+                let objectId = "\(writer.hashValue)"
+                writerMap[objectId] = writer
+                let ret = ["objectId": objectId] as [String : Any]
+                self.success(command, retAsDict: ret as NSDictionary)
+
+                safelyExecuteEnd()
+            }
         }.catch{ error in
             self.enhancedError(command, error: error)
         }
@@ -545,10 +587,14 @@ class HivePlugin : TrinityPlugin {
         let srcPath = command.arguments[1] as? String ?? ""
         let vault = vaultMap[vaultObjectId]
         vault?.files.download(srcPath).done{ [self] reader in
-            let objectId = "\(reader.hashValue)"
-            readerMap[objectId] = reader
-            let ret = ["objectId": objectId] as [String : Any]
-            self.success(command, retAsDict: ret as NSDictionary)
+            if safelyExecuteStart() {
+                let objectId = "\(reader.hashValue)"
+                readerMap[objectId] = reader
+                let ret = ["objectId": objectId] as [String : Any]
+                self.success(command, retAsDict: ret as NSDictionary)
+
+                safelyExecuteEnd()
+            }
         }.catch{ error in
             self.enhancedError(command, error: error)
         }
@@ -679,10 +725,14 @@ class HivePlugin : TrinityPlugin {
         let vault = vaultMap[vaultObjectId]
         if ensureValidVault(vault, command) {
             vault!.scripting.uploadFile(transactionId).done{ [self] writer in
-                let objectId = "\(writer.hashValue)"
-                writerMap[objectId] = writer
-                let ret = ["objectId": objectId] as [String : Any]
-                self.success(command, retAsDict: ret as NSDictionary)
+                if safelyExecuteStart() {
+                    let objectId = "\(writer.hashValue)"
+                    writerMap[objectId] = writer
+                    let ret = ["objectId": objectId] as [String : Any]
+                    self.success(command, retAsDict: ret as NSDictionary)
+
+                    safelyExecuteEnd()
+                }
             }.catch{ error in
                 self.enhancedError(command, error: error)
             }
@@ -696,10 +746,14 @@ class HivePlugin : TrinityPlugin {
         let vault = vaultMap[vaultObjectId]
         if ensureValidVault(vault, command) {
             vault!.scripting.downloadFile(transactionId).done{ [self] reader in
-                let objectId = "\(reader.hashValue)"
-                readerMap[objectId] = reader
-                let ret = ["objectId": objectId] as [String : Any]
-                self.success(command, retAsDict: ret as NSDictionary)
+                if safelyExecuteStart() {
+                    let objectId = "\(reader.hashValue)"
+                    readerMap[objectId] = reader
+                    let ret = ["objectId": objectId] as [String : Any]
+                    self.success(command, retAsDict: ret as NSDictionary)
+
+                    safelyExecuteEnd()
+                }
             }.catch{ error in
                 self.enhancedError(command, error: error)
             }
