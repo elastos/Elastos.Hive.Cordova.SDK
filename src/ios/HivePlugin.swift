@@ -79,7 +79,10 @@ class HivePlugin : TrinityPlugin {
     }
 
     @objc override func dispose() {
+        // Make sure no callback is currently executing something
+        safeRunLock.lock()
         pluginInitialized = false
+        safeRunLock.unlock()
     }
 
     /**
