@@ -458,7 +458,7 @@ public class HivePlugin extends TrinityPlugin {
                 Throwable cause = e.getCause();
                 if (cause instanceof ProviderNotSetException) {
                     callbackContext.success((String)null);
-                } else if (e.getLocalizedMessage().contains("Vault has been created")) {
+                else if (cause instanceof VaultAlreadyExistException) {
                     // Vault already exists, return null, not an error.
                     callbackContext.success((String)null);
                 } else {
