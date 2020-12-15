@@ -43,6 +43,7 @@ import org.elastos.hive.database.UpdateResult;
 import org.elastos.hive.exception.FileNotFoundException;
 import org.elastos.hive.exception.HiveException;
 import org.elastos.hive.exception.ProviderNotSetException;
+import org.elastos.hive.exception.VaultAlreadyExistException;
 import org.elastos.hive.exception.VaultNotFoundException;
 import org.elastos.hive.files.FileInfo;
 import org.elastos.hive.payment.Order;
