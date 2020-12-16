@@ -333,7 +333,7 @@ public class HivePlugin extends TrinityPlugin {
             HiveContext context = new HiveContext() {
                 @Override
                 public String getLocalDataDir() {
-                    return null;
+                    return getDataDir();
                 }
 
                 @Override
