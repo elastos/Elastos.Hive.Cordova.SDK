@@ -29,8 +29,10 @@ import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 import org.elastos.did.DIDDocument;
+import org.elastos.did.exception.MalformedDocumentException;
 import org.elastos.hive.AuthenticationHandler;
 import org.elastos.hive.Client;
+import org.elastos.hive.HiveContext;
 import org.elastos.hive.Vault;
 import org.elastos.hive.database.CountOptions;
 import org.elastos.hive.database.CreateCollectionOptions;
@@ -68,7 +70,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class HivePlugin extends TrinityPlugin {
     private HashMap<String, Client> clientMap = new HashMap<>();
-    private HashMap<String, AuthenticationHandler> clientAuthHandlersMap = new HashMap<>();
     private HashMap<String, CallbackContext> clientAuthHandlerCallbackMap = new HashMap<>();
     private HashMap<String, CompletableFuture<String>> clientAuthHandlerCompletionMap = new HashMap<>();
     private HashMap<String, Vault> vaultMap = new HashMap<>();
@@ -327,42 +328,50 @@ public class HivePlugin extends TrinityPlugin {
 
             // final atomic reference as a way to pass our non final client Id to the auth handler.
             final AtomicReference<String> clientIdReference = new AtomicReference<>();
-            Client.Options options = new Client.Options();
-            options.setLocalDataPath(getDataDir());
-
-            // Set the authentication DID document
             String authDIDDocumentJson = optionsJson.getString("authenticationDIDDocument");
-            DIDDocument authenticationDIDDocument = DIDDocument.fromJson(authDIDDocumentJson);
-            options.setAuthenticationDIDDocument(authenticationDIDDocument);
 
-            // Create a authentication handler
-            AuthenticationHandler authHandler = (challengeJwtToken) -> {
-                CompletableFuture<String> future = new CompletableFuture<>();
+            HiveContext context = new HiveContext() {
+                @Override
+                public String getLocalDataDir() {
+                    return null;
+                }
 
-                // Retrieve the JS side callback context to call it.
-                // JS will call client_setAuthHandlerChallengeCallback() to send the response JWT
-                CallbackContext authCallbackContext = clientAuthHandlerCallbackMap.get(clientIdReference.get());
+                @Override
+                public DIDDocument getAppInstanceDocument() {
+                    try {
+                        DIDDocument authenticationDIDDocument = DIDDocument.fromJson(authDIDDocumentJson);
+                        return authenticationDIDDocument;
+                    } catch (MalformedDocumentException e) {
+                        e.printStackTrace();
+                        return null;
+                    }
+                }
 
-                // Save the response callback ref to call it from client_sendAuthHandlerChallengeResponse
-                clientAuthHandlerCompletionMap.put(clientIdReference.get(), future);
+                @Override
+                public CompletableFuture<String> getAuthorization(String jwtToken) {
+                    CompletableFuture<String> future = new CompletableFuture<>();
 
-                // Call JS callback, so the dapp can start the auth flow.
-                // Keep the callback active for future use.
-                PluginResult result = new PluginResult(PluginResult.Status.OK, challengeJwtToken);
-                result.setKeepCallback(true);
-                authCallbackContext.sendPluginResult(result);
+                    // Retrieve the JS side callback context to call it.
+                    // JS will call client_setAuthHandlerChallengeCallback() to send the response JWT
+                    CallbackContext authCallbackContext = clientAuthHandlerCallbackMap.get(clientIdReference.get());
 
-                return future;
+                    // Save the response callback ref to call it from client_sendAuthHandlerChallengeResponse
+                    clientAuthHandlerCompletionMap.put(clientIdReference.get(), future);
+
+                    // Call JS callback, so the dapp can start the auth flow.
+                    // Keep the callback active for future use.
+                    PluginResult result = new PluginResult(PluginResult.Status.OK, jwtToken);
+                    result.setKeepCallback(true);
+                    authCallbackContext.sendPluginResult(result);
+
+                    return future;
+                }
             };
-            options.setAuthenticationHandler(authHandler);
 
-            Client client = Client.createInstance(options);
+            Client client = Client.createInstance(context);
             String clientId = ""+System.identityHashCode(client);
             clientIdReference.set(clientId);
             clientMap.put(clientId, client);
-
-            // Save the handler for later use
-            clientAuthHandlersMap.put(clientId, authHandler);
 
             JSONObject ret = new JSONObject();
             ret.put("objectId", clientId);
