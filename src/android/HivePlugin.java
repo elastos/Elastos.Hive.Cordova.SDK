@@ -23,6 +23,7 @@
 package org.elastos.trinity.plugins.hive;
 
 import android.util.Base64;
+import android.util.Log;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -30,7 +31,6 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 import org.elastos.did.DIDDocument;
 import org.elastos.did.exception.MalformedDocumentException;
-import org.elastos.hive.AuthenticationHandler;
 import org.elastos.hive.Client;
 import org.elastos.hive.HiveContext;
 import org.elastos.hive.Vault;
@@ -64,6 +64,7 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -106,6 +107,15 @@ public class HivePlugin extends TrinityPlugin {
                 }
             }
             return UNSPECIFIED;
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        for(Map.Entry<String, CompletableFuture<String>> entry : clientAuthHandlerCompletionMap.entrySet()){
+            CompletableFuture<String> authResponseFuture = entry.getValue();
+            authResponseFuture.complete(null);
+            clientAuthHandlerCompletionMap.remove(entry.getKey());
         }
     }
 
@@ -425,6 +435,8 @@ public class HivePlugin extends TrinityPlugin {
         // Retrieve the auth response callback and send the authentication JWT back to the hive SDK
         CompletableFuture<String> authResponseFuture = clientAuthHandlerCompletionMap.get(clientObjectId);
         authResponseFuture.complete(challengeResponseJwt);
+
+        clientAuthHandlerCompletionMap.remove(clientObjectId);
 
         callbackContext.success();
     }

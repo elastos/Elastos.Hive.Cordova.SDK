@@ -83,6 +83,11 @@ class HivePlugin : TrinityPlugin {
         safeRunLock.lock()
         pluginInitialized = false
         safeRunLock.unlock()
+
+        for (key, authResponseFuture) in clientAuthHandlerCompletionMap {
+            authResponseFuture.fulfill("")
+            clientAuthHandlerCompletionMap[key] = nil
+        }
     }
 
     /**
@@ -277,7 +282,7 @@ class HivePlugin : TrinityPlugin {
     @objc func client_sendAuthHandlerChallengeResponse(_ command: CDVInvokedUrlCommand) {
         let clientObjectId = command.arguments[0] as? String ?? ""
         let challengeResponseJwt = command.arguments[1] as? String ?? ""
-        guard challengeResponseJwt != "" else {
+        guard challengeResponseJwt == "" else {
             self.error(command, retAsString: "Empty challenge response given!")
             return
         }
@@ -287,6 +292,7 @@ class HivePlugin : TrinityPlugin {
         let callbackId = clientAuthHandlerCallbackMap[clientObjectId]
         let authResponseFuture: Resolver<String> = clientAuthHandlerCompletionMap[callbackId!]!
         authResponseFuture.fulfill(challengeResponseJwt)
+        clientAuthHandlerCompletionMap[callbackId!] = nil
         self.success(command, retAsDict: [: ])
     }
 
