@@ -24,13 +24,27 @@ import Foundation
 import ElastosHiveSDK
 
 var clientAuthHandlerCompletionMap = Dictionary<String, Resolver<String>>()
-class VaultAuthenticator: Authenticator {
-
+class VaultHiveContext: HiveContext {
     var callbackId : String?
     var delegate: Any? = nil
     var clientObjectId: String?
+    var authenticationDidDocument: DIDDocument?
+    weak var hivePlugin: HivePlugin?
 
-    func requestAuthentication(_ jwtToken: String) -> Promise<String> {
+    init(hivePlugin: HivePlugin) {
+        self.hivePlugin = hivePlugin
+    }
+
+    func getLocalDataDir() -> String {
+        return hivePlugin!.getDataDir()
+    }
+
+    func getAppInstanceDocument() -> DIDDocument {
+        return authenticationDidDocument!
+    }
+
+    /// This is the interface to make authorization from users, and it would be provided by application.
+    func getAuthorization(_ jwtToken: String) -> Promise<String> {
         return Promise<String> { resolver in
             // Should normally not happen but that happen. In case we receive an invalid JWT, avoid crashing
             if jwtToken == "" {
@@ -66,7 +80,7 @@ class HivePlugin : TrinityPlugin {
     private var pluginInitialized = false
     private var safeRunLock = NSLock()
     private var clientMap = Dictionary<String, HiveClientHandle>()
-    private var clientAuthHandlersMap   = Dictionary<String, Authenticator>()
+    private var clientAuthHandlersMap   = Dictionary<String, HiveContext>()
     private var clientAuthHandlerCallbackMap = Dictionary<String, String>()
     private var vaultMap  = Dictionary<String, Vault>()
     private var readerMap  = Dictionary<String, FileReader>()
@@ -209,7 +223,7 @@ class HivePlugin : TrinityPlugin {
         self.commandDelegate?.send(result!, callbackId: command.callbackId)
     }
 
-    private func getDataDir() -> String {
+    func getDataDir() -> String {
         return getDataPath()
     }
 
@@ -241,25 +255,22 @@ class HivePlugin : TrinityPlugin {
 
             // final atomic reference as a way to pass our non final client Id to the auth handler.
             var clientIdReference: [String] = [String]()
-            let options = HiveClientOptions()
-            _ = options.setLocalDataPath(getDataDir())
 
             // Set the authentication DID document
             let authDIDDocumentJson = optionsJson!["authenticationDIDDocument"]
             let authenticationDIDDocument = try DIDDocument.convertToDIDDocument(fromJson: authDIDDocumentJson as! String)
-            _ = options.setAuthenticationDIDDocument(authenticationDIDDocument)
 
             // Create a authentication handler
-            let authHandler = VaultAuthenticator()
-            authHandler.delegate = self.commandDelegate
-            _ = options.setAuthenticator(authHandler)
-            let client = try HiveClientHandle.createInstance(withOptions: options)
+            let hiveContext = VaultHiveContext(hivePlugin: self)
+            hiveContext.authenticationDidDocument = authenticationDIDDocument
+            hiveContext.delegate = self.commandDelegate
+            let client = try HiveClientHandle.createInstance(withContext: hiveContext)
             let clientId = "\(client.hashValue)"
             clientIdReference.append(clientId)
             clientMap[clientId] = client
 
             // Save the handler for later use
-            clientAuthHandlersMap[clientId] = authHandler
+            clientAuthHandlersMap[clientId] = hiveContext
             let ret = ["objectId": clientId]
             print("getClient result: \(clientId)")
             self.success(command, retAsDict: ret as NSDictionary)
@@ -271,8 +282,8 @@ class HivePlugin : TrinityPlugin {
     @objc func client_setAuthHandlerChallengeCallback(_ command: CDVInvokedUrlCommand) {
         let clientObjectId = command.arguments[0] as? String ?? ""
         // Save current callback content to be able to call it back when an authentication is requests by the hive SDK
-        let auth: VaultAuthenticator = clientAuthHandlersMap[clientObjectId] as! VaultAuthenticator
-        auth.callbackId = command.callbackId
+        let hiveContext: VaultHiveContext = clientAuthHandlersMap[clientObjectId] as! VaultHiveContext
+        hiveContext.callbackId = command.callbackId
         clientAuthHandlerCallbackMap[clientObjectId] = command.callbackId
         let result: CDVPluginResult = CDVPluginResult(status: CDVCommandStatus_NO_RESULT)
         result.setKeepCallbackAs(true)
@@ -282,7 +293,7 @@ class HivePlugin : TrinityPlugin {
     @objc func client_sendAuthHandlerChallengeResponse(_ command: CDVInvokedUrlCommand) {
         let clientObjectId = command.arguments[0] as? String ?? ""
         let challengeResponseJwt = command.arguments[1] as? String ?? ""
-        guard challengeResponseJwt == "" else {
+        guard challengeResponseJwt != "" else {
             self.error(command, retAsString: "Empty challenge response given!")
             return
         }

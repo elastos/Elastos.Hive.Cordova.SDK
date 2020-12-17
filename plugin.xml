@@ -47,7 +47,7 @@
                 <source url="https://cdn.cocoapods.org/"/>
             </config>
             <pods use-frameworks="true">
-                <pod name="ElastosHiveSDK" spec='2.0.6'/>
+                <pod name="ElastosHiveSDK" spec='2.0.7'/>
                 <!-- <pod name="Alamofire" spec='~> 5.4'/>
                 <pod name="PromiseKit" spec='~> 6.13.1'/> -->
             </pods>
