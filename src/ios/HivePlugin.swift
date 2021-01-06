@@ -196,6 +196,9 @@ class HivePlugin : TrinityPlugin {
                 }
                 else {
                     switch error as! HiveError {
+                    case .vaultNotFound:
+                        result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .vaultNotFound, message: hiveErrorMessage))
+                        break
                     case .fileNotFound:
                         result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAs: createEnhancedError(code: .fileNotFound, message: hiveErrorMessage))
                         break
