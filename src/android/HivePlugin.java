@@ -46,7 +46,6 @@ import org.elastos.hive.exception.FileNotFoundException;
 import org.elastos.hive.exception.HiveException;
 import org.elastos.hive.exception.ProviderNotSetException;
 import org.elastos.hive.exception.VaultAlreadyExistException;
-import org.elastos.hive.exception.VaultNotFoundException;
 import org.elastos.hive.files.FileInfo;
 import org.elastos.hive.payment.Order;
 import org.elastos.hive.scripting.RawCondition;
@@ -61,6 +60,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.ProviderNotFoundException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -291,7 +291,7 @@ public class HivePlugin extends TrinityPlugin {
         if (hiveErrorMessage != null && hiveErrorMessage.contains("collection not exist")) {
             result = new PluginResult(PluginResult.Status.ERROR, Objects.requireNonNull(createEnhancedError(EnhancedErrorCodes.COLLECTION_NOT_FOUND, hiveErrorMessage)));
         }
-        else if (exception instanceof VaultNotFoundException) {
+        else if (hiveErrorMessage != null && hiveErrorMessage.contains("vault service not found")) {
             result = new PluginResult(PluginResult.Status.ERROR, Objects.requireNonNull(createEnhancedError(EnhancedErrorCodes.VAULT_NOT_FOUND,
                     "Vault does not exist. It has to be created by calling createVault()")));
         }
@@ -527,8 +527,8 @@ public class HivePlugin extends TrinityPlugin {
                 Throwable cause = e.getCause();
                 if (cause instanceof ProviderNotSetException) {
                     callbackContext.success((String)null);
-                } else if (cause instanceof VaultNotFoundException) {
-                    enhancedError(callbackContext, cause);
+                /*} else if (cause instanceof VaultNotFoundException) {
+                    enhancedError(callbackContext, cause);*/
                 } else {
                     callbackContext.error("client_getVault error: "+e.getMessage());
                 }
