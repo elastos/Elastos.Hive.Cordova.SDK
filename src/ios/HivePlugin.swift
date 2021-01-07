@@ -365,7 +365,7 @@ class HivePlugin : TrinityPlugin {
         }.catch{ error in
             if let hiveError = error as? HiveError {
                 switch hiveError {
-                    case .providerIsNil:
+                    case .providerNotFound, .providerIsNil:
                         self.successAsNil(command)
                         break
                 default:
