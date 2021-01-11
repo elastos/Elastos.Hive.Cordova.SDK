@@ -655,6 +655,12 @@ declare namespace HivePlugin {
              * Lets the vault owner register a script on his vault for a given app. The script is built on the client side, then
              * serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can
              * use Scripting.call() to execute one of those scripts and get results/data.
+             *
+             * @param functionName Reference script name that will be used later with scripting call().
+             * @param executable Simple or aggregated executables that are ran by the hive node, if the access condition is successful.
+             * @param accessCondition Optional simple condition or aggregated conditions that are checked by the hive node when the script is called.
+             * @param allowAnonymousUser Whether to allow un-authenticated users to call this script to another user's vault. This allows making some resources available for public use. False by default.
+             * @param allowAnonymousApp Whether another application than the one registering the script is allowed to call the script or not. False by default.
              */
             setScript(functionName: string, executable: Executables.Executable, accessCondition?: Conditions.Condition, allowAnonymousUser?: boolean, allowAnonymousApp?: boolean): Promise<boolean>;
 
