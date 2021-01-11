@@ -24,7 +24,7 @@ import Foundation
 import ElastosHiveSDK
 
 var clientAuthHandlerCompletionMap = Dictionary<String, Resolver<String>>()
-class VaultHiveContext: HiveContext {
+class VaultHiveContext: ApplicationContext {
     var callbackId : String?
     var delegate: Any? = nil
     var clientObjectId: String?
@@ -80,7 +80,7 @@ class HivePlugin : TrinityPlugin {
     private var pluginInitialized = false
     private var safeRunLock = NSLock()
     private var clientMap = Dictionary<String, HiveClientHandle>()
-    private var clientAuthHandlersMap   = Dictionary<String, HiveContext>()
+    private var clientAuthHandlersMap   = Dictionary<String, ApplicationContext>()
     private var clientAuthHandlerCallbackMap = Dictionary<String, String>()
     private var vaultMap  = Dictionary<String, Vault>()
     private var readerMap  = Dictionary<String, FileReader>()
@@ -365,7 +365,7 @@ class HivePlugin : TrinityPlugin {
         }.catch{ error in
             if let hiveError = error as? HiveError {
                 switch hiveError {
-                    case .providerNotFound, .providerIsNil:
+                    case .providerNotSet, .providerIsNil:
                         self.successAsNil(command)
                         break
                 default:
@@ -715,9 +715,11 @@ class HivePlugin : TrinityPlugin {
         data = try? JSONSerialization.data(withJSONObject: executionSequenceJson, options: [])
         let executionSequenceJsonstr = String(data: data!, encoding: String.Encoding.utf8)
         let executable = RawExecutable(executable: executionSequenceJsonstr!)
+        let allowAnonymousUser = command.arguments[4] as? Bool ?? false
+        let allowAnonymousApp = command.arguments[5] as? Bool ?? false
 
         let vault = vaultMap[vaultObjectId]
-        vault?.scripting.registerScript(functionName, condition, executable).done{ [self] success in
+        vault?.scripting.registerScript(functionName, condition, executable, allowAnonymousUser, allowAnonymousApp).done{ [self] success in
             self.success(command, retAsDict: ["success": success])
         }.catch{ error in
             self.enhancedError(command, error: error)
