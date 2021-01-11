@@ -656,7 +656,7 @@ declare namespace HivePlugin {
              * serialized and stored on the hive back-end. Later on, anyone, including the vault owner or external users, can
              * use Scripting.call() to execute one of those scripts and get results/data.
              */
-            setScript(functionName: string, executable: Executables.Executable, accessCondition?: Conditions.Condition): Promise<boolean>;
+            setScript(functionName: string, executable: Executables.Executable, accessCondition?: Conditions.Condition, allowAnonymousUser?: boolean, allowAnonymousApp?: boolean): Promise<boolean>;
 
             /**
              * Executes a previously registered server side script using Scripting.setScript(). Vault owner or external users are

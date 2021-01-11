@@ -780,10 +780,10 @@ class ObjectIdImpl extends JSONObjectImpl implements HivePlugin.Database.ObjectI
 class ScriptingImpl implements HivePlugin.Scripting.Scripting {
     constructor(private vault: VaultImpl) {}
 
-    async setScript(functionName: string, executionSequence: AggregatedExecutableImpl, accessCondition?: ConditionImpl): Promise<boolean> {
+    async setScript(functionName: string, executionSequence: AggregatedExecutableImpl, accessCondition?: ConditionImpl, allowAnonymousUser?: boolean, allowAnonymousApp?: boolean): Promise<boolean> {
         let executableAsJson = executionSequence ? executionSequence.toJSON() : null;
         let conditionAsJson = accessCondition ? accessCondition.toJSON() : null;
-        let result = await execAsPromise<{success:boolean}>("scripting_setScript", [this.vault.objectId, functionName, executableAsJson, conditionAsJson]);
+        let result = await execAsPromise<{success:boolean}>("scripting_setScript", [this.vault.objectId, functionName, executableAsJson, conditionAsJson, allowAnonymousUser, allowAnonymousApp]);
         return result.success;
     }
 
