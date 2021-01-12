@@ -1164,6 +1164,8 @@ public class HivePlugin extends TrinityPlugin {
         String functionName = args.getString(1);
         JSONObject executionSequenceJson = args.isNull(2) ? null : args.getJSONObject(2);
         JSONObject accessConditionJson = args.isNull(3) ? null : args.getJSONObject(3);
+        boolean allowAnonymousUser = args.isNull(4) ? false : args.getBoolean(4);
+        boolean allowAnonymousApp = args.isNull(5) ? false : args.getBoolean(5);
 
         RawCondition condition = accessConditionJson != null ? new RawCondition(accessConditionJson.toString()) : null;
         RawExecutable executable = new RawExecutable(executionSequenceJson.toString());
@@ -1171,7 +1173,7 @@ public class HivePlugin extends TrinityPlugin {
         try {
             Vault vault = vaultMap.get(vaultObjectId);
             if (ensureValidVault(vault, callbackContext)) {
-                vault.getScripting().registerScript(functionName, condition, executable).thenAccept(success -> {
+                vault.getScripting().registerScript(functionName, condition, executable, allowAnonymousUser, allowAnonymousApp).thenAccept(success -> {
                     try {
                         JSONObject ret = new JSONObject();
                         ret.put("success", success);
