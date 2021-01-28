@@ -865,6 +865,25 @@ class VaultImpl implements HivePlugin.Vault {
     }
 }
 
+class HiveURLInfoImpl implements HivePlugin.HiveURLInfo {
+    objectId: string;
+
+    callScript(): Promise<HivePlugin.JSONObject> {
+        return execAsPromise<HivePlugin.JSONObject>("hiveURLInfo_callScript", [this.objectId]);
+    }
+
+    async getVault(): Promise<HivePlugin.Vault> {
+        let vaultJson = await execAsPromise<HivePlugin.JSONObject>("hiveURLInfo_getVault", [this.objectId]);
+        return VaultImpl.fromJson(vaultJson);
+    }
+
+    static fromJson(json: HivePlugin.JSONObject): HiveURLInfoImpl {
+        let hiveURLInfo = new HiveURLInfoImpl();
+        Object.assign(hiveURLInfo, json);
+        return hiveURLInfo;
+    }
+}
+
 class ClientImpl implements HivePlugin.Client {
     objectId: string;
 
@@ -878,20 +897,31 @@ class ClientImpl implements HivePlugin.Client {
         return VaultImpl.fromJson(vaultJson);
     }
 
+    async parseHiveURL(hiveURL: string): Promise<HivePlugin.HiveURLInfo> {
+        let hiveUrlInfoJson = await execAsPromise<HivePlugin.JSONObject>("client_parseHiveURL", [this.objectId, hiveURL]);
+        return HiveURLInfoImpl.fromJson(hiveUrlInfoJson);
+    }
+
+    async callScriptURL(scriptURL: string): Promise<HivePlugin.JSONObject> {
+        let hiveURLInfo = await this.parseHiveURL(scriptURL);
+        if (hiveURLInfo) {
+            return hiveURLInfo.callScript();
+        }
+        else {
+            // TODO: throw a new "invalid hive url" exception
+            throw new EnhancedErrorImpl(HivePlugin.EnhancedErrorType.UNSPECIFIED, "Invalid script url format: "+scriptURL);
+        }
+    }
+
+    async downloadFileByScriptUrl(scriptURL: string): Promise<FileReader> {
+        // TODO - wait until the base methods implementations are stable before implementing this.
+        throw new Error("Method not implemented.");
+    }
+
     static fromJson(json: HivePlugin.JSONObject): ClientImpl {
         let client = new ClientImpl();
         Object.assign(client, json);
         return client;
-    }
-
-    parseHiveURL(hiveURL: string): Promise<HivePlugin.HiveURLInfo> {
-        throw new Error("Method not implemented.");
-    }
-    callScriptURL(scriptURL: string): Promise<HivePlugin.JSONObject> {
-        throw new Error("Method not implemented.");
-    }
-    downloadFileByScriptUrl(scriptURL: string): Promise<FileReader> {
-        throw new Error("Method not implemented.");
     }
 }
 
