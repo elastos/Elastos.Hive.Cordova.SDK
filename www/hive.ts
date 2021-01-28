@@ -883,6 +883,16 @@ class ClientImpl implements HivePlugin.Client {
         Object.assign(client, json);
         return client;
     }
+
+    parseHiveURL(hiveURL: string): Promise<HivePlugin.HiveURLInfo> {
+        throw new Error("Method not implemented.");
+    }
+    callScriptURL(scriptURL: string): Promise<HivePlugin.JSONObject> {
+        throw new Error("Method not implemented.");
+    }
+    downloadFileByScriptUrl(scriptURL: string): Promise<FileReader> {
+        throw new Error("Method not implemented.");
+    }
 }
 
 class HiveManagerImpl implements HivePlugin.HiveManager {

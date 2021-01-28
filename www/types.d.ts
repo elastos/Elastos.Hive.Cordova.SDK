@@ -811,12 +811,42 @@ declare namespace HivePlugin {
          * - let scriptOutput = await hiveURLInfo.callScript();
          * - hiveURLInfo.getVault().getScripting().downloadFile(scriptOutput.items["download"].getTransferID())
          */
-        //parseHiveURL(hiveURL: string): Promise<HiveURLInfo>;
+        parseHiveURL(hiveURL: string): Promise<HiveURLInfo>;
+
+        /**
+         * Convenient method to directly get a URL result as JSON object, in case no advanced url information
+         * is required.
+         * This is a shortcut for client.parseHiveURL().callScript();
+         */
+        callScriptURL(scriptURL: string): Promise<JSONObject>;
+
+        /**
+         * Convenient method that first calls a script by url using callScriptURL(), and expects the
+         * JSON output to contain a file download information. If this is the case, the file download is
+         * starting and a file reader is returned.
+         */
+        downloadFileByScriptUrl(scriptURL: string): Promise<FileReader>;
     }
 
-    /*interface HiveURLInfo {
-        callScript(): Promise<HivePlugin.JSONObject>;
-    }*/
+    /**
+     * Information about a parsed hive url. Usually, this url is a a textual description that represents
+     * a way to access a user's vault, call an existing script, with given parameters.
+     *
+     * This object also contains a reference to the vault
+     */
+    interface HiveURLInfo {
+        /**
+         * Calls a script represented by the parsed hive url.
+         * Internally calls client.getVault().getScripting().call("scriptName", {params});
+         */
+        callScript(): Promise<JSONObject>;
+
+        /**
+         * Returns the vault targeted by the parsed url. Useful to be able to call consecutive actions following
+         * the script call, such as a file download or upload.
+         */
+        getVault(): Promise<Vault>;
+    }
 
     interface HiveManager {
         Database: {
@@ -877,22 +907,5 @@ declare namespace HivePlugin {
          * Tells if a javascript error is a specific hive error, and that error is of the given type.
          */
         errorOfType(error: any, errorType: HivePlugin.EnhancedErrorType): boolean;
-
-        /**
-         * Tries to find a vault address in the public DID document of the given user's DID.
-         *
-         * This API always tries to fetch this information from ID chain first (vault address published
-         * publicly for this user) and falls back to the local DID/Vault mapping if it fails to resolve
-         * from chain.
-         *
-         * After being able to resolve from chain, any previously set local mapping is deleted.
-         */
-        //getVaultAddress(ownerDid: string): Promise<string>;
-
-        /**
-         * Locally maps the given owner DID with the given vault address. This is useful for example in case
-         * a user doesn't publish his vault address on the ID chain, and shared it privately.
-         */
-        //setVaultAddress(ownerDid: string, vaultAddress: string): Promise<void>;
     }
 }
