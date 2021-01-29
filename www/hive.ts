@@ -51,6 +51,7 @@ function nativeToTSException(nativeErr) {
         case HivePlugin.EnhancedErrorType.DID_NOT_PUBLISHED:
         case HivePlugin.EnhancedErrorType.COLLECTION_NOT_FOUND:
         case HivePlugin.EnhancedErrorType.FILE_NOT_FOUND:
+        case HivePlugin.EnhancedErrorType.INVALID_HIVE_URL_FORMAT:
             return new EnhancedErrorImpl(nativeErr.code, nativeErr.message);
         default:
             return new EnhancedErrorImpl(HivePlugin.EnhancedErrorType.UNSPECIFIED, nativeErr.message);
@@ -913,9 +914,9 @@ class ClientImpl implements HivePlugin.Client {
         }
     }
 
-    async downloadFileByScriptUrl(scriptURL: string): Promise<FileReader> {
-        // TODO - wait until the base methods implementations are stable before implementing this.
-        throw new Error("Method not implemented.");
+    async downloadFileByScriptUrl(scriptURL: string): Promise<HivePlugin.Files.Reader> {
+        let resultJson = await execAsPromise<HivePlugin.JSONObject>("client_downloadFileByScriptUrl", [this.objectId, scriptURL]);
+        return ReaderImpl.fromJson(resultJson);
     }
 
     static fromJson(json: HivePlugin.JSONObject): ClientImpl {

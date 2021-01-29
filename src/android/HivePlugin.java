@@ -31,8 +31,9 @@ import org.apache.cordova.CallbackContext;
 import org.apache.cordova.PluginResult;
 import org.elastos.did.DIDDocument;
 import org.elastos.did.exception.MalformedDocumentException;
+import org.elastos.hive.ApplicationContext;
 import org.elastos.hive.Client;
-import org.elastos.hive.HiveContext;
+import org.elastos.hive.HiveURLInfo;
 import org.elastos.hive.Vault;
 import org.elastos.hive.database.CountOptions;
 import org.elastos.hive.database.CreateCollectionOptions;
@@ -77,6 +78,7 @@ public class HivePlugin extends TrinityPlugin {
     private HashMap<String, InputStream> readerMap = new HashMap<>();
     private HashMap<String, Integer> readerOffsetsMap = new HashMap<>(); // Current read offset byte position for each active reader
     private HashMap<String, OutputStream> writerMap = new HashMap<>();
+    private HashMap<String, HiveURLInfo> hiveUrlInfoMap = new HashMap<>();
 
     private static boolean didResolverInitialized = false;
 
@@ -85,6 +87,7 @@ public class HivePlugin extends TrinityPlugin {
         VAULT_NOT_FOUND(-1),
         PROVIDER_NOT_PUBLISHED(-2),
         DID_NOT_PUBLISHED(-3),
+        INVALID_HIVE_URL_FORMAT(-4),
 
         // Database errors - range -1000 ~ -1999
         COLLECTION_NOT_FOUND(-1000),
@@ -137,6 +140,12 @@ public class HivePlugin extends TrinityPlugin {
                     break;
                 case "client_getVault":
                     this.client_getVault(args, callbackContext);
+                    break;
+                case "client_parseHiveURL":
+                    this.client_parseHiveURL(args, callbackContext);
+                    break;
+                case "client_downloadFileByScriptUrl":
+                    this.client_downloadFileByScriptUrl(args, callbackContext);
                     break;
                 case "vault_getNodeVersion":
                     this.vault_getNodeVersion(args, callbackContext);
@@ -255,6 +264,12 @@ public class HivePlugin extends TrinityPlugin {
                 case "payment_getPaymentVersion":
                     this.payment_getPaymentVersion(args, callbackContext);
                     break;
+                case "hiveURLInfo_callScript":
+                    this.hiveURLInfo_callScript(args, callbackContext);
+                    break;
+                case "hiveURLInfo_getVault":
+                    this.hiveURLInfo_getVault(args, callbackContext);
+                    break;
                 default:
                     return false;
             }
@@ -306,6 +321,11 @@ public class HivePlugin extends TrinityPlugin {
         callbackContext.sendPluginResult(result);
     }
 
+    private void enhancedError(CallbackContext callbackContext, EnhancedErrorCodes enhancedErrorCode, String message) {
+        PluginResult result =  new PluginResult(PluginResult.Status.ERROR, Objects.requireNonNull(createEnhancedError(enhancedErrorCode, message)));
+        callbackContext.sendPluginResult(result);
+    }
+
     private String getDataDir() {
         return getDataPath();
     }
@@ -340,7 +360,7 @@ public class HivePlugin extends TrinityPlugin {
             final AtomicReference<String> clientIdReference = new AtomicReference<>();
             String authDIDDocumentJson = optionsJson.getString("authenticationDIDDocument");
 
-            HiveContext context = new HiveContext() {
+            ApplicationContext context = new ApplicationContext() {
                 @Override
                 public String getLocalDataDir() {
                     return getDataDir();
@@ -536,6 +556,73 @@ public class HivePlugin extends TrinityPlugin {
             });
         }
         catch (Exception e) {
+            enhancedError(callbackContext, e);
+        }
+    }
+
+    private void client_parseHiveURL(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String clientObjectId = args.getString(0);
+        String scriptUrl = args.isNull(1) ? null : args.getString(1);
+
+        if (scriptUrl == null) {
+            callbackContext.error("parseHiveURL() cannot be called with a null hive url");
+            return;
+        }
+
+        try {
+            Client client = clientMap.get(clientObjectId);
+            client.parseHiveURL(scriptUrl).thenAccept(hiveURLInfo -> {
+                if (hiveURLInfo != null) {
+                    String hiveUrlInfoId = "" + System.identityHashCode(hiveURLInfo);
+                    hiveUrlInfoMap.put(hiveUrlInfoId, hiveURLInfo);
+                    try {
+                        JSONObject ret = new JSONObject();
+                        ret.put("objectId", hiveUrlInfoId);
+                        callbackContext.success(ret);
+                    } catch (JSONException e) {
+                        enhancedError(callbackContext, e);
+                    }
+                }
+                else {
+                    enhancedError(callbackContext, EnhancedErrorCodes.INVALID_HIVE_URL_FORMAT, "The given url could not be parsed into a valid info for hive: "+scriptUrl);
+                }
+            }).exceptionally(e -> {
+                callbackContext.error("parseHiveURL() error: " + e.getMessage());
+                return null;
+            });
+        } catch (Exception e) {
+            enhancedError(callbackContext, e);
+        }
+    }
+
+    private void client_downloadFileByScriptUrl(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String clientObjectId = args.getString(0);
+        String scriptUrl = args.isNull(1) ? null : args.getString(1);
+
+        if (scriptUrl == null) {
+            callbackContext.error("downloadFileByScriptUrl() cannot be called with a null hive url");
+            return;
+        }
+
+        try {
+            Client client = clientMap.get(clientObjectId);
+            client.downloadFileByScriptUrl(scriptUrl, InputStream.class).thenAccept(reader -> {
+                try {
+                    String objectId = "" + System.identityHashCode(reader);
+                    readerMap.put(objectId, reader);
+                    readerOffsetsMap.put(objectId, 0); // Current read offset is 0
+
+                    JSONObject ret = new JSONObject();
+                    ret.put("objectId", objectId);
+                    callbackContext.success(ret);
+                } catch (JSONException e) {
+                    enhancedError(callbackContext, e);
+                }
+            }).exceptionally(e -> {
+                enhancedError(callbackContext, e.getCause());
+                return null;
+            });
+        } catch (Exception e) {
             enhancedError(callbackContext, e);
         }
     }
@@ -1598,6 +1685,71 @@ public class HivePlugin extends TrinityPlugin {
                     enhancedError(callbackContext, e.getCause());
                     return null;
                 });
+            }
+        }
+        catch (Exception e) {
+            enhancedError(callbackContext, e);
+        }
+    }
+
+    private void hiveURLInfo_callScript(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String hiveUrlObjectId = args.getString(0);
+
+        try {
+            HiveURLInfo urlInfo = hiveUrlInfoMap.get(hiveUrlObjectId);
+            if (urlInfo != null) {
+                urlInfo.callScript(JsonNode.class).thenAccept(scriptResult -> {
+                    callbackContext.success(HivePluginHelper.jsonNodeToJsonObject(scriptResult));
+                }).exceptionally(e->{
+                    enhancedError(callbackContext, e.getCause());
+                    return null;
+                });
+            }
+            else {
+                callbackContext.error("Invalid hive url info object passed");
+            }
+        }
+        catch (Exception e) {
+            enhancedError(callbackContext, e);
+        }
+    }
+
+    private void hiveURLInfo_getVault(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        String hiveUrlObjectId = args.getString(0);
+
+        try {
+            HiveURLInfo urlInfo = hiveUrlInfoMap.get(hiveUrlObjectId);
+            if (urlInfo != null) {
+                urlInfo.getVault().thenAcceptAsync((vault)->{
+                    if (vault != null) {
+                        String vaultId = "" + System.identityHashCode(vault);
+                        vaultMap.put(vaultId, vault);
+
+                        try {
+                            JSONObject ret = new JSONObject();
+                            ret.put("objectId", vaultId);
+                            ret.put("vaultProviderAddress", vault.getProviderAddress());
+                            ret.put("vaultOwnerDid", vault.getOwnerDid());
+                            callbackContext.success(ret);
+                        } catch (JSONException e) {
+                            enhancedError(callbackContext, e);
+                        }
+                    }
+                    else {
+                        callbackContext.success((String)null);
+                    }
+                }).exceptionally(e -> {
+                    Throwable cause = e.getCause();
+                    if (cause instanceof ProviderNotSetException) {
+                        callbackContext.success((String)null);
+                    } else {
+                        callbackContext.error("client_getVault error: "+e.getMessage());
+                    }
+                    return null;
+                });
+            }
+            else {
+                callbackContext.error("Invalid hive url info object passed");
             }
         }
         catch (Exception e) {

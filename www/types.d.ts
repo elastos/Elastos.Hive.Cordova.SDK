@@ -53,6 +53,7 @@ declare namespace HivePlugin {
         VAULT_NOT_FOUND = -1,
         PROVIDER_NOT_PUBLISHED = -2, // No vault provider information inside a DID document
         DID_NOT_PUBLISHED = -3,
+        INVALID_HIVE_URL_FORMAT = -4,
 
         // Database errors - range -1000 ~ -1999
         COLLECTION_NOT_FOUND = -1000,
@@ -825,7 +826,7 @@ declare namespace HivePlugin {
          * JSON output to contain a file download information. If this is the case, the file download is
          * starting and a file reader is returned.
          */
-        downloadFileByScriptUrl(scriptURL: string): Promise<FileReader>;
+        downloadFileByScriptUrl(scriptURL: string): Promise<Files.Reader>;
     }
 
     /**
