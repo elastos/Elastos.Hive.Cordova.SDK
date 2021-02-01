@@ -82,6 +82,9 @@ declare namespace HivePlugin {
             /**
              * Convenient way to read a whole file at once. This method may be used only
              * for small files.
+             *
+             * In order to display a downloaded hive picture as a HTML image, the following sample can be useful:
+             * img.src = URL.createObjectURL(await hiveFileReader.readAll());
              */
             readAll(): Promise<Blob>;
 
@@ -799,7 +802,7 @@ declare namespace HivePlugin {
          * target url.
          *
          * For example, later calling a url such as ...
-         *      hive://userdid:appdid/getAvatar
+         *      hive://userdid@appdid/getAvatar?params=
          *
          * ... results in a call to the "getAvatar" script, previously registered by "userdid" on his vault,
          * in the "appdid" scope. This is similar to calling:
