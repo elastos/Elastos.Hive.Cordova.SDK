@@ -30,5 +30,6 @@
   "homepage": "https://github.com/elastos/Elastos.NET.Hive.Cordova.SDK#README.md",
   "scripts": {
     "gen-docs": "jsdoc2md --template \"jsdoc2md/README.hbs\" \"www/hive.js\" > README.md"
-  }
+  },
+  "types": "./www/types.d.ts"
 }
