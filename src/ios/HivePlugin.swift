@@ -76,7 +76,7 @@ private enum EnhancedErrorCodes : Int {
 }
 
 @objc(HivePlugin)
-class HivePlugin : TrinityPlugin {
+class HivePlugin : CDVPlugin {
     private var pluginInitialized = false
     private var safeRunLock = NSLock()
     private var clientMap = Dictionary<String, HiveClientHandle>()
@@ -87,6 +87,8 @@ class HivePlugin : TrinityPlugin {
     private var writerMap   = Dictionary<String, FileWriter>()
     private var readerOffsetsMap   = Dictionary<String, Int>()
     private var didResolverInitialized: Bool = false
+
+    private static var s_didResolverUrl = "http://api.elastos.io:20606";
 
     @objc override func pluginInitialize() {
         pluginInitialized = true
@@ -227,11 +229,11 @@ class HivePlugin : TrinityPlugin {
     }
 
     func getDataDir() -> String {
-        return getDataPath()
+        return NSHomeDirectory() + "/hive"
     }
 
     private func getDIDResolverUrl() -> String {
-        return PreferenceManager.getShareInstance().getDIDResolver()
+        return HivePlugin.s_didResolverUrl
     }
 
     @objc func setupDIDResolver() throws {
@@ -240,6 +242,16 @@ class HivePlugin : TrinityPlugin {
         }
         try HiveClientHandle.setupResolver(getDIDResolverUrl(), "\(NSHomeDirectory())/Library/Caches/didCache") //暂时拿不到appManager 先写死
         didResolverInitialized = true
+    }
+
+    @objc func setResolverUrl(_ command: CDVInvokedUrlCommand) {
+        guard command.arguments.count == 1 else {
+            self.sendWrongParametersCount(command, expected: 1)
+            return
+        }
+
+        HivePlugin.s_didResolverUrl = resolver;
+        self.success(command)
     }
 
     @objc func getClient(_ command: CDVInvokedUrlCommand) {

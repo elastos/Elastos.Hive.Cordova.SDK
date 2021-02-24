@@ -1065,6 +1065,10 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
     setVaultAddress(ownerDid: string, vaultAddress: string): Promise<void> {
         return execAsPromise<void>("client_setVaultAddress", [ownerDid, vaultAddress]);
     }
+
+    setDIDResolverUrl(resolver: string): Promise<void> {
+        return execAsPromise<void>("setDIDResolverUrl", [resolver]);
+    }
 }
 
 export = new HiveManagerImpl();

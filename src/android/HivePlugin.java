@@ -28,6 +28,7 @@ import android.util.Log;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import org.apache.cordova.CallbackContext;
+import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.PluginResult;
 import org.elastos.did.DIDDocument;
 import org.elastos.did.exception.MalformedDocumentException;
@@ -51,8 +52,6 @@ import org.elastos.hive.files.FileInfo;
 import org.elastos.hive.payment.Order;
 import org.elastos.hive.scripting.RawCondition;
 import org.elastos.hive.scripting.RawExecutable;
-import org.elastos.trinity.runtime.PreferenceManager;
-import org.elastos.trinity.runtime.TrinityPlugin;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -70,7 +69,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class HivePlugin extends TrinityPlugin {
+public class HivePlugin extends CordovaPlugin {
     private HashMap<String, Client> clientMap = new HashMap<>();
     private HashMap<String, CallbackContext> clientAuthHandlerCallbackMap = new HashMap<>();
     private HashMap<String, CompletableFuture<String>> clientAuthHandlerCompletionMap = new HashMap<>();
@@ -81,6 +80,8 @@ public class HivePlugin extends TrinityPlugin {
     private HashMap<String, HiveURLInfo> hiveUrlInfoMap = new HashMap<>();
 
     private static boolean didResolverInitialized = false;
+
+    private static String s_didResolverUrl = "http://api.elastos.io:20606";
 
     private enum EnhancedErrorCodes {
         // Vault errors - range -1 ~ -999
@@ -128,6 +129,9 @@ public class HivePlugin extends TrinityPlugin {
             switch (action) {
                 case "getClient":
                     this.getClient(args, callbackContext);
+                    break;
+                case "setDIDResolverUrl":
+                    this.setDIDResolverUrl(args, callbackContext);
                     break;
                 case "client_setAuthHandlerChallengeCallback":
                     this.client_setAuthHandlerChallengeCallback(args, callbackContext);
@@ -327,11 +331,11 @@ public class HivePlugin extends TrinityPlugin {
     }
 
     private String getDataDir() {
-        return getDataPath();
+        return cordova.getActivity().getFilesDir().toString();
     }
 
     private static String getDIDResolverUrl() {
-        return PreferenceManager.getShareInstance().getDIDResolver();
+        return s_didResolverUrl;
     }
 
     private void setupDIDResolver() throws HiveException {
@@ -341,9 +345,15 @@ public class HivePlugin extends TrinityPlugin {
         // NOTE: Static way to set the DID resolver. This means we'd better hope that every app in trinity uses
         // the same network/resolver, otherwise one overwrites the other. The Hive SDK only provides such static method
         // for now...
-        Client.setupResolver(getDIDResolverUrl(),  appManager.activity.getCacheDir()+"/didCache");
+        Client.setupResolver(getDIDResolverUrl(),  cordova.getActivity().getFilesDir() + "/didCache");
 
         didResolverInitialized = true;
+    }
+
+    private void setDIDResolverUrl(JSONArray args, CallbackContext callbackContext) throws JSONException {
+        s_didResolverUrl = args.getString(0);
+
+        callbackContext.success();
     }
 
     private void getClient(JSONArray args, CallbackContext callbackContext) throws JSONException {

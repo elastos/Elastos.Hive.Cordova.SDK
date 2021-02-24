@@ -911,5 +911,7 @@ declare namespace HivePlugin {
          * Tells if a javascript error is a specific hive error, and that error is of the given type.
          */
         errorOfType(error: any, errorType: HivePlugin.EnhancedErrorType): boolean;
+
+        setDIDResolverUrl(resolver: string): Promise<void>;
     }
 }
