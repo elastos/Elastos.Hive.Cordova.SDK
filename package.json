@@ -1,9 +1,9 @@
 {
-  "name": "elastos-trinity-plugins-hive",
+  "name": "elastos-cordova-plugin-hive",
   "version": "0.0.1",
   "description": "Elastos Hive Plugin",
   "cordova": {
-    "id": "elastos-trinity-plugins-hive",
+    "id": "elastos-cordova-plugin-hive",
     "platforms": [
       "android",
       "ios"

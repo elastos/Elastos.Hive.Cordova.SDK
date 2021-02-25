@@ -3,7 +3,7 @@ title: hive
 description: The Hive javascript API.
 ---
 
-# elastos-trinity-plugins-hive
+# elastos-cordova-plugin-hive
 
 This plugin defines a global `cordova.hivePlugin` object, which provides an API for hive library.
 
@@ -20,7 +20,7 @@ function onDeviceReady() {
 ## Installation
 
 ```bash
-    cordova plugin add elastos-trinity-plugins-hive
+    cordova plugin add elastos-cordova-plugin-hive
 ```
 
 ## Supported Platforms
@@ -46,7 +46,7 @@ function onDeviceReady() {
 <a name="File"></a>
 
 ## File
-**Kind**: global class  
+**Kind**: global class
 
 * [File](#File)
     * [new File()](#new_File_new)
@@ -70,8 +70,8 @@ The class representing File.
 ### file.getLastInfo(onSuccess, onError) ⇒
 Get the information(ID, name size, type) of the file got last time.
 
-**Kind**: instance method of [<code>File</code>](#File)  
-**Returns**: onSuccess will be called on success, otherwise onError will be called.  
+**Kind**: instance method of [<code>File</code>](#File)
+**Returns**: onSuccess will be called on success, otherwise onError will be called.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -83,18 +83,18 @@ Get the information(ID, name size, type) of the file got last time.
 ### file.getInfo() ⇒
 Get the information(ID, name, size, type) of the file from the server.
 
-**Kind**: instance method of [<code>File</code>](#File)  
+**Kind**: instance method of [<code>File</code>](#File)
 **Returns**: A promise object that contains the information(ID, name, size, type) of the file
 will be returned on success, otherwise a promise object that contains error
-information will be returned.  
+information will be returned.
 <a name="File+moveTo"></a>
 
 ### file.moveTo(destPath) ⇒
 Move to a new path.
 
-**Kind**: instance method of [<code>File</code>](#File)  
+**Kind**: instance method of [<code>File</code>](#File)
 **Returns**: A promise object that contains success information will be returned on success,
-otherwise a promise object that contains error information will be returned.  
+otherwise a promise object that contains error information will be returned.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -105,9 +105,9 @@ otherwise a promise object that contains error information will be returned.
 ### file.copyTo(newPath) ⇒
 Copy to a new path.
 
-**Kind**: instance method of [<code>File</code>](#File)  
+**Kind**: instance method of [<code>File</code>](#File)
 **Returns**: A promise object that contains success information will be returned on success,
-otherwise a promise object that contains error information will be returned.  
+otherwise a promise object that contains error information will be returned.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -118,17 +118,17 @@ otherwise a promise object that contains error information will be returned.
 ### file.deleteItem() ⇒
 Delete.
 
-**Kind**: instance method of [<code>File</code>](#File)  
+**Kind**: instance method of [<code>File</code>](#File)
 **Returns**: A promise object that contains success information will be returned on success,
-otherwise a promise object that contains error information will be returned.  
+otherwise a promise object that contains error information will be returned.
 <a name="File+readData"></a>
 
 ### file.readData(length) ⇒
 Read data of a specified length sequentially.
 
-**Kind**: instance method of [<code>File</code>](#File)  
+**Kind**: instance method of [<code>File</code>](#File)
 **Returns**: A promise object that contains success information will be returned on success,
-otherwise a promise object that contains error information will be returned.  
+otherwise a promise object that contains error information will be returned.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -139,9 +139,9 @@ otherwise a promise object that contains error information will be returned.
 ### file.writeData(data) ⇒
 Write local change on File.
 
-**Kind**: instance method of [<code>File</code>](#File)  
+**Kind**: instance method of [<code>File</code>](#File)
 **Returns**: A promise object that contains success information will be returned on success,
-otherwise a promise object that contains error information will be returned.  
+otherwise a promise object that contains error information will be returned.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -152,16 +152,16 @@ otherwise a promise object that contains error information will be returned.
 ### file.commit() ⇒
 Commit local change on File to backend.
 
-**Kind**: instance method of [<code>File</code>](#File)  
+**Kind**: instance method of [<code>File</code>](#File)
 **Returns**: A promise object that contains success information will be returned on success,
-otherwise a promise object that contains error information will be returned.  
+otherwise a promise object that contains error information will be returned.
 <a name="File+discard"></a>
 
 ### file.discard(onSuccess) ⇒
 Discard local change on File.
 
-**Kind**: instance method of [<code>File</code>](#File)  
-**Returns**: onSuccess will be called on success.  
+**Kind**: instance method of [<code>File</code>](#File)
+**Returns**: onSuccess will be called on success.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -170,7 +170,7 @@ Discard local change on File.
 <a name="Directory"></a>
 
 ## Directory
-**Kind**: global class  
+**Kind**: global class
 
 * [Directory](#Directory)
     * [new Directory()](#new_Directory_new)
@@ -195,8 +195,8 @@ The class representing Directory.
 ### directory.getLastInfo(onSuccess, onError) ⇒
 Get the information(ID, name, childCount) of the directory got last time.
 
-**Kind**: instance method of [<code>Directory</code>](#Directory)  
-**Returns**: onSuccess will be called on success, otherwise onError will be called.  
+**Kind**: instance method of [<code>Directory</code>](#Directory)
+**Returns**: onSuccess will be called on success, otherwise onError will be called.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -208,18 +208,18 @@ Get the information(ID, name, childCount) of the directory got last time.
 ### directory.getInfo() ⇒
 Get the information(ID, name, childCount) of the directory from the server.
 
-**Kind**: instance method of [<code>Directory</code>](#Directory)  
+**Kind**: instance method of [<code>Directory</code>](#Directory)
 **Returns**: A promise object that contains the information(ID, name, childCount) of the file
 will be returned on success, otherwise a promise object that contains error
-information will be returned.  
+information will be returned.
 <a name="Directory+createDirectory"></a>
 
 ### directory.createDirectory(name) ⇒
 Create directory with name.
 
-**Kind**: instance method of [<code>Directory</code>](#Directory)  
+**Kind**: instance method of [<code>Directory</code>](#Directory)
 **Returns**: A directory will be returned on success, otherwise a promise object that contains
-error information will be returned.  
+error information will be returned.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -230,9 +230,9 @@ error information will be returned.
 ### directory.getDirectory(name) ⇒
 Get the directory with a specified name.
 
-**Kind**: instance method of [<code>Directory</code>](#Directory)  
+**Kind**: instance method of [<code>Directory</code>](#Directory)
 **Returns**: A directory will be returned on success, otherwise a promise object that contains
-error information will be returned.  
+error information will be returned.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -243,9 +243,9 @@ error information will be returned.
 ### directory.createFile(name) ⇒
 Create file with name.
 
-**Kind**: instance method of [<code>Directory</code>](#Directory)  
+**Kind**: instance method of [<code>Directory</code>](#Directory)
 **Returns**: A file will be returned on success, otherwise a promise object that contains
-error information will be returned.  
+error information will be returned.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -256,9 +256,9 @@ error information will be returned.
 ### directory.getFile(name) ⇒
 Get the File with a specified name.
 
-**Kind**: instance method of [<code>Directory</code>](#Directory)  
+**Kind**: instance method of [<code>Directory</code>](#Directory)
 **Returns**: A file will be returned on success, otherwise a promise object that contains
-error information will be returned.  
+error information will be returned.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -269,17 +269,17 @@ error information will be returned.
 ### directory.getChildren() ⇒
 Get children for current directory.
 
-**Kind**: instance method of [<code>Directory</code>](#Directory)  
+**Kind**: instance method of [<code>Directory</code>](#Directory)
 **Returns**: The children for current directory will be returned on success, otherwise
-a promise object that contains error information will be returned.  
+a promise object that contains error information will be returned.
 <a name="Directory+moveTo"></a>
 
 ### directory.moveTo(destPath) ⇒
 Move to a new path.
 
-**Kind**: instance method of [<code>Directory</code>](#Directory)  
+**Kind**: instance method of [<code>Directory</code>](#Directory)
 **Returns**: A promise object that contains success information will be returned on success,
-otherwise a promise object that contains error information will be returned.  
+otherwise a promise object that contains error information will be returned.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -290,9 +290,9 @@ otherwise a promise object that contains error information will be returned.
 ### directory.copyTo(newPath) ⇒
 Copy to a new path.
 
-**Kind**: instance method of [<code>Directory</code>](#Directory)  
+**Kind**: instance method of [<code>Directory</code>](#Directory)
 **Returns**: A promise object that contains success information will be returned on success,
-otherwise a promise object that contains error information will be returned.  
+otherwise a promise object that contains error information will be returned.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -303,13 +303,13 @@ otherwise a promise object that contains error information will be returned.
 ### directory.deleteItem() ⇒
 Delete.
 
-**Kind**: instance method of [<code>Directory</code>](#Directory)  
+**Kind**: instance method of [<code>Directory</code>](#Directory)
 **Returns**: A promise object that contains success information will be returned on success,
-otherwise a promise object that contains error information will be returned.  
+otherwise a promise object that contains error information will be returned.
 <a name="Drive"></a>
 
 ## Drive
-**Kind**: global class  
+**Kind**: global class
 
 * [Drive](#Drive)
     * [new Drive()](#new_Drive_new)
@@ -332,8 +332,8 @@ The class representing Drive.
 ### drive.getLastInfo(onSuccess, onError) ⇒
 Get the information(ID) of the drive got last time.
 
-**Kind**: instance method of [<code>Drive</code>](#Drive)  
-**Returns**: onSuccess will be called on success, otherwise onError will be called.  
+**Kind**: instance method of [<code>Drive</code>](#Drive)
+**Returns**: onSuccess will be called on success, otherwise onError will be called.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -345,26 +345,26 @@ Get the information(ID) of the drive got last time.
 ### drive.getInfo() ⇒
 Get the information(ID) of the drive from the server.
 
-**Kind**: instance method of [<code>Drive</code>](#Drive)  
+**Kind**: instance method of [<code>Drive</code>](#Drive)
 **Returns**: A promise object that contains the information(ID) of the file
 will be returned on success, otherwise a promise that contains error information
-will be returned.  
+will be returned.
 <a name="Drive+rootDirctory"></a>
 
 ### drive.rootDirctory() ⇒
 Get the root directory.
 
-**Kind**: instance method of [<code>Drive</code>](#Drive)  
+**Kind**: instance method of [<code>Drive</code>](#Drive)
 **Returns**: A directory will be returned on success, otherwise a promise that contains
-error information will be returned.  
+error information will be returned.
 <a name="Drive+createDirectory"></a>
 
 ### drive.createDirectory(path) ⇒
 Create directory with path.
 
-**Kind**: instance method of [<code>Drive</code>](#Drive)  
+**Kind**: instance method of [<code>Drive</code>](#Drive)
 **Returns**: A directory will be returned on success, otherwise a promise that contains
-error information will be returned.  
+error information will be returned.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -375,9 +375,9 @@ error information will be returned.
 ### drive.getDirectory(path) ⇒
 Get the directory with a specified path.
 
-**Kind**: instance method of [<code>Drive</code>](#Drive)  
+**Kind**: instance method of [<code>Drive</code>](#Drive)
 **Returns**: A directory will be returned on success, otherwise a promise that contains
-error information will be returned.  
+error information will be returned.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -388,9 +388,9 @@ error information will be returned.
 ### drive.createFile(path) ⇒
 Create file with path.
 
-**Kind**: instance method of [<code>Drive</code>](#Drive)  
+**Kind**: instance method of [<code>Drive</code>](#Drive)
 **Returns**: A file will be returned on success, otherwise a promise that contains
-error information will be returned.  
+error information will be returned.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -401,9 +401,9 @@ error information will be returned.
 ### drive.getFile(path) ⇒
 Get the File with a specified path.
 
-**Kind**: instance method of [<code>Drive</code>](#Drive)  
+**Kind**: instance method of [<code>Drive</code>](#Drive)
 **Returns**: A file will be returned on success, otherwise a promise that contains
-error information will be returned.  
+error information will be returned.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -414,9 +414,9 @@ error information will be returned.
 ### drive.getItemInfo(path) ⇒
 Get the information(ID, name, size, type) of the drive with a specified path.
 
-**Kind**: instance method of [<code>Drive</code>](#Drive)  
+**Kind**: instance method of [<code>Drive</code>](#Drive)
 **Returns**: A promise object that contains success information will be returned on success,
-otherwise a promise that contains error information will be returned.  
+otherwise a promise that contains error information will be returned.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -425,7 +425,7 @@ otherwise a promise that contains error information will be returned.
 <a name="Client"></a>
 
 ## Client
-**Kind**: global class  
+**Kind**: global class
 
 * [Client](#Client)
     * [new Client()](#new_Client_new)
@@ -445,8 +445,8 @@ The class representing Client.
 ### client.login(onSuccess, onError, handler) ⇒
 Associate a user with the Client.
 
-**Kind**: instance method of [<code>Client</code>](#Client)  
-**Returns**: onSuccess will be called on success, otherwise onError will be called.  
+**Kind**: instance method of [<code>Client</code>](#Client)
+**Returns**: onSuccess will be called on success, otherwise onError will be called.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -459,8 +459,8 @@ Associate a user with the Client.
 ### client.logout(onSuccess, onError) ⇒
 Dissociate the user from the Client.
 
-**Kind**: instance method of [<code>Client</code>](#Client)  
-**Returns**: onSuccess will be called on success, otherwise onError will be called.  
+**Kind**: instance method of [<code>Client</code>](#Client)
+**Returns**: onSuccess will be called on success, otherwise onError will be called.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -472,8 +472,8 @@ Dissociate the user from the Client.
 ### client.getLastInfo(onSuccess, onError) ⇒
 Get the last associated user's information with client information.
 
-**Kind**: instance method of [<code>Client</code>](#Client)  
-**Returns**: onSuccess will be called on success, otherwise onError will be called.  
+**Kind**: instance method of [<code>Client</code>](#Client)
+**Returns**: onSuccess will be called on success, otherwise onError will be called.
 
 | Param | Type | Description |
 | --- | --- | --- |
@@ -485,15 +485,15 @@ Get the last associated user's information with client information.
 ### client.getInfo() ⇒
 Get associated user's information with client information.
 
-**Kind**: instance method of [<code>Client</code>](#Client)  
+**Kind**: instance method of [<code>Client</code>](#Client)
 **Returns**: A promise object that contains success information will be returned on success,
-otherwise a promise object that contains error information will be returned.  
+otherwise a promise object that contains error information will be returned.
 <a name="Client+getDefDrive"></a>
 
 ### client.getDefDrive() ⇒
 Get the current backend's Drive instance associated with the client's drive.
 
-**Kind**: instance method of [<code>Client</code>](#Client)  
+**Kind**: instance method of [<code>Client</code>](#Client)
 **Returns**: A drive will be returned on success, otherwise a promise object that contains
-error information will be returned.  
+error information will be returned.
 
