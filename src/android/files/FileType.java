@@ -1,4 +1,4 @@
-package org.elastos.trinity.plugins.hive.files;
+package org.elastos.essentials.plugins.hive.files;
 
 public enum FileType {
     FILE(0),

@@ -1071,4 +1071,4 @@ class HiveManagerImpl implements HivePlugin.HiveManager {
     }
 }
 
-export default new HiveManagerImpl();
+export = new HiveManagerImpl();

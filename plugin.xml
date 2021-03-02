@@ -20,17 +20,17 @@
 	<platform name="android">
 		<config-file target="config.xml" parent="/*">
 			<feature name="HivePlugin">
-				<param name="android-package" value="org.elastos.trinity.plugins.hive.HivePlugin" />
+				<param name="android-package" value="org.elastos.essentials.plugins.hive.HivePlugin" />
 			</feature>
 		</config-file>
-        <source-file src="src/android/HivePlugin.java" target-dir="src/org/elastos/trinity/plugins/hive" />
-        <source-file src="src/android/HivePluginHelper.java" target-dir="src/org/elastos/trinity/plugins/hive" />
-        <source-file src="src/android/database/Database.java" target-dir="src/org/elastos/trinity/plugins/hive/database" />
-        <source-file src="src/android/database/DeleteResult.java" target-dir="src/org/elastos/trinity/plugins/hive/database" />
-        <source-file src="src/android/database/InsertResult.java" target-dir="src/org/elastos/trinity/plugins/hive/database" />
-        <source-file src="src/android/database/UpdateResult.java" target-dir="src/org/elastos/trinity/plugins/hive/database" />
-        <source-file src="src/android/files/FileInfo.java" target-dir="src/org/elastos/trinity/plugins/hive/files" />
-        <source-file src="src/android/files/FileType.java" target-dir="src/org/elastos/trinity/plugins/hive/files" />
+        <source-file src="src/android/HivePlugin.java" target-dir="src/org/elastos/essentials/plugins/hive" />
+        <source-file src="src/android/HivePluginHelper.java" target-dir="src/org/elastos/essentials/plugins/hive" />
+        <source-file src="src/android/database/Database.java" target-dir="src/org/elastos/essentials/plugins/hive/database" />
+        <source-file src="src/android/database/DeleteResult.java" target-dir="src/org/elastos/essentials/plugins/hive/database" />
+        <source-file src="src/android/database/InsertResult.java" target-dir="src/org/elastos/essentials/plugins/hive/database" />
+        <source-file src="src/android/database/UpdateResult.java" target-dir="src/org/elastos/essentials/plugins/hive/database" />
+        <source-file src="src/android/files/FileInfo.java" target-dir="src/org/elastos/essentials/plugins/hive/files" />
+        <source-file src="src/android/files/FileType.java" target-dir="src/org/elastos/essentials/plugins/hive/files" />
 
         <resource-file src="src/android/libs/ElastosHiveSDK-0.1.0.jar" target="libs/ElastosHiveSDK-0.1.0.jar"/>
         <framework src="src/android/hive.gradle" custom="true" type="gradleReference"/>

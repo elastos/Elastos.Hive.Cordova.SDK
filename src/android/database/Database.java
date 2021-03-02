@@ -1,4 +1,4 @@
-package org.elastos.trinity.plugins.hive.database;
+package org.elastos.essentials.plugins.hive.database;
 
 public class Database {
 }
