@@ -48,22 +48,22 @@ declare namespace HivePlugin {
         [k:string]: JSONObject | JSONObject[] | string | number | boolean
     }
 
-    export const enum EnhancedErrorType {
+    // Can't use const enums in shared modules.
+    export type EnhancedErrorType =
         // Vault errors - range -1 ~ -999
-        VAULT_NOT_FOUND = -1,
-        PROVIDER_NOT_PUBLISHED = -2, // No vault provider information inside a DID document
-        DID_NOT_PUBLISHED = -3,
-        INVALID_HIVE_URL_FORMAT = -4,
+        "VAULT_NOT_FOUND" |
+        "PROVIDER_NOT_PUBLISHED" | // No vault provider information inside a DID document
+        "DID_NOT_PUBLISHED" |
+        "INVALID_HIVE_URL_FORMAT" |
 
         // Database errors - range -1000 ~ -1999
-        COLLECTION_NOT_FOUND = -1000,
+        "COLLECTION_NOT_FOUND" |
 
         // File errors - range -2000 ~ -2999
-        FILE_NOT_FOUND = -2000,
+        "FILE_NOT_FOUND" |
 
         // Unknown error
-        UNSPECIFIED = 999
-    }
+        "UNSPECIFIED";
 
     export class EnhancedError {
         getType(): EnhancedErrorType;
@@ -123,10 +123,7 @@ declare namespace HivePlugin {
         /**
          * Type of a remote file or folder.
          */
-        export const enum FileType {
-            FILE = 0,
-            FOLDER = 1
-        }
+        export type FileType = "FILE" | "FOLDER";
 
         /**
          * File information about a remote file or folder.
@@ -240,14 +237,13 @@ declare namespace HivePlugin {
             getCurrency(): string;
         }
 
-        export const enum OrderState {
-            AWAITING_PAYMENT = "wait_pay",
-            AWAITING_TX_CONFIRMATION = "wait_tx",
-            TIMED_OUT_WHILE_WAITING_FOR_PAYMENT = "wait_pay_timeout",
-            TIMED_OUT_WHILE_WAITING_FOR_TX_CONFIRMATION = "wait_tx_timeout",
-            FAILED_UNSPECIFIED_REASON = "failed",
-            COMPLETED = "success"
-        }
+        export type OrderState =
+            "AWAITING_PAYMENT" |
+            "AWAITING_TX_CONFIRMATION" |
+            "TIMED_OUT_WHILE_WAITING_FOR_PAYMENT" |
+            "TIMED_OUT_WHILE_WAITING_FOR_TX_CONFIRMATION" |
+            "FAILED_UNSPECIFIED_REASON" |
+            "COMPLETED";
 
         export class Order {
             /**

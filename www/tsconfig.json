@@ -5,6 +5,7 @@
       "emitDecoratorMetadata": true,
       "experimentalDecorators": true,
       "noImplicitAny": false,
+      "isolatedModules": true,
       "lib": [
         "dom",
         "es2015"

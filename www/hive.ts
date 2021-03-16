@@ -32,12 +32,29 @@ function execAsPromise<T>(method: string, params: any[] = []): Promise<T> {
     });
 }
 
+enum NativeErrorCode {
+    // Vault errors - range -1 ~ -999
+    VAULT_NOT_FOUND = -1,
+    PROVIDER_NOT_PUBLISHED = -2, // No vault provider information inside a DID document
+    DID_NOT_PUBLISHED = -3,
+    INVALID_HIVE_URL_FORMAT = -4,
+
+    // Database errors - range -1000 ~ -1999
+    COLLECTION_NOT_FOUND = -1000,
+
+    // File errors - range -2000 ~ -2999
+    FILE_NOT_FOUND = -2000,
+
+    // Unknown error
+    UNSPECIFIED = 999
+}
+
 /**
  * Tries to convert a native error into a better TS error type for app convenience.
  */
 function nativeToTSException(nativeErr) {
     if (!nativeErr) {
-        return new EnhancedErrorImpl(HivePlugin.EnhancedErrorType.UNSPECIFIED, "Null error received, this is strange. Check native logs.");
+        return new EnhancedErrorImpl("UNSPECIFIED", "Null error received, this is strange. Check native logs.");
     }
 
     if (!nativeErr.code) {
@@ -45,17 +62,18 @@ function nativeToTSException(nativeErr) {
         return EnhancedErrorImpl.fromRawError(nativeErr);
     }
 
+    let tsErrorCode: HivePlugin.EnhancedErrorType;
     switch (nativeErr.code) {
-        case HivePlugin.EnhancedErrorType.VAULT_NOT_FOUND:
-        case HivePlugin.EnhancedErrorType.PROVIDER_NOT_PUBLISHED:
-        case HivePlugin.EnhancedErrorType.DID_NOT_PUBLISHED:
-        case HivePlugin.EnhancedErrorType.COLLECTION_NOT_FOUND:
-        case HivePlugin.EnhancedErrorType.FILE_NOT_FOUND:
-        case HivePlugin.EnhancedErrorType.INVALID_HIVE_URL_FORMAT:
-            return new EnhancedErrorImpl(nativeErr.code, nativeErr.message);
-        default:
-            return new EnhancedErrorImpl(HivePlugin.EnhancedErrorType.UNSPECIFIED, nativeErr.message);
+        case NativeErrorCode.VAULT_NOT_FOUND: tsErrorCode = "VAULT_NOT_FOUND"; break;
+        case NativeErrorCode.PROVIDER_NOT_PUBLISHED: tsErrorCode = "PROVIDER_NOT_PUBLISHED"; break;
+        case NativeErrorCode.DID_NOT_PUBLISHED: tsErrorCode = "DID_NOT_PUBLISHED"; break;
+        case NativeErrorCode.COLLECTION_NOT_FOUND: tsErrorCode = "COLLECTION_NOT_FOUND"; break;
+        case NativeErrorCode.FILE_NOT_FOUND: tsErrorCode = "FILE_NOT_FOUND"; break;
+        case NativeErrorCode.INVALID_HIVE_URL_FORMAT: tsErrorCode = "INVALID_HIVE_URL_FORMAT"; break;
+        default: tsErrorCode = "UNSPECIFIED";
     }
+
+    return new EnhancedErrorImpl(tsErrorCode, nativeErr.message);
 }
 
 class EnhancedErrorImpl extends Error implements HivePlugin.EnhancedError {
@@ -71,7 +89,7 @@ class EnhancedErrorImpl extends Error implements HivePlugin.EnhancedError {
     }
 
     static fromRawError(error: any): EnhancedErrorImpl {
-        let enhancedError = new EnhancedErrorImpl(HivePlugin.EnhancedErrorType.UNSPECIFIED, JSON.stringify(error));
+        let enhancedError = new EnhancedErrorImpl("UNSPECIFIED", JSON.stringify(error));
         return enhancedError;
     }
 }
@@ -156,6 +174,15 @@ class PricingInfoImpl implements HivePlugin.Payment.PricingInfo {
     }
 }
 
+enum NativeOrderState {
+    AWAITING_PAYMENT = "wait_pay",
+    AWAITING_TX_CONFIRMATION = "wait_tx",
+    TIMED_OUT_WHILE_WAITING_FOR_PAYMENT = "wait_pay_timeout",
+    TIMED_OUT_WHILE_WAITING_FOR_TX_CONFIRMATION = "wait_tx_timeout",
+    FAILED_UNSPECIFIED_REASON = "failed",
+    COMPLETED = "success"
+}
+
 class OrderImpl implements HivePlugin.Payment.Order {
     private order_id: string;
     private pricing_info: PricingPlanImpl;
@@ -193,6 +220,18 @@ class OrderImpl implements HivePlugin.Payment.Order {
         Object.assign(result, json);
 
         result.pricing_info = PricingPlanImpl.fromJson(json.pricing_info as JSONObjectImpl);
+
+        // Convert order state
+        switch (json.state as NativeOrderState) {
+            case NativeOrderState.AWAITING_PAYMENT: result.state = "AWAITING_PAYMENT";
+            case NativeOrderState.AWAITING_TX_CONFIRMATION: result.state = "AWAITING_TX_CONFIRMATION";
+            case NativeOrderState.COMPLETED: result.state = "COMPLETED";
+            case NativeOrderState.FAILED_UNSPECIFIED_REASON: result.state = "FAILED_UNSPECIFIED_REASON";
+            case NativeOrderState.TIMED_OUT_WHILE_WAITING_FOR_PAYMENT: result.state = "TIMED_OUT_WHILE_WAITING_FOR_PAYMENT";
+            case NativeOrderState.TIMED_OUT_WHILE_WAITING_FOR_TX_CONFIRMATION: result.state = "TIMED_OUT_WHILE_WAITING_FOR_TX_CONFIRMATION";
+            default:
+                result.state = null;
+        }
 
         return result;
     }
@@ -503,6 +542,11 @@ class ReaderImpl implements HivePlugin.Files.Reader {
     }
 }
 
+enum NativeFileType {
+    FILE = 0,
+    FOLDER = 1
+}
+
 class FileInfoImpl implements HivePlugin.Files.FileInfo {
     name: string;
     size?: number;
@@ -515,6 +559,10 @@ class FileInfoImpl implements HivePlugin.Files.FileInfo {
 
         let result = new FileInfoImpl();
         Object.assign(result, json);
+
+        // Convert file type
+        result.type = (json.type == NativeFileType.FILE ? "FILE" : "FOLDER");
+
         return result;
     }
 }
@@ -910,7 +958,7 @@ class ClientImpl implements HivePlugin.Client {
         }
         else {
             // TODO: throw a new "invalid hive url" exception
-            throw new EnhancedErrorImpl(HivePlugin.EnhancedErrorType.UNSPECIFIED, "Invalid script url format: "+scriptURL);
+            throw new EnhancedErrorImpl("UNSPECIFIED", "Invalid script url format: "+scriptURL);
         }
     }
 
