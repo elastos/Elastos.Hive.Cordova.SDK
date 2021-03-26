@@ -88,7 +88,7 @@ class HivePlugin : CDVPlugin {
     private var readerOffsetsMap   = Dictionary<String, Int>()
     private var didResolverInitialized: Bool = false
 
-    private static var s_didResolverUrl = "http://api.elastos.io:20606";
+    private static var s_didResolverUrl = "https://api.elastos.io/did";
 
     @objc override func pluginInitialize() {
         pluginInitialized = true

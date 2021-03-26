@@ -81,7 +81,7 @@ public class HivePlugin extends CordovaPlugin {
 
     private static boolean didResolverInitialized = false;
 
-    private static String s_didResolverUrl = "http://api.elastos.io:20606";
+    private static String s_didResolverUrl = "https://api.elastos.io/did";
 
     private enum EnhancedErrorCodes {
         // Vault errors - range -1 ~ -999
