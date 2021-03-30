@@ -1,9 +1,9 @@
 {
   "name": "@elastosfoundation/elastos-cordova-plugin-hive",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Elastos Hive Plugin",
   "cordova": {
-    "id": "elastos-cordova-plugin-hive",
+    "id": "@elastosfoundation/elastos-cordova-plugin-hive",
     "platforms": [
       "android",
       "ios"
