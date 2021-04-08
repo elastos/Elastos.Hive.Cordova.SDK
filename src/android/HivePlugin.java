@@ -557,6 +557,8 @@ public class HivePlugin extends CordovaPlugin {
                 Throwable cause = e.getCause();
                 if (cause instanceof ProviderNotSetException) {
                     callbackContext.success((String)null);
+                } else if (cause instanceof ProviderNotFoundException) { // TODO: get ProviderNotFoundException if the did is not published.
+                    callbackContext.success((String)null);
                 /*} else if (cause instanceof VaultNotFoundException) {
                     enhancedError(callbackContext, cause);*/
                 } else {
