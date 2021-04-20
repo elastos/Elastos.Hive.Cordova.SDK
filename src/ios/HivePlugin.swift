@@ -245,13 +245,10 @@ class HivePlugin : CDVPlugin {
     }
 
     @objc func setResolverUrl(_ command: CDVInvokedUrlCommand) {
-        guard command.arguments.count == 1 else {
-            self.sendWrongParametersCount(command, expected: 1)
-            return
-        }
+        let resolver = command.arguments[0] as? String ?? ""
 
         HivePlugin.s_didResolverUrl = resolver;
-        self.success(command)
+        self.successAsNil(command)
     }
 
     @objc func getClient(_ command: CDVInvokedUrlCommand) {
@@ -804,7 +801,7 @@ class HivePlugin : CDVPlugin {
         if ensureValidVault(vault, command) {
             vault!.payment.getPaymentInfo().done { pricingInfo in
                 if let info = try? pricingInfo.serialize().toDict() {
-                    self.success(command, retAsDict: info as NSDictionary)
+                    self.success(command, retAsDict: info as! NSDictionary)
                 }
                 else {
                     self.error(command, retAsString: "Invalid payment info received (json format)")
@@ -828,7 +825,7 @@ class HivePlugin : CDVPlugin {
         if ensureValidVault(vault, command) {
             vault!.payment.getPricingPlan(pricingPlanName!).done { pricingPlan in
                 if let plan = try? pricingPlan.serialize().toDict() {
-                    self.success(command, retAsDict: plan as NSDictionary)
+                    self.success(command, retAsDict: plan as! NSDictionary)
                 }
                 else {
                     self.error(command, retAsString: "Invalid pricing plan received (json format)")
@@ -899,7 +896,7 @@ class HivePlugin : CDVPlugin {
         if ensureValidVault(vault, command) {
             vault!.payment.getOrder(orderId!).done { order in
                 if let order = try? order.serialize().toDict() {
-                    self.success(command, retAsDict: order as NSDictionary)
+                    self.success(command, retAsDict: order as! NSDictionary)
                 }
                 else {
                     self.error(command, retAsString: "Invalid order received (json format)")
@@ -936,7 +933,7 @@ class HivePlugin : CDVPlugin {
         if ensureValidVault(vault, command) {
             vault!.payment.getUsingPricePlan().done { activePlan in
                 if let plan = try? activePlan.serialize().toDict() {
-                    self.success(command, retAsDict: plan as NSDictionary)
+                    self.success(command, retAsDict: plan as! NSDictionary)
                 }
                 else {
                     self.error(command, retAsString: "Invalid active plan received (json format)")
