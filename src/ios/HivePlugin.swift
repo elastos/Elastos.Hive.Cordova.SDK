@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Elastos Foundation
+ * Copyright (c) 2021 Elastos Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -92,6 +92,17 @@ class HivePlugin : CDVPlugin {
 
     @objc override func pluginInitialize() {
         pluginInitialized = true
+
+        // Why can not be initialized in up code?
+        safeRunLock = NSLock()
+        clientMap = Dictionary<String, HiveClientHandle>()
+        clientAuthHandlersMap   = Dictionary<String, ApplicationContext>()
+        clientAuthHandlerCallbackMap = Dictionary<String, String>()
+        vaultMap  = Dictionary<String, Vault>()
+        readerMap  = Dictionary<String, FileReader>()
+        writerMap   = Dictionary<String, FileWriter>()
+        readerOffsetsMap   = Dictionary<String, Int>()
+        didResolverInitialized = false
     }
 
     @objc override func dispose() {

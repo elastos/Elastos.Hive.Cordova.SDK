@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019 Elastos Foundation
+ * Copyright (c) 2021 Elastos Foundation
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,7 +27,7 @@ class DeleteResult: NSObject {
 
     public func toJsonObject() -> Dictionary<String, Any> {
         var dict = ["updatedCount": updatedCount] as [String : Any]
-        
+
         return dict
     }
 }
