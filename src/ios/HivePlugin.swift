@@ -240,7 +240,7 @@ class HivePlugin : CDVPlugin {
     }
 
     func getDataDir() -> String {
-        return NSHomeDirectory() + "/hive"
+        return NSHomeDirectory() + "/Documents/data/hive"
     }
 
     private func getDIDResolverUrl() -> String {
@@ -251,7 +251,7 @@ class HivePlugin : CDVPlugin {
         guard !didResolverInitialized else {
             return
         }
-        try HiveClientHandle.setupResolver(getDIDResolverUrl(), "\(NSHomeDirectory())/Library/Caches/didCache") //暂时拿不到appManager 先写死
+        try HiveClientHandle.setupResolver(getDIDResolverUrl(), "\(NSHomeDirectory())/Library/Caches/didCache")
         didResolverInitialized = true
     }
 
