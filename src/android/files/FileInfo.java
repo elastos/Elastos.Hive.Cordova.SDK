@@ -1,4 +1,4 @@
-package org.elastos.essentials.plugins.hive.files;
+package org.elastos.plugins.hive.files;
 
 import org.json.JSONObject;
 

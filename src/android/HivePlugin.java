@@ -20,7 +20,7 @@
  * SOFTWARE.
  */
 
-package org.elastos.essentials.plugins.hive;
+package org.elastos.plugins.hive;
 
 import android.util.Base64;
 import android.util.Log;

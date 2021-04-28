@@ -20,7 +20,7 @@
 	<platform name="android">
 		<config-file target="config.xml" parent="/*">
 			<feature name="HivePlugin">
-				<param name="android-package" value="org.elastos.essentials.plugins.hive.HivePlugin" />
+				<param name="android-package" value="org.elastos.plugins.hive.HivePlugin" />
 			</feature>
 		</config-file>
         <source-file src="src/android/HivePlugin.java" target-dir="src/org/elastos/plugins/hive" />
