@@ -358,7 +358,18 @@ class HivePlugin : CDVPlugin {
                 safelyExecuteEnd()
             }
         }.catch { error in
-            self.enhancedError(command, error: error)
+            if let hiveError = error as? HiveError {
+                switch hiveError {
+                    case .providerNotSet, .providerIsNil, .vaultAlreadyExistException:
+                        self.successAsNil(command)
+                        break
+                default:
+                    self.enhancedError(command, error: error)
+                }
+            }
+            else {
+                self.enhancedError(command, error: error)
+            }
         }
     }
 
