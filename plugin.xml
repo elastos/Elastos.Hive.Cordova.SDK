@@ -32,7 +32,7 @@
         <source-file src="src/android/files/FileInfo.java" target-dir="src/org/elastos/plugins/hive/files" />
         <source-file src="src/android/files/FileType.java" target-dir="src/org/elastos/plugins/hive/files" />
 
-        <resource-file src="src/android/libs/ElastosHiveSDK-0.1.0.jar" target="libs/ElastosHiveSDK-0.1.0.jar"/>
+        <!-- <resource-file src="src/android/libs/ElastosHiveSDK-0.1.0.jar" target="libs/ElastosHiveSDK-0.1.0.jar"/> -->
         <framework src="src/android/hive.gradle" custom="true" type="gradleReference"/>
 	</platform>
     <platform name="ios">
