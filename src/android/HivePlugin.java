@@ -81,7 +81,7 @@ public class HivePlugin extends CordovaPlugin {
 
     private static boolean didResolverInitialized = false;
 
-    private static String s_didResolverUrl = "https://api.elastos.io/did";
+    private static String s_didResolverUrl = "https://api.elastos.io/eid";
 
     private enum EnhancedErrorCodes {
         // Vault errors - range -1 ~ -999
@@ -345,7 +345,7 @@ public class HivePlugin extends CordovaPlugin {
         // NOTE: Static way to set the DID resolver. This means we'd better hope that every app in trinity uses
         // the same network/resolver, otherwise one overwrites the other. The Hive SDK only provides such static method
         // for now...
-        Client.setupResolver(getDIDResolverUrl(),  cordova.getActivity().getFilesDir() + "/didCache");
+        Client.setupResolver(getDIDResolverUrl());
 
         didResolverInitialized = true;
     }
