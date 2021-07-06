@@ -619,16 +619,22 @@ public class HivePlugin extends CordovaPlugin {
         try {
             Client client = clientMap.get(clientObjectId);
             client.downloadFileByScriptUrl(scriptUrl, InputStream.class).thenAccept(reader -> {
-                try {
-                    String objectId = "" + System.identityHashCode(reader);
-                    readerMap.put(objectId, reader);
-                    readerOffsetsMap.put(objectId, 0); // Current read offset is 0
+                if (reader == null) {
+                    PluginResult result = new PluginResult(PluginResult.Status.ERROR, "Null reader returned by downloadFileByScriptUrl() for url "+scriptUrl);
+                    callbackContext.sendPluginResult(result);
+                }
+                else {
+                    try {
+                        String objectId = "" + System.identityHashCode(reader);
+                        readerMap.put(objectId, reader);
+                        readerOffsetsMap.put(objectId, 0); // Current read offset is 0
 
-                    JSONObject ret = new JSONObject();
-                    ret.put("objectId", objectId);
-                    callbackContext.success(ret);
-                } catch (JSONException e) {
-                    enhancedError(callbackContext, e);
+                        JSONObject ret = new JSONObject();
+                        ret.put("objectId", objectId);
+                        callbackContext.success(ret);
+                    } catch (JSONException e) {
+                        enhancedError(callbackContext, e);
+                    }
                 }
             }).exceptionally(e -> {
                 enhancedError(callbackContext, e.getCause());
@@ -1471,13 +1477,14 @@ public class HivePlugin extends CordovaPlugin {
                 int readBytes;
                 do {
                     readBytes = reader.read(buffer);
-                    outputStream.write(buffer, 0, readBytes);
+                    if (readBytes != -1)
+                        outputStream.write(buffer, 0, readBytes);
                 }
                 while (readBytes != -1);
 
                 callbackContext.success(outputStream.toByteArray());
             }
-            catch (IOException e) {
+            catch (Exception e) {
                 enhancedError(callbackContext, e);
             }
         }).start();
