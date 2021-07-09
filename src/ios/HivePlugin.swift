@@ -88,7 +88,7 @@ class HivePlugin : CDVPlugin {
     private var readerOffsetsMap   = Dictionary<String, Int>()
     private var didResolverInitialized: Bool = false
 
-    private static var s_didResolverUrl = "https://api.elastos.io/did";
+    private static var s_didResolverUrl = "https://api.elastos.io/eid";
 
     @objc override func pluginInitialize() {
         pluginInitialized = true
@@ -255,7 +255,7 @@ class HivePlugin : CDVPlugin {
         didResolverInitialized = true
     }
 
-    @objc func setResolverUrl(_ command: CDVInvokedUrlCommand) {
+    @objc func setDIDResolverUrl(_ command: CDVInvokedUrlCommand) {
         let resolver = command.arguments[0] as? String ?? ""
 
         HivePlugin.s_didResolverUrl = resolver;
