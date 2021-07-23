@@ -86,6 +86,7 @@ class HivePlugin : CDVPlugin {
     private var readerMap  = Dictionary<String, FileReader>()
     private var writerMap   = Dictionary<String, FileWriter>()
     private var readerOffsetsMap   = Dictionary<String, Int>()
+    private var hiveUrlInfoMap = Dictionary<String, HiveURLInfo>()
     private var didResolverInitialized: Bool = false
 
     private static var s_didResolverUrl = "https://api.elastos.io/eid";
