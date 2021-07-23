@@ -1,6 +1,6 @@
 {
   "name": "@elastosfoundation/elastos-cordova-plugin-hive",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "Elastos Hive Plugin",
   "cordova": {
     "id": "@elastosfoundation/elastos-cordova-plugin-hive",
@@ -29,7 +29,8 @@
   },
   "homepage": "https://github.com/elastos/Elastos.NET.Hive.Cordova.SDK#README.md",
   "scripts": {
-    "gen-docs": "jsdoc2md --template \"jsdoc2md/README.hbs\" \"www/hive.js\" > README.md"
+    "gen-docs": "jsdoc2md --template \"jsdoc2md/README.hbs\" \"www/hive.js\" > README.md",
+    "prepublishOnly": "tsc -build www/tsconfig.json"
   },
   "types": "./www/types.d.ts"
 }

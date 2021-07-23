@@ -409,6 +409,48 @@ class HivePlugin : CDVPlugin {
         }
     }
 
+    @objc func client_parseHiveURL(_ command: CDVInvokedUrlCommand) {
+        let clientObjectId = command.arguments[0] as? String ?? ""
+        let scriptUrl = command.arguments[1] as? String
+
+        guard scriptUrl != nil else {
+            self.error(command, retAsString: "parseHiveURL() cannot be called with a nil hive url")
+            return
+        }
+
+        let client = clientMap[clientObjectId]
+        client?.parseHiveURL(scriptUrl!).done{ [self] hiveURLInfo in
+            let hiveUrlInfoId = "12345" // NOT USED FOR NOW "\(hiveURLInfo.hashValue)"
+            hiveUrlInfoMap[hiveUrlInfoId] = hiveURLInfo
+            let ret = ["objectId": hiveUrlInfoId]
+            self.success(command, retAsDict: ret as NSDictionary)
+        }.catch{ error in
+            self.enhancedError(command, error: error)
+        }
+    }
+
+    @objc func client_downloadFileByScriptUrl(_ command: CDVInvokedUrlCommand) {
+        let clientObjectId = command.arguments[0] as? String ?? ""
+        let scriptUrl = command.arguments[1] as? String
+
+        guard scriptUrl != nil else {
+            self.error(command, retAsString: "downloadFileByScriptUrl() cannot be called with a nil hive url")
+            return
+        }
+
+        let client = clientMap[clientObjectId]
+        client?.downloadFileByScriptUrl(scriptUrl!).done({ [self] reader in
+            let objectId = "\(reader.hashValue)"
+            readerMap[objectId] = reader
+            readerOffsetsMap[objectId] = 0 // Current read offset is 0
+
+            let ret = ["objectId": objectId]
+            self.success(command, retAsDict: ret as NSDictionary)
+        }).catch { error in
+            self.enhancedError(command, error: error)
+        }
+    }
+
     @objc func vault_getNodeVersion(_ command: CDVInvokedUrlCommand) {
         let vaultObjectId = command.arguments[0] as? String ?? ""
 
