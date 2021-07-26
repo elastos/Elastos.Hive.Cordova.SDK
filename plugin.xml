@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<plugin id="@elastosfoundation/elastos-cordova-plugin-hive" version="1.0.16" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
+<plugin id="@elastosfoundation/elastos-cordova-plugin-hive" version="1.0.18" xmlns="http://apache.org/cordova/ns/plugins/1.0" xmlns:android="http://schemas.android.com/apk/res/android">
     <name>Hive</name>
     <js-module name="HivePlugin" src="www/hive.js">
         <clobbers target="hiveManager" />
@@ -47,7 +47,7 @@
                 <source url="https://cdn.cocoapods.org/"/>
             </config>
             <pods use-frameworks="true">
-                <pod name="ElastosHiveSDK" spec='~> 2.1.6-pre'/>
+                <pod name="ElastosHiveSDK" spec='~> 2.1.7-pre'/>
                 <!-- <pod name="Alamofire" spec='~> 5.4'/>
                 <pod name="PromiseKit" spec='~> 6.13.1'/> -->
             </pods>

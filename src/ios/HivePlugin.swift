@@ -1093,16 +1093,16 @@ class HivePlugin : CDVPlugin {
 
         let reader = readerMap[readerObjectId]
 
-        var data: Data?
+        var data = Data()
         while !reader!.didLoadFinish {
             if let d = reader!.read({ error in
                 self.enhancedError(command, error: error)
             }){
-                data?.append(d)
+                data.append(d)
             }
         }
 
-        self.success(command, retAsString: data?.base64EncodedString() ?? "")
+        self.success(command, retAsString: data.base64EncodedString())
     }
 
     @objc func reader_close(_ command: CDVInvokedUrlCommand) {
