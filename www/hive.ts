@@ -525,8 +525,12 @@ class ReaderImpl implements HivePlugin.Files.Reader {
 
         return new Base64Binary().decode(readData);
     }
-    readAll(): Promise<Blob> {
-        return execAsPromise<Blob>("reader_readAll", [this.objectId]);
+    async readAll(): Promise<Uint8Array> {
+        let readData = await execAsPromise<string>("reader_readAll", [this.objectId]);
+        if (!readData)
+            return null;
+
+        return new Base64Binary().decode(readData);
     }
     close(): Promise<void> {
         return execAsPromise<void>("reader_close", [this.objectId]);

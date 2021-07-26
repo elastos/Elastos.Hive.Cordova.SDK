@@ -1482,7 +1482,7 @@ public class HivePlugin extends CordovaPlugin {
                 }
                 while (readBytes != -1);
 
-                callbackContext.success(outputStream.toByteArray());
+                callbackContext.success(Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP));
             }
             catch (Exception e) {
                 enhancedError(callbackContext, e);

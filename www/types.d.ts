@@ -86,7 +86,7 @@ declare namespace HivePlugin {
              * In order to display a downloaded hive picture as a HTML image, the following sample can be useful:
              * img.src = URL.createObjectURL(await hiveFileReader.readAll());
              */
-            readAll(): Promise<Blob>;
+            readAll(): Promise<Uint8Array>;
 
             /**
              * Closes and frees reader's resources.
