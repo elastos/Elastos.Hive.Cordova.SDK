@@ -1036,19 +1036,21 @@ class HivePlugin : CDVPlugin {
         let writerObjectId = command.arguments[0] as? String ?? ""
         let data = command.arguments[1] as? Data
 
-        do {
-            if let _ = data {
-            let writer = writerMap[writerObjectId]
-                try writer?.write(data: data!, { error in
-                    self.error(command, retAsString: HiveError.description(error))
-                })
-                self.success(command, retAsDict: ["success": "success"])
+        DispatchQueue(label: "writer_write").async {
+            do {
+                if let _ = data {
+                    let writer = self.writerMap[writerObjectId]
+                    try writer?.write(data: data!, { error in
+                        self.error(command, retAsString: HiveError.description(error))
+                    })
+                    self.success(command, retAsDict: ["success": "success"])
+                }
+                else {
+                    self.error(command, retAsString: "data is nil.")
+                }
+            } catch {
+                self.enhancedError(command, error: error)
             }
-            else {
-                self.error(command, retAsString: "data is nil.")
-            }
-        } catch {
-            self.enhancedError(command, error: error)
         }
     }
 
@@ -1077,15 +1079,20 @@ class HivePlugin : CDVPlugin {
         let reader = readerMap[readerObjectId]
         // Resume reading at the previous read offset
         var data: Data?
-        while !reader!.didLoadFinish {
-            data = reader!.read(bytesCount, { error in
-                self.enhancedError(command, error: error)
-            })
-            if data != nil {
-                break
+
+        DispatchQueue(label: "reader_read").async {
+            while !reader!.didLoadFinish {
+                data = reader!.read(bytesCount, { error in
+                    self.enhancedError(command, error: error)
+                })
+                if data != nil {
+                    break
+                } else {
+                    Thread.sleep(forTimeInterval: 0.01)
+                }
             }
+            self.success(command, retAsString: data?.base64EncodedString() ?? "")
         }
-        self.success(command, retAsString: data?.base64EncodedString() ?? "")
     }
 
     @objc func reader_readAll(_ command: CDVInvokedUrlCommand) {
@@ -1094,15 +1101,19 @@ class HivePlugin : CDVPlugin {
         let reader = readerMap[readerObjectId]
 
         var data = Data()
-        while !reader!.didLoadFinish {
-            if let d = reader!.read({ error in
-                self.enhancedError(command, error: error)
-            }){
-                data.append(d)
-            }
-        }
 
-        self.success(command, retAsString: data.base64EncodedString())
+        DispatchQueue(label: "reader_readAll").async {
+            while !reader!.didLoadFinish {
+                if let d = reader!.read({ error in
+                    self.enhancedError(command, error: error)
+                }) {
+                    data.append(d)
+                } else {
+                    Thread.sleep(forTimeInterval: 0.01)
+                }
+            }
+            self.success(command, retAsString: data.base64EncodedString())
+        }
     }
 
     @objc func reader_close(_ command: CDVInvokedUrlCommand) {
